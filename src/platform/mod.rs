@@ -311,15 +311,16 @@ impl Platform {
     }
 
     pub fn current_work_area(&self) -> (i32, i32, i32, i32) {
+        let pad = self.config.layout.outer_padding as i32;
         if let Some(hwnd) = self.focused_hwnd {
             if let Some(mon) = self.monitor_for_hwnd(hwnd.0) {
-                return (mon.work_left, mon.work_top, mon.work_right, mon.work_bottom);
+                return (mon.work_left + pad, mon.work_top + pad, mon.work_right - pad, mon.work_bottom - pad);
             }
         }
         if let Some(m) = self.primary_monitor() {
-            return (m.work_left, m.work_top, m.work_right, m.work_bottom);
+            return (m.work_left + pad, m.work_top + pad, m.work_right - pad, m.work_bottom - pad);
         }
-        (0, 0, 1920, 1080)
+        (pad, pad, 1920 - pad, 1080 - pad)
     }
 
     pub fn initialize(&mut self, _config: &crate::config::Config) -> anyhow::Result<()> {
