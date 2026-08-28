@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.2.0] - 2026-08-29 — Window Visual Effects: Rounded Corners, DWM Shadows, Opacity
+### Added
+- **Rounded corners**: hardware-accelerated via `SetWindowRgn` + `CreateRoundRectRgn`
+- **DWM drop shadows**: `DwmSetWindowAttribute` with `DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED`
+- **Window opacity**: `SetLayeredWindowAttributes` with `LWA_ALPHA` for per-window transparency
+- Configurable via `rounded_corners`, `dwm_shadows`, `window_opacity`, `corner_radius` in LayoutConfig
+- Visual effects applied automatically to each managed window via `apply_rounded_corners()`, `apply_dwm_shadow()`, `apply_window_opacity()`
+- IPC `get-config` exposes new visual effect fields
+
+## [4.1.0] - 2026-08-29 — Session Z-order Save/Restore
+### Added
+- **Z-order save/restore**: session saves window stacking order (Z-order) using GetTopWindow/GetWindow enumeration
+- Windows restored to their previous Z-order position on startup
+- z_order field on WindowInfo tracks per-window stacking position
+- apply_z_order() sorts windows by saved Z-order and re-applies with SetWindowPos
+
 ## [4.0.0] - 2026-08-29 — Rule-based Float Position and Size
 ### Added
 - **Float position and size in rules**: `float_x`, `float_y`, `float_w`, `float_h` fields

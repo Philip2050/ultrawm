@@ -1006,6 +1006,18 @@ impl Platform {
                     grid.focus_window(wid);
                 }
 
+                // Apply visual effects
+                let cfg = &self.config.layout;
+                if cfg.rounded_corners && cfg.corner_radius > 0 {
+                    self.apply_rounded_corners(hwnd, cfg.corner_radius);
+                }
+                if cfg.dwm_shadows {
+                    self.apply_dwm_shadow(hwnd);
+                }
+                if cfg.window_opacity < 1.0 {
+                    self.apply_window_opacity(hwnd, cfg.window_opacity);
+                }
+
                 info!("Managed window: {} (id={})", title, wid);
                 self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
             }
@@ -1383,6 +1395,49 @@ impl Platform {
                     let _ = SetLayeredWindowAttributes(info.hwnd, COLORREF(0), (opacity.clamp(0.0, 1.0) * 255.0) as u8, LWA_ALPHA);
                 }
                 info!("Opacity set: {} (id={})", opacity, info.id);
+            }
+        }
+    }
+
+    /// Apply rounded corners to a window using hardware-accelerated window region
+    pub fn apply_rounded_corners(&self, hwnd: HWND, radius: u32) {
+        if radius == 0 {
+            return;
+        }
+        unsafe {
+            let mut rect = RECT::default();
+            let _ = GetWindowRect(hwnd, &mut rect);
+            let w = (rect.right - rect.left).max(1) as i32;
+            let h = (rect.bottom - rect.top).max(1) as i32;
+            let r = radius.min((w / 2).max(1) as u32).min((h / 2).max(1) as u32) as i32;
+            let rgn = CreateRoundRectRgn(0, 0, w, h, r, r);
+            if !rgn.is_invalid() {
+                let _ = SetWindowRgn(hwnd, rgn, false);
+            }
+        }
+    }
+
+    /// Enable DWM drop shadow for a window
+    pub fn apply_dwm_shadow(&self, hwnd: HWND) {
+        unsafe {
+            let mut policy = DWMNCRP_ENABLED;
+            let _ = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_NCRENDERING_POLICY,
+                &mut policy as *mut _ as *const _,
+                std::mem::size_of::<DWMNCRENDERINGPOLICY>() as u32,
+            );
+        }
+    }
+
+    /// Apply default window opacity
+    pub fn apply_window_opacity(&self, hwnd: HWND, opacity: f32) {
+        if opacity < 1.0 {
+            unsafe {
+                let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+                let _ = SetWindowLongW(hwnd, GWL_EXSTYLE, ex_style | WS_EX_LAYERED.0 as i32);
+                let alpha = (opacity.clamp(0.0, 1.0) * 255.0) as u8;
+                let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA);
             }
         }
     }
