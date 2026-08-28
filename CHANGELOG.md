@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [6.4.0] - 2026-08-29 — Config Validation
+### Added
+- `Config::validate()` method checks config on load for common errors
+- Validates `workspace_count` is 1-10
+- Validates `workspace_names` length <= `workspace_count`
+- Validates `monitor_layouts` length <= 8 (max monitors supported)
+- Validates each rule has non-empty `match` field
+- Validates rule `workspace` field < `workspace_count`
+- Validation called automatically after `Config::load()` and `reload_if_changed()`
+
+### Changed
+- Config load fails with descriptive error message if validation fails
+- Rule validation reports rule index for easy debugging
+
 ## [6.3.0] - 2026-08-29 — IPC Query Enhancements
 ### Added
 - `get-state` now returns: managed_windows count, current theme name, per-monitor workspace info

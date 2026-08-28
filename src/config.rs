@@ -212,10 +212,35 @@ impl Config {
             config.last_modified = std::fs::metadata(&path)
                 .and_then(|m| m.modified())
                 .ok();
+            config.validate()?;
             Ok(config)
         } else {
             Ok(Config::default())
         }
+    }
+
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.layout.workspace_count == 0 || self.layout.workspace_count > 10 {
+            anyhow::bail!("workspace_count must be between 1 and 10, got {}", self.layout.workspace_count);
+        }
+        if self.layout.workspace_names.len() > self.layout.workspace_count {
+            anyhow::bail!("workspace_names has {} entries but workspace_count is {}",
+                self.layout.workspace_names.len(), self.layout.workspace_count);
+        }
+        if self.layout.monitor_layouts.len() > 8 {
+            anyhow::bail!("monitor_layouts has {} entries (max 8 monitors supported)", self.layout.monitor_layouts.len());
+        }
+        for (i, rule) in self.rules.iter().enumerate() {
+            if rule.match_.is_empty() {
+                anyhow::bail!("rule[{}]: match field cannot be empty", i);
+            }
+            if let Some(ws) = rule.workspace {
+                if ws >= self.layout.workspace_count {
+                    anyhow::bail!("rule[{}]: workspace {} >= workspace_count ({})", i, ws, self.layout.workspace_count);
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Reload if the config file has been modified since last load.
