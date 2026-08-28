@@ -655,6 +655,7 @@ impl Platform {
 
     pub fn tile_all_windows(&mut self, accent_rgb: u32, inactive_rgb: u32) {
         let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>)> = Vec::new();
+        let mut tile_rects: Vec<(i32, i32, i32, i32, HWND)> = Vec::new();
 
         // Overview mode: compact grid of all windows
         if self.overview {
@@ -771,6 +772,9 @@ impl Platform {
                         );
                     }
 
+                    // Collect rect for mouse resize detection
+                    tile_rects.push((px, py, pw, ph, hwnd_wrapper.0));
+
                     // Enable DWM shadow once per window
                     if !self.shadow_set.get(&wid).copied().unwrap_or(false) {
                         enable_dwm_shadow(hwnd_wrapper.0);
@@ -825,6 +829,7 @@ impl Platform {
 
         // Update border overlay
         if let Some(ref mut overlay) = self.border_overlay {
+            overlay.tile_rects = tile_rects;
             overlay.update(&border_rects);
         }
     }

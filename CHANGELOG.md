@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.3.0] - 2026-08-29 — Mouse-based Window Resize
+### Added
+- **Resize tiled windows by dragging edges**: hover near a window edge (6px zone) to see resize cursor
+- Supports all four edges and corners (horizontal, vertical, and diagonal resize)
+- Click and drag to resize — window dimensions update in real-time
+- Minimum window size enforced at 100px
+
 ## [3.2.0] - 2026-08-29 — Enhanced Session Save/Restore
 ### Added
 - **Session saves per-window state**: floating, workspace, opacity, sticky, maximized, always-on-top
