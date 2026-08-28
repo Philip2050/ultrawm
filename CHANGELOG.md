@@ -2,6 +2,16 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.5.0] - 2026-08-29 — Mouse Drag-to-Move for Tiled Windows
+### Added
+- **Drag-to-move tiled windows**: click and drag any tiled window to reposition it within the grid
+- 5px drag threshold distinguishes drag from click (click = swap, drag = move)
+- Green ghost rectangle shows target cell during drag
+- Hand cursor during drag operation
+- `drag_start`, `drag_active`, `drag_ghost` fields on BorderOverlay track drag state
+- `drag_move_window()` method moves source window to target cell, shifting grid accordingly
+- `WM_DRAG_MOVE` custom message (WM_USER + 0x102) for border-to-main-thread communication
+
 ## [4.4.0] - 2026-08-29 — Wallpaper Support: Theme-based Gradient, Image Wallpaper, IPC Commands
 ### Added
 - **Theme wallpaper**: diagonal gradient from background to accent color, applied on theme switch

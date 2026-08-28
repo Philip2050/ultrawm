@@ -27,10 +27,14 @@ pub struct BorderOverlay {
     resize_target: Option<(HWND, i32, i32, i32, i32)>,
     resize_edge: u8,
     move_source: Option<HWND>,
+    drag_start: Option<(i32, i32, HWND)>,
+    drag_active: bool,
+    drag_ghost: Option<(i32, i32, i32, i32)>,
 }
 
 pub const WM_OVERVIEW_CLICK: u32 = WM_USER + 0x100;
 pub const WM_SWAP_WINDOWS: u32 = WM_USER + 0x101;
+pub const WM_DRAG_MOVE: u32 = WM_USER + 0x102;
 
 fn color_dim(c: u32, factor: f32) -> u32 {
     let r = ((c & 0xFF) as f32 * factor) as u32;
@@ -113,6 +117,9 @@ impl BorderOverlay {
                 resize_target: None,
                 resize_edge: 0,
                 move_source: None,
+                drag_start: None,
+                drag_active: false,
+                drag_ghost: None,
             })
         }
     }
@@ -249,6 +256,19 @@ impl BorderOverlay {
                     SelectObject(self.mem_dc, old_pen);
                     let _ = DeleteObject(pen);
                 }
+            }
+
+            // Draw drag ghost (highlighted target cell)
+            if let Some((gx, gy, gw, gh)) = self.drag_ghost {
+                let ghost_pen = CreatePen(PS_SOLID, 3, COLORREF(0xFF00FF00));
+                let old_pen = SelectObject(self.mem_dc, ghost_pen);
+                let ghost_brush = CreateSolidBrush(COLORREF(0x3000FF00));
+                let old_brush = SelectObject(self.mem_dc, ghost_brush);
+                Rectangle(self.mem_dc, gx, gy, gx + gw, gy + gh);
+                SelectObject(self.mem_dc, old_brush);
+                DeleteObject(ghost_brush);
+                SelectObject(self.mem_dc, old_pen);
+                DeleteObject(ghost_pen);
             }
 
             let mut ptr = self.bits as *mut u32;
@@ -401,12 +421,31 @@ unsafe extern "system" fn border_wnd_proc(
                         on_window = true;
                     }
                 }
-                if cursor == IDC_ARROW && on_window {
+                if overlay.drag_active {
+                    cursor = IDC_HAND;
+                } else if cursor == IDC_ARROW && on_window {
                     cursor = IDC_HAND;
                 }
                 let hcursor = LoadCursorW(HINSTANCE(null_mut()), cursor);
                 if let Ok(c) = hcursor {
                     SetCursor(c);
+                }
+
+                // Track drag movement
+                if let Some((sx, sy, _src)) = overlay.drag_start {
+                    let dx = x - sx;
+                    let dy = y - sy;
+                    if (dx * dx + dy * dy) > 25 {
+                        overlay.drag_active = true;
+                        // Find target cell under cursor
+                        overlay.drag_ghost = None;
+                        for &(rx, ry, rw, rh, _) in &overlay.tile_rects {
+                            if x >= rx && x < rx + rw && y >= ry && y < ry + rh {
+                                overlay.drag_ghost = Some((rx, ry, rw, rh));
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             LRESULT(0)
@@ -438,19 +477,12 @@ unsafe extern "system" fn border_wnd_proc(
                     }
                 }
 
-                // Check if on a tiled window for move/swap
+                // Check if on a tiled window for move/swap/drag
                 for &(rx, ry, rw, rh, win_hwnd) in &overlay.tile_rects {
                     if x >= rx && x < rx + rw && y >= ry && y < ry + rh {
-                        if let Some(src) = overlay.move_source {
-                            if src != win_hwnd {
-                                // Swap move_source with clicked window
-                                let _ = PostMessageW(hwnd, WM_SWAP_WINDOWS, WPARAM(src.0 as usize), LPARAM(win_hwnd.0 as isize));
-                            }
-                            overlay.move_source = None;
-                        } else {
-                            overlay.move_source = Some(win_hwnd);
-                        }
-                        return LRESULT(0);
+                        overlay.drag_start = Some((x, y, win_hwnd));
+                        overlay.move_source = Some(win_hwnd);
+                        return LRESULT(1);
                     }
                 }
 
@@ -473,6 +505,43 @@ unsafe extern "system" fn border_wnd_proc(
                 let overlay = &mut *ptr;
                 if overlay.resize_target.is_some() {
                     overlay.resize_target = None;
+                }
+                // Handle drag move
+                if overlay.drag_active {
+                    if let Some((_sx, _sy, src_hwnd)) = overlay.drag_start {
+                        if let Some((tx, ty, tw, th)) = overlay.drag_ghost {
+                            for &(rx, ry, rw, rh, tgt_hwnd) in &overlay.tile_rects {
+                                if rx == tx && ry == ty && rw == tw && rh == th {
+                                    let _ = PostMessageW(hwnd, WM_DRAG_MOVE,
+                                        WPARAM(src_hwnd.0 as usize),
+                                        LPARAM(tgt_hwnd.0 as isize));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    overlay.drag_active = false;
+                    overlay.drag_start = None;
+                    overlay.drag_ghost = None;
+                } else {
+                    // Quick click without drag — swap windows
+                    if let Some(src) = overlay.move_source {
+                        for &(_rx, _ry, _rw, _rh, win_hwnd) in &overlay.tile_rects {
+                            let cx = ((lparam.0 & 0xFFFF) as i32);
+                            let cy = (((lparam.0 >> 16) & 0xFFFF) as i32);
+                            for &(rx, ry, rw, rh, wh) in &overlay.tile_rects {
+                                if cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh {
+                                    if src != wh {
+                                        let _ = PostMessageW(hwnd, WM_SWAP_WINDOWS,
+                                            WPARAM(src.0 as usize),
+                                            LPARAM(wh.0 as isize));
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        overlay.move_source = None;
+                    }
                 }
             }
             LRESULT(0)

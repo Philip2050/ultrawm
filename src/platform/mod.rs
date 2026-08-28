@@ -481,6 +481,13 @@ impl Platform {
                         self.swap_windows(src_hwnd, tgt_hwnd);
                     }
 
+                    // Handle window drag-move from border overlay
+                    if msg.message == border::WM_DRAG_MOVE {
+                        let src_hwnd = HWND(msg.wParam.0 as *mut _);
+                        let tgt_hwnd = HWND(msg.lParam.0 as *mut _);
+                        self.drag_move_window(src_hwnd, tgt_hwnd);
+                    }
+
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 } else {
@@ -1309,7 +1316,37 @@ impl Platform {
                 info!("Swapped windows: {} <-> {}", src_id, tgt_id);
             }
         }
-        self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+    }
+
+    pub fn drag_move_window(&mut self, src_hwnd: HWND, tgt_hwnd: HWND) {
+        let src_wrapper = HWnd(src_hwnd);
+        let tgt_wrapper = HWnd(tgt_hwnd);
+
+        let src_id = self.windows.get(&src_wrapper).map(|i| i.id);
+        let tgt_id = self.windows.get(&tgt_wrapper).map(|i| i.id);
+
+        if let (Some(src_id), Some(tgt_id)) = (src_id, tgt_id) {
+            let grid = self.current_grid();
+            let src_cell = grid.window_positions.get(&src_id).copied();
+            let tgt_cell = grid.window_positions.get(&tgt_id).copied();
+
+            if let (Some(src_cell), Some(tgt_cell)) = (src_cell, tgt_cell) {
+                // Remove source from its cell, put target in source's cell
+                grid.window_positions.insert(src_id, tgt_cell);
+                grid.cells.remove(&src_cell);
+                grid.cells.insert(tgt_cell, src_id);
+
+                // Place target in source's cell
+                grid.window_positions.insert(tgt_id, src_cell);
+                grid.cells.remove(&tgt_cell);
+                grid.cells.insert(src_cell, tgt_id);
+
+                grid.focus_window(src_id);
+                self.swap_flash.insert(src_id, 20);
+                self.swap_flash.insert(tgt_id, 20);
+                info!("Drag-moved window {} to cell of {}", src_id, tgt_id);
+            }
+        }
     }
 
     pub fn close_focused(&mut self) {
