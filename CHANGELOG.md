@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.4.0] - 2026-08-29 — Enhanced Swap Animation
+### Added
+- Swap flash duration increased from 20 to 35 frames for more visible animation
+- Swap notification toast ("Swapped") appears after window swap
+- Flash blend is brighter — starts near-white and fades to accent color
+- Swap and drag-move both use 35-frame flash for consistent animation
+
+### Changed
+- `swap_flash` timers now count down from 35 instead of 20
+- Flash alpha uses `min(35)` instead of `min(20)` for longer fade
+- Blend factor `alpha * 0.8 + 0.2` ensures initial flash is near-white
+
 ## [7.3.0] - 2026-08-29 — Bar Click-to-Switch Workspace
 ### Added
 - Clicking on a workspace indicator in the bar switches to that workspace

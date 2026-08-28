@@ -922,8 +922,8 @@ impl Platform {
                     let flash = self.swap_flash.get(&wid).copied().unwrap_or(0);
                     let color = if flash > 0 {
                         // Flash white during swap animation, fading with timer
-                        let alpha = flash.min(20) as f32 / 20.0;
-                        blend_color(0xFFFFFFFF, if is_focused { accent_rgb } else { inactive_rgb }, alpha)
+                        let alpha = flash.min(35) as f32 / 35.0;
+                        blend_color(0xFFFFFFFF, if is_focused { accent_rgb } else { inactive_rgb }, alpha * 0.8 + 0.2)
                     } else if is_focused {
                         accent_rgb
                     } else {
@@ -1481,8 +1481,9 @@ impl Platform {
                 grid.window_positions.insert(tgt_id, src_cell);
                 grid.cells.insert(src_cell, tgt_id);
                 grid.cells.insert(tgt_cell, src_id);
-                self.swap_flash.insert(src_id, 20);
-                self.swap_flash.insert(tgt_id, 20);
+                self.swap_flash.insert(src_id, 35);
+                self.swap_flash.insert(tgt_id, 35);
+                self.notify("Swapped");
                 info!("Swapped windows: {} <-> {}", src_id, tgt_id);
             }
         }
@@ -1512,8 +1513,8 @@ impl Platform {
                 grid.cells.insert(src_cell, tgt_id);
 
                 grid.focus_window(src_id);
-                self.swap_flash.insert(src_id, 20);
-                self.swap_flash.insert(tgt_id, 20);
+                self.swap_flash.insert(src_id, 35);
+                self.swap_flash.insert(tgt_id, 35);
                 info!("Drag-moved window {} to cell of {}", src_id, tgt_id);
             }
         }
