@@ -2,6 +2,14 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.7.0] - 2026-08-28 — Dynamic Gap Adjustment
+### Added
+- **`adjust_gap(delta)`**: dynamically grow/shrink window gaps at runtime
+- `Win+,` (comma): shrink gaps by 2px (minimum 0)
+- `Win+.` (period): grow gaps by 2px (maximum 100px)
+- Gap changes apply immediately on next tiling pass
+- **IPC commands**: `grow-gap` and `shrink-gap`
+
 ## [2.6.0] - 2026-08-28 — Always-on-Top Toggle
 ### Added
 - **`toggle_always_on_top()`**: pin focused window above all others with `Win+O`

@@ -1356,6 +1356,12 @@ impl Platform {
         }
     }
 
+    pub fn adjust_gap(&mut self, delta: i32) {
+        let new_gap = (self.config.layout.gaps as i32 + delta).max(0).min(100) as u32;
+        self.config.layout.gaps = new_gap;
+        info!("Gap adjusted: {}px", new_gap);
+    }
+
     pub fn minimize_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -1423,6 +1429,14 @@ impl Platform {
                 }
                 if command == "always-on-top" {
                     self.toggle_always_on_top();
+                    return;
+                }
+                if command == "grow-gap" {
+                    self.adjust_gap(2);
+                    return;
+                }
+                if command == "shrink-gap" {
+                    self.adjust_gap(-2);
                     return;
                 }
                 match command.as_str() {

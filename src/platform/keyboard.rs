@@ -227,6 +227,16 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.toggle_always_on_top();
             return LRESULT(1);
         }
+        x if x == VK_OEM_COMMA.0 as u32 => {
+            // Comma — shrink gaps (Win+,)
+            platform.adjust_gap(-1);
+            return LRESULT(1);
+        }
+        x if x == VK_OEM_PERIOD.0 as u32 => {
+            // Period — grow gaps (Win+.)
+            platform.adjust_gap(1);
+            return LRESULT(1);
+        }
         _ => {}
     }
 
