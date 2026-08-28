@@ -135,15 +135,27 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             return LRESULT(1);
         }
         0x54 => {
-            // T — next theme (Win+T) or tab (Win+Alt+T)
+            // T — next theme (Win+T), prev theme (Win+Shift+T), or tab (Win+Alt+T)
             if alt {
                 if shift {
                     platform.untab_focused();
                 } else {
                     platform.tab_focused();
                 }
+            } else if shift {
+                platform.cycle_theme(false);
             } else {
                 platform.next_theme();
+            }
+            return LRESULT(1);
+        }
+        x if x >= 0x31 && x <= 0x34 => {
+            // 1-4 — switch workspace (Win+1/2/3/4) or move window (Win+Shift+1/2/3/4)
+            let ws = (x - 0x31) as usize;
+            if shift {
+                platform.move_focused_window_to_workspace(ws);
+            } else {
+                platform.switch_workspace(ws);
             }
             return LRESULT(1);
         }

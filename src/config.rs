@@ -64,6 +64,7 @@ pub struct KeybindsConfig {
     pub close: String,
     pub float: String,
     pub theme_next: String,
+    pub theme_prev: String,
     pub theme_picker: String,
     pub launcher: String,
 }
@@ -130,7 +131,8 @@ impl Default for Config {
                 close: "C".into(),
                 float: "C".into(),
                 theme_next: "T".into(),
-                theme_picker: "Space".into(),
+                theme_prev: "Shift+T".into(),
+                theme_picker: "G".into(),
                 launcher: "Space".into(),
             },
             theme: ThemeConfig {
