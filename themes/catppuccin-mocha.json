@@ -1,0 +1,21 @@
+{
+  "name": "catppuccin-mocha",
+  "author": "catppuccin",
+  "background": "#1e1e2e",
+  "foreground": "#cdd6f4",
+  "accent": "#cba6f7",
+  "inactive": "#45475a",
+  "urgent": "#f38ba8",
+  "shadow": "#00000066",
+  "wallpaper": null,
+  "dark_mode": true,
+  "cursor_theme": "Bibata-Modern-Classic",
+  "icon_theme": "Papirus-Dark",
+  "bar_background": "#181825",
+  "bar_foreground": "#cdd6f4",
+  "bar_height": 40,
+  "launcher_background": "#11111b",
+  "launcher_foreground": "#cdd6f4",
+  "launcher_accent": "#cba6f7",
+  "launcher_border_radius": 12
+}

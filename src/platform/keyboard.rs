@@ -1,0 +1,171 @@
+use std::ptr::null_mut;
+use windows::Win32::{
+    Foundation::*,
+    UI::{
+        Input::KeyboardAndMouse::*,
+        WindowsAndMessaging::*,
+    },
+};
+
+pub static mut PLATFORM_PTR: *mut crate::platform::Platform = std::ptr::null_mut();
+
+pub struct KeyboardHook {
+    _hook: HHOOK,
+}
+
+impl KeyboardHook {
+    pub unsafe fn install(platform: &mut crate::platform::Platform) -> anyhow::Result<Self> {
+        PLATFORM_PTR = platform as *mut _;
+        let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), HINSTANCE(null_mut()), 0)
+            .map_err(|e| anyhow::anyhow!("Failed to install keyboard hook: {:?}", e))?;
+        log::debug!("Keyboard hook installed");
+        Ok(Self { _hook: hook })
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if ncode < 0 {
+        return CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam);
+    }
+
+    let kb = &*(lparam.0 as *const KBDLLHOOKSTRUCT);
+    let vk = kb.vkCode as u32;
+    let pressed = wparam.0 == WM_KEYDOWN as usize || wparam.0 == WM_SYSKEYDOWN as usize;
+
+    if !pressed {
+        return CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam);
+    }
+
+    let win = (GetKeyState(VK_LWIN.0 as i32) & 0x8000u16 as i16) != 0
+        || (GetKeyState(VK_RWIN.0 as i32) & 0x8000u16 as i16) != 0;
+    let ctrl = (GetKeyState(VK_CONTROL.0 as i32) & 0x8000u16 as i16) != 0;
+    let shift = (GetKeyState(VK_SHIFT.0 as i32) & 0x8000u16 as i16) != 0;
+
+    if !win && vk != VK_LWIN.0 as u32 && vk != VK_RWIN.0 as u32 {
+        return CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam);
+    }
+
+    // Swallow the Win key itself to prevent Start Menu
+    if vk == VK_LWIN.0 as u32 || vk == VK_RWIN.0 as u32 {
+        return LRESULT(1);
+    }
+
+    let platform = match PLATFORM_PTR.as_mut() {
+        Some(p) => p,
+        None => return CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam),
+    };
+
+    match vk {
+        x if x == VK_ESCAPE.0 as u32 => {
+            if platform.overview {
+                platform.toggle_overview();
+                return LRESULT(1);
+            }
+        }
+        x if x == VK_LEFT.0 as u32 => {
+            if ctrl {
+                platform.pan_camera(0, -1);
+            } else if shift {
+                platform.move_window(0, -1);
+            } else {
+                platform.move_focus(0, -1);
+            }
+            return LRESULT(1);
+        }
+        x if x == VK_RIGHT.0 as u32 => {
+            if ctrl {
+                platform.pan_camera(0, 1);
+            } else if shift {
+                platform.move_window(0, 1);
+            } else {
+                platform.move_focus(0, 1);
+            }
+            return LRESULT(1);
+        }
+        x if x == VK_UP.0 as u32 => {
+            if ctrl {
+                platform.pan_camera(-1, 0);
+            } else if shift {
+                platform.move_window(-1, 0);
+            } else {
+                platform.move_focus(-1, 0);
+            }
+            return LRESULT(1);
+        }
+        x if x == VK_DOWN.0 as u32 => {
+            if ctrl {
+                platform.pan_camera(1, 0);
+            } else if shift {
+                platform.move_window(1, 0);
+            } else {
+                platform.move_focus(1, 0);
+            }
+            return LRESULT(1);
+        }
+        x if x == VK_OEM_MINUS.0 as u32 => {
+            if shift {
+                platform.resize_height(false);
+            } else {
+                platform.resize_width(false);
+            }
+            return LRESULT(1);
+        }
+        x if x == VK_OEM_PLUS.0 as u32 => {
+            if shift {
+                platform.resize_height(true);
+            } else {
+                platform.resize_width(true);
+            }
+            return LRESULT(1);
+        }
+        0x46 => {
+            // F — fullscreen toggle
+            platform.toggle_fullscreen();
+            return LRESULT(1);
+        }
+        0x43 => {
+            // C — close / float
+            if shift {
+                platform.toggle_floating();
+            } else {
+                platform.close_focused();
+            }
+            return LRESULT(1);
+        }
+        0x54 => {
+            // T — next theme
+            log::debug!("Next theme");
+            return LRESULT(1);
+        }
+        0x47 => {
+            // G — theme picker
+            platform.toggle_theme_picker();
+            return LRESULT(1);
+        }
+        0x20 => {
+            // Space — launcher
+            platform.toggle_launcher();
+            return LRESULT(1);
+        }
+        0x57 => {
+            // W — overview toggle
+            platform.toggle_overview();
+            return LRESULT(1);
+        }
+        0x53 => {
+            // S — scratchpad toggle
+            platform.toggle_scratchpad();
+            return LRESULT(1);
+        }
+        0x31..=0x34 => {
+            // 1-4 — switch workspace
+            let ws = (vk - 0x31) as usize;
+            platform.switch_workspace(ws);
+            return LRESULT(1);
+        }
+        _ => {}
+    }
+
+    CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam)
+}
