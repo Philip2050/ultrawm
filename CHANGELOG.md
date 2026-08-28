@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.7.0] - 2026-08-29 — Configurable Layout Algorithm: Auto-split and Default Split Direction
+### Added
+- **default_split_dir**: "vertical" (default) or "horizontal" — controls auto-split direction
+- **auto_split**: when true, new windows automatically split the focused window's cell
+- Auto-split places new window in the split cell and focuses it
+- Supports both vertical (stack) and horizontal (side-by-side) auto-splitting
+
 ## [4.6.0] - 2026-08-29 — IPC Command Expansion: set-gap, set-corner-radius, set-border-width
 ### Added
 - **set-gap \<value\>**: dynamically adjust gaps between tiled windows at runtime

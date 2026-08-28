@@ -53,6 +53,8 @@ pub struct LayoutConfig {
     pub workspace_count: usize,
     pub default_float_width: u32,
     pub default_float_height: u32,
+    pub default_split_dir: String,
+    pub auto_split: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -131,6 +133,8 @@ impl Default for Config {
                 workspace_count: 4,
                 default_float_width: 800,
                 default_float_height: 600,
+                default_split_dir: "vertical".into(),
+                auto_split: false,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

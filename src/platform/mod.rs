@@ -990,6 +990,20 @@ impl Platform {
 
                 let grid = &mut self.monitor_workspaces[mon_idx].grids[ws];
                 {
+                    // Auto-split: if enabled, split focused window instead of placing on grid
+                    if self.config.layout.auto_split {
+                        if let Some(focused_wid) = grid.focused_window {
+                            if focused_wid != wid {
+                                let dir = if self.config.layout.default_split_dir == "horizontal" {
+                                    crate::layout::SplitDir::Horizontal
+                                } else {
+                                    crate::layout::SplitDir::Vertical
+                                };
+                                let _ = grid.split_cell(focused_wid, dir);
+                                grid.focus_window(wid);
+                            }
+                        }
+                    }
                     grid.place_window(wid);
 
                     // Restore state from session if available
