@@ -105,6 +105,7 @@ pub struct MonitorInfo {
     pub work_right: i32,
     pub work_bottom: i32,
     pub dpi: u32,
+    pub scale_factor: f32,
 }
 
 impl MonitorInfo {
@@ -112,6 +113,8 @@ impl MonitorInfo {
     pub fn height(&self) -> i32 { self.bottom - self.top }
     pub fn work_width(&self) -> i32 { self.work_right - self.work_left }
     pub fn work_height(&self) -> i32 { self.work_bottom - self.work_top }
+    pub fn effective_width(&self) -> i32 { (self.width() as f32 * self.scale_factor) as i32 }
+    pub fn effective_height(&self) -> i32 { (self.height() as f32 * self.scale_factor) as i32 }
 }
 
 pub struct Platform {
@@ -2245,6 +2248,7 @@ fn enumerate_monitors() -> anyhow::Result<Vec<MonitorInfo>> {
             work_right: wr,
             work_bottom: wb,
             dpi: 96,
+            scale_factor: 1.0,
         });
     }
     Ok(monitors)
@@ -2263,6 +2267,7 @@ unsafe extern "system" fn enum_monitors_proc(
         let mut dpi_x = 96u32;
         let mut dpi_y = 96u32;
         let _ = GetDpiForMonitor(hmonitor, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y);
+        let scale = dpi_x as f32 / 96.0;
         monitors.push(MonitorInfo {
             handle: hmonitor,
             left: mi.rcMonitor.left,
@@ -2274,6 +2279,7 @@ unsafe extern "system" fn enum_monitors_proc(
             work_right: mi.rcWork.right,
             work_bottom: mi.rcWork.bottom,
             dpi: dpi_x,
+            scale_factor: scale,
         });
     }
     TRUE

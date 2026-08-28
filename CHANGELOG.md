@@ -2,6 +2,14 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.8.0] - 2026-08-29 — Per-Monitor DPI Scaling with Independent Scale Factors
+### Added
+- **scale_factor** field on MonitorInfo calculated from effective DPI (dpi/96.0)
+- **effective_width()** and **effective_height()** methods for DPI-aware pixel dimensions
+- Per-monitor DPI queried via GetDpiForMonitor with MDT_EFFECTIVE_DPI
+- DPI scaling applied consistently across window placement, border overlay, and bar positioning
+- Fallback scale_factor: 1.0 for single-monitor fallback
+
 ## [4.7.0] - 2026-08-29 — Configurable Layout Algorithm: Auto-split and Default Split Direction
 ### Added
 - **default_split_dir**: "vertical" (default) or "horizontal" — controls auto-split direction
