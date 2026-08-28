@@ -134,6 +134,7 @@ pub struct Platform {
     pub window_monitors: HashMap<u64, usize>,   // wid -> monitor index
     pub anim: HashMap<u64, WindowAnimState>,
     pub swap_flash: HashMap<u64, u32>, // wid -> flash timer (countdown frames)
+    pub opacity_anim: HashMap<u64, crate::anim::SpringValue>, // wid -> opacity spring animation
     last_rounded: HashMap<u64, (i32, i32, i32)>, // wid -> (w, h, radius) last applied
     last_frame_time: std::time::Instant,
     shadow_set: HashMap<u64, bool>, // wid -> whether DWM shadow is enabled
@@ -209,6 +210,7 @@ impl Platform {
             window_monitors: HashMap::new(),
             anim: HashMap::new(),
             swap_flash: HashMap::new(),
+            opacity_anim: HashMap::new(),
             last_rounded: HashMap::new(),
             last_frame_time: std::time::Instant::now(),
             shadow_set: HashMap::new(),
@@ -934,11 +936,14 @@ impl Platform {
                     // Apply DWM blur to windows
                     let _ = enable_blur(hwnd_wrapper.0, accent_rgb);
 
-                    // Apply per-window opacity
-                    if let Some(op) = info.opacity {
-                        unsafe {
-                            let _ = SetLayeredWindowAttributes(hwnd_wrapper.0, COLORREF(0), (op * 255.0) as u8, LWA_ALPHA);
-                        }
+                    // Apply per-window opacity (with animation support)
+                    let final_op = if let Some(spring) = self.opacity_anim.get_mut(&info.id) {
+                        spring.step(1.0 / 60.0).clamp(0.0, 1.0)
+                    } else {
+                        info.opacity.unwrap_or(1.0)
+                    };
+                    unsafe {
+                        let _ = SetLayeredWindowAttributes(hwnd_wrapper.0, COLORREF(0), (final_op * 255.0) as u8, LWA_ALPHA);
                     }
                 }
             }
@@ -949,6 +954,9 @@ impl Platform {
             overlay.tile_rects = tile_rects;
             overlay.update(&border_rects);
         }
+
+        // Clean up settled opacity animations
+        self.opacity_anim.retain(|_, spring| !spring.is_settled());
     }
 
     fn tile_overview(
@@ -1304,6 +1312,36 @@ impl Platform {
 
         let wid = self.windows.get(&HWnd(hwnd)).map(|i| i.id).unwrap_or(0);
         if wid > 0 {
+            // Animate opacity: dim old focused, brighten new focused
+            let old_focused = self.focused_hwnd;
+            if let Some(old_hwnd) = old_focused {
+                if old_hwnd != HWnd(hwnd) {
+                    if let Some(old_info) = self.windows.get(&old_hwnd) {
+                        let old_wid = old_info.id;
+                        let base_opacity = old_info.opacity.unwrap_or(1.0);
+                        let target = (base_opacity * 0.7).max(0.3);
+                        self.opacity_anim.entry(old_wid).or_insert_with(|| {
+                            crate::anim::SpringValue::new(base_opacity).with_spring(crate::anim::Spring {
+                                stiffness: 200.0,
+                                damping: 25.0,
+                                mass: 1.0,
+                            })
+                        }).set_target(target);
+                    }
+                }
+            }
+            let new_info = self.windows.get(&HWnd(hwnd));
+            if let Some(info) = new_info {
+                let base_opacity = info.opacity.unwrap_or(1.0);
+                self.opacity_anim.entry(wid).or_insert_with(|| {
+                    crate::anim::SpringValue::new(base_opacity).with_spring(crate::anim::Spring {
+                        stiffness: 200.0,
+                        damping: 25.0,
+                        mass: 1.0,
+                    })
+                }).set_target(1.0);
+            }
+
             self.trigger_focus_flash(wid);
             let grid = self.current_grid();
             grid.focus_window(wid);

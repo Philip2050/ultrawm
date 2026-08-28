@@ -2,6 +2,26 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [Unreleased]
+### Planned
+- Window snapping to screen edges (resize/move windows with Win+Grab)
+- Floating window snapping with grid-based alignment
+- Dynamic workspace creation/deletion
+- Scratchpad windows (hidden terminals, launchers)
+- Window tabs in grid cells
+- Per-monitor DPI scaling
+- IPC-based screenshot/capture commands
+
+## [8.1.0] - 2026-08-29 — Per-Window Opacity Animation on Focus Change
+### Added
+- `opacity_anim: HashMap<u64, SpringValue>` on Platform for per-window opacity springs
+- `on_focus_changed` creates spring animation for old focused window (target: 70% opacity) and new focused window (target: 100% opacity)
+- `tile_all_windows` updates opacity springs each frame using `step(dt)` and applies via `SetLayeredWindowAttributes`
+- `retain` cleanup removes settled springs to avoid unnecessary work
+
+### Changed
+- Window opacity transitions smoothly with spring physics (stiffness: 200, damping: 25) instead of instant changes
+
 ## [8.0.0] - 2026-08-29 — Master-Stack Layout with Variable Cell Sizes
 ### Added
 - `LayoutMode` enum: `Grid` (equal cells) and `Master` (50/50 split)
