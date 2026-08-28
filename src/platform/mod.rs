@@ -1229,6 +1229,11 @@ impl Platform {
     }
 
     pub fn on_focus_changed(&mut self, hwnd: HWND) {
+        let old_mon = self.focused_hwnd
+            .and_then(|hw| self.window_for_hwnd(hw.0))
+            .and_then(|info| self.window_monitors.get(&info.id))
+            .copied();
+
         self.focused_hwnd = Some(HWnd(hwnd));
 
         let wid = self.windows.get(&HWnd(hwnd)).map(|i| i.id).unwrap_or(0);
@@ -1236,6 +1241,18 @@ impl Platform {
             self.trigger_focus_flash(wid);
             let grid = self.current_grid();
             grid.focus_window(wid);
+        }
+
+        // Update bar workspace indicators if focus moved to a different monitor
+        let new_mon = self.windows.get(&HWnd(hwnd))
+            .and_then(|info| self.window_monitors.get(&info.id))
+            .copied();
+        if old_mon != new_mon {
+            if let (Some(mon_idx), Some(ref bar)) = (new_mon, self.bar.as_ref()) {
+                let names = self.workspace_names(mon_idx);
+                let current = self.monitor_workspaces[mon_idx].current;
+                bar.set_workspaces(names, current);
+            }
         }
     }
 

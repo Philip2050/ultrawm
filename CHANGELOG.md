@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.0.0] - 2026-08-29 — Multi-Monitor Workspace Awareness
+### Added
+- Bar workspace indicators update when focus moves to a different monitor
+- `on_focus_changed()` detects monitor change and updates bar workspace names
+- Bar shows workspace indicators for the monitor containing the focused window
+- Compares old and new monitor of focused window to trigger bar update
+
+### Changed
+- Workspace indicators in bar now reflect the focused window's monitor
+- Focus change triggers both flash animation and workspace indicator update
+
 ## [6.5.0] - 2026-08-29 — Bar Position Configuration
 ### Added
 - Bar can be positioned at top or bottom of screen via `bar.position` config
