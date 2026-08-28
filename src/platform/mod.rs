@@ -1273,6 +1273,14 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "theme-next" {
+                    self.cycle_theme(true);
+                    return;
+                }
+                if command == "theme-prev" {
+                    self.cycle_theme(false);
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
@@ -1370,6 +1378,19 @@ impl Platform {
         }
         if let Some(ref mut sp) = self.scratchpad {
             sp.toggle();
+        }
+    }
+
+    pub fn cycle_theme(&mut self, forward: bool) {
+        if let Some(ref mgr) = self.theme_mgr {
+            let mut m = mgr.borrow_mut();
+            if forward {
+                let _ = m.next_theme();
+            } else {
+                let _ = m.prev_theme();
+            }
+            let bg = m.current_theme().background.clone();
+            let _ = crate::platform::wallpaper::apply_wallpaper(&bg);
         }
     }
 
