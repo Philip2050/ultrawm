@@ -558,7 +558,7 @@ impl Platform {
     }
 
     pub fn tile_all_windows(&mut self, accent_rgb: u32, inactive_rgb: u32) {
-        let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool)> = Vec::new();
+        let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool, Option<String>)> = Vec::new();
 
         // Overview mode: compact grid of all windows
         if self.overview {
@@ -695,7 +695,12 @@ impl Platform {
                     } else {
                         inactive_rgb
                     };
-                    border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused));
+                    let title = if is_focused {
+                        get_window_title(hwnd_wrapper.0)
+                    } else {
+                        None
+                    };
+                    border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, title));
 
                     // Apply DWM blur to windows
                     let _ = enable_blur(hwnd_wrapper.0, accent_rgb);
@@ -720,7 +725,7 @@ impl Platform {
         &mut self,
         accent_rgb: u32,
         inactive_rgb: u32,
-        border_rects: &mut Vec<(i32, i32, i32, i32, u32, bool)>,
+        border_rects: &mut Vec<(i32, i32, i32, i32, u32, bool, Option<String>)>,
     ) {
         let (wl, wt, wr, wb) = self.current_work_area();
         let vw = wr - wl;
@@ -772,7 +777,8 @@ impl Platform {
 
             let is_focused = self.focused_hwnd == Some(HWnd(*hwnd));
             let color = if is_focused { accent_rgb } else { inactive_rgb };
-            border_rects.push((x, y, cell_w, cell_h, color, is_focused));
+            let title = if is_focused { get_window_title(*hwnd) } else { None };
+            border_rects.push((x, y, cell_w, cell_h, color, is_focused, title));
         }
     }
 
@@ -1606,6 +1612,19 @@ fn enable_dwm_shadow(hwnd: HWND) {
             &disabled as *const _ as *const _,
             std::mem::size_of::<u32>() as u32,
         );
+    }
+}
+
+fn get_window_title(hwnd: HWND) -> Option<String> {
+    unsafe {
+        let len = GetWindowTextLengthW(hwnd);
+        if len == 0 {
+            return None;
+        }
+        let mut buf = vec![0u16; (len + 1) as usize];
+        let _ = GetWindowTextW(hwnd, &mut buf);
+        let title = String::from_utf16_lossy(&buf[..len as usize]);
+        if title.is_empty() { None } else { Some(title) }
     }
 }
 

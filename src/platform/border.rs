@@ -19,6 +19,7 @@ pub struct BorderOverlay {
     bitmap: HBITMAP,
     old_bitmap: HGDIOBJ,
     bits: *mut u8,
+    title_font: HFONT,
 }
 
 fn color_dim(c: u32, factor: f32) -> u32 {
@@ -75,6 +76,17 @@ impl BorderOverlay {
 
             ShowWindow(hwnd, SW_SHOW);
 
+            let title_font = CreateFontW(
+                -12, 0, 0, 0, FW_NORMAL.0 as i32,
+                0u32, 0u32, 0u32,
+                DEFAULT_CHARSET.0 as u32,
+                OUT_DEFAULT_PRECIS.0 as u32,
+                CLIP_DEFAULT_PRECIS.0 as u32,
+                DEFAULT_QUALITY.0 as u32,
+                0u32,
+                w!("Segoe UI"),
+            );
+
             Ok(Self {
                 hwnd,
                 border_width: 2,
@@ -85,15 +97,16 @@ impl BorderOverlay {
                 bitmap,
                 old_bitmap,
                 bits: bits as *mut u8,
+                title_font,
             })
         }
     }
 
-    pub fn update(&mut self, rects: &[(i32, i32, i32, i32, u32, bool)]) {
+    pub fn update(&mut self, rects: &[(i32, i32, i32, i32, u32, bool, Option<String>)]) {
         unsafe {
             std::ptr::write_bytes(self.bits, 0, (self.width * self.height * 4) as usize);
 
-            for &(x, y, w, h, color_rgb, focused) in rects {
+            for &(x, y, w, h, color_rgb, focused, ref title) in rects {
                 let bw = self.border_width;
                 let half = bw / 2;
 
@@ -140,6 +153,18 @@ impl BorderOverlay {
                     );
                     SelectObject(self.mem_dc, old_pen);
                     let _ = DeleteObject(pen);
+
+                    // Window title
+                    if let Some(ref t) = title {
+                        let old_font = SelectObject(self.mem_dc, self.title_font);
+                        SetBkMode(self.mem_dc, TRANSPARENT);
+                        SetTextColor(self.mem_dc, COLORREF(color_rgb));
+                        let text_y = y + half + 2;
+                        let text_x = x + half + 6;
+                        let mut wide: Vec<u16> = t.encode_utf16().chain(Some(0)).collect();
+                        TextOutW(self.mem_dc, text_x, text_y, &wide);
+                        SelectObject(self.mem_dc, old_font);
+                    }
                 } else {
                     let pen = CreatePen(PS_SOLID, bw, COLORREF(color_rgb));
                     let old_pen = SelectObject(self.mem_dc, pen);
@@ -213,6 +238,7 @@ impl Drop for BorderOverlay {
         unsafe {
             SelectObject(self.mem_dc, self.old_bitmap);
             DeleteObject(self.bitmap);
+            DeleteObject(self.title_font);
             DeleteDC(self.mem_dc);
             DestroyWindow(self.hwnd);
         }
