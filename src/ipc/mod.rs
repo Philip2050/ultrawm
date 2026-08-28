@@ -221,6 +221,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                             "spring_stiffness": platform.config.layout.spring_stiffness,
                             "spring_damping": platform.config.layout.spring_damping,
                             "workspace_count": platform.config.layout.workspace_count,
+                            "default_float_width": platform.config.layout.default_float_width,
+                            "default_float_height": platform.config.layout.default_float_height,
                             "center_focused": platform.config.layout.center_focused,
                             "focus_follows_mouse": platform.config.layout.focus_follows_mouse,
                         },

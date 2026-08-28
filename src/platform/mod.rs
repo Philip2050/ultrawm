@@ -1311,7 +1311,7 @@ impl Platform {
                 }
 
                 if !was_floating {
-                    // Center window on monitor at 50% monitor size
+                    // Center window on monitor at configurable default size
                     unsafe {
                         let mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
                         if !mon.is_invalid() {
@@ -1320,20 +1320,20 @@ impl Platform {
                                 ..Default::default()
                             };
                             if GetMonitorInfoW(mon, &mut mi).as_bool() {
-                                let mw = (mi.rcWork.right - mi.rcWork.left) / 2;
-                                let mh = (mi.rcWork.bottom - mi.rcWork.top) / 2;
-                                let mx = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - mw) / 2;
-                                let my = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - mh) / 2;
+                                let fw = self.config.layout.default_float_width.min((mi.rcWork.right - mi.rcWork.left) as u32);
+                                let fh = self.config.layout.default_float_height.min((mi.rcWork.bottom - mi.rcWork.top) as u32);
+                                let mx = mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - fw as i32) / 2;
+                                let my = mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) - fh as i32) / 2;
                                 if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
                                     info.saved_x = mx;
                                     info.saved_y = my;
-                                    info.saved_w = mw;
-                                    info.saved_h = mh;
+                                    info.saved_w = fw as i32;
+                                    info.saved_h = fh as i32;
                                 }
                                 let _ = SetWindowPos(
                                     hwnd,
                                     HWND_TOPMOST,
-                                    mx, my, mw, mh,
+                                    mx, my, fw as i32, fh as i32,
                                     SWP_FRAMECHANGED,
                                 );
                             }

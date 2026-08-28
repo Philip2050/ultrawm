@@ -42,6 +42,8 @@ pub struct LayoutConfig {
     pub spring_stiffness: f32,
     pub spring_damping: f32,
     pub workspace_count: usize,
+    pub default_float_width: u32,
+    pub default_float_height: u32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -115,6 +117,8 @@ impl Default for Config {
                 spring_stiffness: 180.0,
                 spring_damping: 20.0,
                 workspace_count: 4,
+                default_float_width: 800,
+                default_float_height: 600,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.4.0] - 2026-08-29 — Configurable Floating Window Size
+### Added
+- **`default_float_width` and `default_float_height`** config options: set the default size for floated windows
+- Default: 800x600, capped to monitor work area
+- Centered on monitor when toggling float
+- Example in config.toml: `default_float_width = 1024` and `default_float_height = 768`
+
 ## [3.3.0] - 2026-08-29 — Mouse-based Window Resize
 ### Added
 - **Resize tiled windows by dragging edges**: hover near a window edge (6px zone) to see resize cursor
