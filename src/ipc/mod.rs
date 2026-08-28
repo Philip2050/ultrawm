@@ -178,9 +178,19 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
             });
         }
         "get-state" => {
+            let monitor_count = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    platform.monitors.len()
+                } else {
+                    0usize
+                }
+            };
             let state = serde_json::json!({
                 "status": "running",
                 "version": env!("CARGO_PKG_VERSION"),
+                "monitors": monitor_count,
             });
             return serde_json::json!({
                 "success": true,
