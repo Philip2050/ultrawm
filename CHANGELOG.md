@@ -2,6 +2,16 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.0.0] - 2026-08-29 — Overlay Notification System with IPC and Event Notifications
+### Added
+- **Overlay notifications**: toast-style overlay in bottom-right corner with fade in/out
+- **Workspace switch notifications**: shows current workspace number on switch
+- **IPC `notify <message>` command**: trigger custom notifications externally
+- 3-second display duration with 500ms fade out
+- 200ms fade in animation on show
+- Uses layered window (UpdateLayeredWindow) with per-frame alpha updates
+- `Notifier` module with show/tick/position lifecycle
+
 ## [4.9.0] - 2026-08-29 — Idle Inhibit: Prevent Screen Lock and Sleep
 ### Added
 - **idle-inhibit IPC command**: prevents screen lock/sleep via SetThreadExecutionState

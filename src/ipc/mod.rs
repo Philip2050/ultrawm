@@ -391,6 +391,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "set-border-width" => IpcCommand::Single { command: "set-border-width".into() },
         "idle-inhibit" => IpcCommand::Single { command: "idle-inhibit".into() },
         "idle-noinhibit" => IpcCommand::Single { command: "idle-noinhibit".into() },
+        "notify" => IpcCommand::Single { command: "notify".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

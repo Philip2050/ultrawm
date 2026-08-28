@@ -22,6 +22,7 @@ pub use keyboard::KeyboardHook;
 pub use border::BorderOverlay;
 pub use bar::AppBar;
 pub use launcher::AppLauncher;
+pub use notifier::Notifier;
 pub use gesture::GestureReceiver;
 pub use theme_picker::ThemePicker;
 pub use blur::enable_blur;
@@ -31,6 +32,7 @@ mod window;
 pub mod keyboard;
 pub mod border;
 mod bar;
+mod notifier;
 mod launcher;
 mod gesture;
 mod theme_picker;
@@ -125,6 +127,7 @@ pub struct Platform {
     pub keyboard_hook: Option<keyboard::KeyboardHook>,
     pub border_overlay: Option<BorderOverlay>,
     pub bar: Option<AppBar>,
+    pub notifier: Option<Notifier>,
     // Each monitor has its own set of workspaces (independent)
     pub monitor_workspaces: Vec<MonitorWorkspaces>,
     pub window_workspaces: HashMap<u64, usize>, // wid -> workspace index (0-3)
@@ -185,6 +188,7 @@ impl Platform {
             keyboard_hook: None,
             border_overlay: None,
             bar: None,
+            notifier: None,
             monitor_workspaces,
             window_workspaces: HashMap::new(),
             window_monitors: HashMap::new(),
@@ -424,6 +428,21 @@ impl Platform {
             }
         }
 
+        // Create notifier
+        let notif_w = 300i32;
+        let notif_h = 36i32;
+        match Notifier::create(notif_w, notif_h, 0xFF1E1E2E, 0xFFCDD6F4) {
+            Ok(notifier) => {
+                let primary = self.primary_monitor().map(|m| (m.width(), m.height())).unwrap_or((1920, 1080));
+                notifier.set_position(primary.0 - notif_w - 20, primary.1 - notif_h - 20);
+                self.notifier = Some(notifier);
+                info!("Notifier created");
+            }
+            Err(e) => {
+                warn!("Notifier creation failed: {}", e);
+            }
+        }
+
         info!(
             "UltraWM initialized — {} windows managed",
             self.windows.len()
@@ -507,6 +526,9 @@ impl Platform {
             let inactive = hex_to_rgb(&theme.inactive);
             self.tile_all_windows(accent, inactive);
 
+            // Tick notifier
+            self.tick_notifier();
+
             // Workspace switch fade animation
             if self.ws_fade < 1.0 {
                 if self.ws_fade_out {
@@ -551,6 +573,7 @@ impl Platform {
                                     }
                                 }
                                 info!("Monitor {}: switched to workspace {}", mon + 1, ws + 1);
+                                self.notify(&format!("Workspace {}", ws + 1));
                             }
                             self.ws_pending_ws = None;
                             self.ws_pending_monitor = None;
@@ -1553,6 +1576,18 @@ impl Platform {
         }
     }
 
+    pub fn notify(&self, message: &str) {
+        if let Some(ref notifier) = self.notifier {
+            notifier.show(message);
+        }
+    }
+
+    pub fn tick_notifier(&self) {
+        if let Some(ref notifier) = self.notifier {
+            let _ = notifier.tick();
+        }
+    }
+
     pub fn toggle_floating(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             let was_floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
@@ -1917,6 +1952,12 @@ impl Platform {
                 }
                 if command == "idle-noinhibit" {
                     self.disable_idle_inhibit();
+                    return;
+                }
+                if command.starts_with("notify ") {
+                    if let Some(msg) = command.strip_prefix("notify ") {
+                        self.notify(msg);
+                    }
                     return;
                 }
                 match command.as_str() {
