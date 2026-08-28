@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.5.0] - 2026-08-29 — Per-Window Border Colors
+### Added
+- Each window gets a unique border color based on its exe name hash
+- Focused windows display full border color
+- Unfocused windows display dimmed (50%) border color
+- Swap flash blends white with per-window color instead of global accent
+- `border_color` field added to `WindowInfo`
+- `dim_color()` utility function for dimming border colors
+- Border color set during `manage_window` using `exe_hash_color()`
+
+### Changed
+- Border rendering uses per-window `border_color` instead of global accent/inactive
+- Title background uses per-window color (focused = full, unfocused = dimmed)
+
 ## [7.4.0] - 2026-08-29 — Enhanced Swap Animation
 ### Added
 - Swap flash duration increased from 20 to 35 frames for more visible animation

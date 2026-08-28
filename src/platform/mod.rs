@@ -920,14 +920,13 @@ impl Platform {
 
                     let is_focused = focused_hwnd == Some(hwnd_wrapper);
                     let flash = self.swap_flash.get(&wid).copied().unwrap_or(0);
+                    let base_color = if is_focused { info.border_color } else { dim_color(info.border_color, 0.5) };
                     let color = if flash > 0 {
                         // Flash white during swap animation, fading with timer
                         let alpha = flash.min(35) as f32 / 35.0;
-                        blend_color(0xFFFFFFFF, if is_focused { accent_rgb } else { inactive_rgb }, alpha * 0.8 + 0.2)
-                    } else if is_focused {
-                        accent_rgb
+                        blend_color(0xFFFFFFFF, base_color, alpha * 0.8 + 0.2)
                     } else {
-                        inactive_rgb
+                        base_color
                     };
                     let title = get_window_title(hwnd_wrapper.0);
                     border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, info.floating, title));
@@ -1046,6 +1045,7 @@ impl Platform {
                 let exe = info.exe.clone();
                 let mut win_info = info;
                 win_info.id = wid;
+                win_info.border_color = exe_hash_color(&win_info.exe);
 
                 // Apply per-app rules before inserting
                 let rule_info = win_info.clone();
@@ -2987,6 +2987,13 @@ fn blend_color(flash: u32, base: u32, t: f32) -> u32 {
     let r = (fr * t + br * (1.0 - t)) as u32;
     let g = (fg * t + bg * (1.0 - t)) as u32;
     let b = (fb * t + bb * (1.0 - t)) as u32;
+    (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
+}
+
+fn dim_color(color: u32, factor: f32) -> u32 {
+    let r = ((color & 0xFF) as f32 * factor) as u32;
+    let g = (((color >> 8) & 0xFF) as f32 * factor) as u32;
+    let b = (((color >> 16) & 0xFF) as f32 * factor) as u32;
     (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
 }
 

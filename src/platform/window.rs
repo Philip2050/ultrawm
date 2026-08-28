@@ -37,6 +37,7 @@ pub struct WindowInfo {
     pub float_y: Option<i32>,
     pub float_w: Option<u32>,
     pub float_h: Option<u32>,
+    pub border_color: u32,
 }
 
 impl WindowInfo {
@@ -111,6 +112,7 @@ impl WindowInfo {
                 float_y: None,
                 float_w: None,
                 float_h: None,
+                border_color: 0,
             })
         }
     }
