@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
     pub layout: LayoutConfig,
     pub keybinds: KeybindsConfig,
@@ -14,7 +14,7 @@ pub struct Config {
     pub last_modified: Option<SystemTime>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WindowRule {
     #[serde(alias = "match")]
     pub match_: String,
@@ -34,7 +34,7 @@ pub struct WindowRule {
     pub sticky: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LayoutConfig {
     pub gaps: u32,
     pub inner_padding: u32,
@@ -61,7 +61,7 @@ pub struct LayoutConfig {
     pub snap_edge_distance: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MonitorLayout {
     pub gaps: Option<u32>,
     pub inner_padding: Option<u32>,
@@ -70,7 +70,7 @@ pub struct MonitorLayout {
     pub corner_radius: Option<u32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct KeybindsConfig {
     pub mod_key: String,  // "win" or "alt"
     pub focus_left: String,
@@ -99,13 +99,13 @@ pub struct KeybindsConfig {
     pub launcher: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ThemeConfig {
     pub default: String,
     pub cycle_hotkey: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BarConfig {
     pub enabled: bool,
     pub height: u32,
@@ -117,7 +117,7 @@ pub struct BarConfig {
     pub show_battery: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LauncherConfig {
     pub enabled: bool,
     pub hotkey: String,
@@ -244,6 +244,17 @@ impl Config {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Save config to config.toml. Creates parent dir if needed.
+    pub fn save(&self) -> anyhow::Result<()> {
+        let path = config_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let toml_str = toml::to_string_pretty(self)?;
+        std::fs::write(&path, toml_str)?;
         Ok(())
     }
 

@@ -2506,6 +2506,7 @@ impl Platform {
         let new_gap = (self.config.layout.gaps as i32 + delta).max(0).min(100) as u32;
         self.config.layout.gaps = new_gap;
         info!("Gap adjusted: {}px", new_gap);
+        let _ = self.config.save();
     }
 
     fn apply_rule_from_json(&mut self, json: serde_json::Value) {
@@ -2669,6 +2670,14 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "save-config" {
+                    if let Err(e) = self.config.save() {
+                        warn!("Config save failed: {}", e);
+                    } else {
+                        info!("Config saved via IPC");
+                    }
+                    return;
+                }
                 if command.starts_with("set-opacity ") {
                     if let Some(val) = command.strip_prefix("set-opacity ") {
                         if let Ok(op) = val.parse::<f32>() {
@@ -2699,6 +2708,7 @@ impl Platform {
                         if let Ok(gap) = val.parse::<u32>() {
                             self.config.layout.gaps = gap;
                             info!("Gap set to {}", gap);
+                            let _ = self.config.save();
                         }
                     }
                     return;
@@ -2711,6 +2721,7 @@ impl Platform {
                                 overlay.border_radius = r as i32;
                             }
                             info!("Corner radius set to {}", r);
+                            let _ = self.config.save();
                         }
                     }
                     return;
@@ -2723,6 +2734,7 @@ impl Platform {
                                 overlay.border_width = bw as i32;
                             }
                             info!("Border width set to {}", bw);
+                            let _ = self.config.save();
                         }
                     }
                     return;

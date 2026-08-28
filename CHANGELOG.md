@@ -97,6 +97,22 @@ All notable changes to UltraWM will be documented in this file.
 - Keyboard hook uses `platform.keybinds` instead of hardcoded VK constants
 - Modifier keys (Shift/Ctrl/Alt) still handled separately — only base key is configurable
 
+## [9.1.0] - 2026-08-29 — IPC Config Write Commands Persist to Disk
+### Added
+- `Config::save()` writes config back to config.toml with pretty TOML formatting
+- `save-config` IPC command persists current config to disk
+- Config-modifying IPC commands now auto-persist:
+  - `set-gap <value>` — saves after changing gap
+  - `set-corner-radius <value>` — saves after changing corner radius
+  - `set-border-width <value>` — saves after changing border width
+- `adjust_gap(delta)` also persists on every gap change
+- All config structs derive `Serialize` for TOML output
+
+### Changed
+- IPC `reload-config` re-parses keybinds after loading new config
+- Config save creates parent directory if it doesn't exist
+- Failed saves are logged as warnings but don't crash the WM
+
 ## [Unreleased]
 ### Planned
 - Config hot-reload notification in bar
