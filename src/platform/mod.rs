@@ -35,6 +35,7 @@ mod gesture;
 mod theme_picker;
 mod blur;
 mod scratchpad;
+mod wallpaper;
 
 #[derive(Debug, Clone, Copy)]
 struct HWnd(HWND);
@@ -1275,6 +1276,8 @@ impl Platform {
         if let Some(ref mgr) = self.theme_mgr {
             let mut m = mgr.borrow_mut();
             let _ = m.apply_idx(idx);
+            let bg = m.current_theme().background.clone();
+            let _ = wallpaper::apply_wallpaper(&bg);
         }
     }
 
@@ -1282,6 +1285,8 @@ impl Platform {
         if let Some(ref mgr) = self.theme_mgr {
             let mut m = mgr.borrow_mut();
             let _ = m.next_theme();
+            let bg = m.current_theme().background.clone();
+            let _ = wallpaper::apply_wallpaper(&bg);
         }
     }
 
