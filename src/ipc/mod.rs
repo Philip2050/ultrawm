@@ -179,6 +179,16 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 ),
             });
         }
+        "get-workspaces" => {
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": serde_json::json!({
+                    "count": 4,
+                    "names": ["1", "2", "3", "4"],
+                }),
+            });
+        }
         _ => {}
     }
 
