@@ -45,6 +45,22 @@ All notable changes to UltraWM will be documented in this file.
 ### Changed
 - `set_workspace_count` reused internally for add/remove (handles grid allocation/migration)
 
+## [8.5.0] - 2026-08-29 — Per-Monitor DPI Scaling
+### Added
+- Per-monitor DPI detection via `GetDpiForMonitor` in `enumerate_monitors`
+- `dpi` and `scale_factor` fields on `MonitorInfo` populated from system
+- `get_monitor_dpi(hmonitor)` returns DPI for a specific monitor
+- `effective_width()` and `effective_height()` apply scale factor to dimensions
+- `WM_DPICHANGED` handler re-enumerates monitors on DPI change
+- `on_dpi_changed()` rescales floating window positions by DPI ratio
+- `get-dpi` IPC command returns per-monitor DPI and scale factor info
+- DPI info included in `get-config` IPC response
+- DPI-aware snapping that uses effective pixel coordinates
+
+### Changed
+- App uses `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2` for correct per-monitor rendering
+- Floating windows auto-rescale when dragged between monitors with different DPI
+
 ## [Unreleased]
 ### Planned
 - Window snapping to screen edges (resize/move windows with Win+Grab)

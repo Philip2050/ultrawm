@@ -246,6 +246,38 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "data": state,
             });
         }
+        "get-dpi" => {
+            let dpi_info = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let mut monitors = Vec::new();
+                    for (i, m) in platform.monitors.iter().enumerate() {
+                        monitors.push(serde_json::json!({
+                            "index": i,
+                            "dpi": m.dpi,
+                            "scale_factor": m.scale_factor,
+                            "width": m.width(),
+                            "height": m.height(),
+                            "left": m.left,
+                            "top": m.top,
+                            "right": m.right,
+                            "bottom": m.bottom,
+                        }));
+                    }
+                    monitors
+                } else {
+                    Vec::new()
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": {
+                    "monitors": dpi_info,
+                },
+            });
+        }
         "get-config" => {
             let config_data = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
@@ -270,6 +302,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                             "default_float_height": platform.config.layout.default_float_height,
                             "center_focused": platform.config.layout.center_focused,
                             "focus_follows_mouse": platform.config.layout.focus_follows_mouse,
+                            "snap_grid_size": platform.config.layout.snap_grid_size,
+                            "snap_edge_distance": platform.config.layout.snap_edge_distance,
                         },
                         "bar": {
                             "enabled": platform.config.bar.enabled,
@@ -289,7 +323,11 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                             "fuzzy_search": platform.config.launcher.fuzzy_search,
                             "show_recent": platform.config.launcher.show_recent,
                         },
-                        "monitors": monitor_count,
+                        "monitors": {
+                            "count": monitor_count,
+                            "dpi": platform.monitors.iter().map(|m| m.dpi).collect::<Vec<_>>(),
+                            "scale_factors": platform.monitors.iter().map(|m| m.scale_factor).collect::<Vec<_>>(),
+                        },
                         "windows": window_count,
                     })
                 } else {

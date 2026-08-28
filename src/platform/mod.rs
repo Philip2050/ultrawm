@@ -354,6 +354,51 @@ impl Platform {
         self.primary_monitor()
     }
 
+    /// Get DPI for a specific monitor handle
+    pub fn get_monitor_dpi(&self, hmonitor: HMONITOR) -> u32 {
+        for m in &self.monitors {
+            if m.handle == hmonitor {
+                return m.dpi;
+            }
+        }
+        unsafe { GetDpiForSystem() }
+    }
+
+    /// Handle DPI change notification — re-enumerate monitors and re-tile
+    pub fn on_dpi_changed(&mut self) {
+        info!("DPI changed, re-enumerating monitors");
+        if let Ok(new_monitors) = enumerate_monitors() {
+            // Preserve window positions relative to new DPI
+            let old_scales: Vec<f32> = self.monitors.iter().map(|m| m.scale_factor).collect();
+            let new_scales: Vec<f32> = new_monitors.iter().map(|m| m.scale_factor).collect();
+
+            self.monitors = new_monitors;
+
+            // Re-apply window positions scaled for new DPI
+            for (&hwnd_wrapper, info) in &mut self.windows {
+                if info.floating {
+                    if let (Some(fx), Some(fy), Some(fw), Some(fh)) =
+                        (info.float_x, info.float_y, info.float_w, info.float_h) {
+                        let mon_idx = self.window_monitors.get(&info.id).copied().unwrap_or(0);
+                        let old_scale = old_scales.get(mon_idx).copied().unwrap_or(1.0);
+                        let new_scale = self.monitors.get(mon_idx).map(|m| m.scale_factor).unwrap_or(1.0);
+                        if old_scale > 0.0 {
+                            let ratio = new_scale / old_scale;
+                            let new_fw = (fw as f32 * ratio) as u32;
+                            let new_fh = (fh as f32 * ratio) as u32;
+                            let new_fx = (fx as f32 * ratio) as i32;
+                            let new_fy = (fy as f32 * ratio) as i32;
+                            info.float_w = Some(new_fw);
+                            info.float_h = Some(new_fh);
+                            info.float_x = Some(new_fx);
+                            info.float_y = Some(new_fy);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub fn current_work_area(&self) -> (i32, i32, i32, i32) {
         let pad = self.config.layout.outer_padding as i32;
         if let Some(hwnd) = self.focused_hwnd {
@@ -576,6 +621,11 @@ impl Platform {
                     if msg.message == WM_BAR_WORKSPACE_CLICK {
                         let ws_idx = msg.wParam.0 as usize;
                         self.switch_workspace(ws_idx);
+                    }
+
+                    // Handle DPI change notification
+                    if msg.message == WM_DPICHANGED {
+                        self.on_dpi_changed();
                     }
 
                     let _ = TranslateMessage(&msg);
