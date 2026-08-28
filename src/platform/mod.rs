@@ -1296,6 +1296,10 @@ impl Platform {
                     self.cycle_theme(false);
                     return;
                 }
+                if command == "sticky" {
+                    self.toggle_sticky();
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
