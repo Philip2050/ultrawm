@@ -61,6 +61,60 @@ All notable changes to UltraWM will be documented in this file.
 - App launcher now uses `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with 240/255 alpha (94% opacity)
 - Launcher window has subtle transparency matching the bar aesthetic
 
+## [1.3.0] - 2026-08-28 — Title Background in Border Overlay
+### Changed
+- Window title now has a filled background rect (accent color) for better readability
+- White text on colored background for high contrast
+- Text width measured dynamically for proper background sizing
+
+## [1.2.0] - 2026-08-28 — Configurable Border Width
+### Added
+- **`border_width` config option**: adjustable border thickness (default: 2px)
+- BorderOverlay reads border_width from LayoutConfig on initialization
+- Config hot-reload updates border width and corner radius
+
+## [1.1.0] - 2026-08-28 — IPC Workspace Commands
+### Added
+- **`workspace-1` through `workspace-4`** IPC commands for workspace switching
+- **`move-window-to-workspace N`** IPC command to relocate focused window
+- Window removed from old workspace grid and placed at (0,0) in new grid
+- Window visibility managed based on current workspace state
+
+## [1.0.0] - 2026-08-28 — Workspace Switch Fade Animation
+### Added
+- **Smooth workspace switch animation**: overlay fades out, workspace swaps, overlay fades in
+- ~10 frame transition at 60fps for snappy feel
+- `ws_fade` state tracks current overlay opacity (0.0-1.0)
+- Fade direction tracked with `ws_fade_out` flag
+
+## [0.9.0] - 2026-08-28 — Window Title Rendering in Border Overlay
+### Added
+- **Window title in border**: focused window title rendered in top border area
+- Uses GDI `TextOutW` with Segoe UI 12px font
+- Title uses accent color matching the focused window border
+- `get_window_title` helper retrieves title via `GetWindowTextW`
+
+## [0.8.0] - 2026-08-28 — Outer Padding for Tiled Windows
+### Added
+- **`outer_padding` config option**: margin between tiled layout and screen edges (default: 0)
+- Applied via `current_work_area()` which shrinks the usable area
+- Works across all monitors
+
+## [0.7.0] - 2026-08-28 — Inner Window Padding
+### Added
+- **`inner_padding` config option**: margin inside window borders (default: 4px)
+- Windows inset by padding on all sides for visual breathing room
+- Corner radius automatically reduced by padding amount
+- Applied in both tiled and overview modes
+- Config hot-reload includes inner_padding
+
+## [0.6.0] - 2026-08-28 — Wallpaper Engine
+### Added
+- **Wallpaper engine**: generates 1920x1080 gradient BMP from theme background color
+- Applies wallpaper via `SystemParametersInfoW(SPI_SETDESKWALLPAPER)`
+- Automatically updates on theme switch
+- BMP format: 24-bit BGR, bottom-up, with row padding
+
 ## [0.5.6] - 2026-08-28 — Doctor Diagnostics Overhaul
 
 ### Added

@@ -37,6 +37,13 @@ An **ultimate tiling window manager for Windows 11** that combines:
 - Bar transparency (configurable via bar.transparency)
 - Touchpad gesture support (pan, pinch, two-finger tap)
 - Shell replacement support
+- Inner/outer padding for visual breathing room
+- Window title rendering in border overlay with colored background
+- Workspace switch fade animation
+- IPC workspace commands (workspace-1..4, move-window-to-workspace)
+- Configurable border width
+- Live wallpaper engine (gradient from theme background color)
+- Expanded doctor diagnostics
 
 ## Keybindings
 
@@ -60,6 +67,12 @@ An **ultimate tiling window manager for Windows 11** that combines:
 | `Win + Shift + -` | Shrink height |
 | `Win + Shift + =` | Grow height |
 | `Win + Alt + H` | Split focused cell horizontally |
+| `Win + Alt + V` | Split focused cell vertically |
+| `Win + Alt + U` | Unsplit focused cell |
+| `Win + Alt + T` | Tab focused window with neighbor |
+| `Win + Alt + Shift + T` | Untab focused window |
+| `Win + 1/2/3/4` | Switch to workspace 1/2/3/4 |
+| `Win + Shift + 1/2/3/4` | Move focused window to workspace 1/2/3/4 |
 | `Win + Alt + V` | Split focused cell vertically |
 | `Win + Alt + U` | Unsplit focused cell |
 | `Win + Alt + T` | Tab focused window with neighbor |
@@ -93,12 +106,15 @@ cargo run -- --theme     # cycle theme
 Example config.toml:
 ```toml
 [layout]
-gaps = 8
-peek_x = 80
-peek_y = 40
-center_focused = false
-focus_follows_mouse = false
-corner_radius = 8
+gaps = 8              # Gap between tiled windows
+inner_padding = 4     # Padding inside each window border
+outer_padding = 0     # Padding from screen edges
+border_width = 2      # Border thickness in pixels
+corner_radius = 8     # Window corner radius in pixels
+peek_x = 80           # Horizontal peek for off-screen cells
+peek_y = 40           # Vertical peek for off-screen cells
+center_focused = false # Center focused window in viewport
+focus_follows_mouse = false # Auto-focus on mouse hover
 
 [keybinds]
 mod_key = "win"
@@ -136,7 +152,7 @@ max_width = 1200
 
 ## Themes
 
-Themes in `%USERPROFILE%\.config\ultrawm\themes\` (JSON). Ships with 5 built-in themes. JSON schema matches the `Theme` struct.
+Themes in `%USERPROFILE%\.config\ultrawm\themes\` (JSON). Ships with 12 built-in themes. JSON schema matches the `Theme` struct.
 
 ## IPC Commands
 
@@ -153,6 +169,8 @@ echo next-theme > \\.\pipe\ultrawm-ipc
 {"command": "get-state"}
 {"command": "focus-left"}
 {"command": "split-horizontal"}
+{"command": "workspace-2"}
+{"command": "move-window-to-workspace 3"}
 ```
 
 Available commands:
@@ -191,7 +209,7 @@ src/
 │   ├── scratchpad.rs   # Scratchpad windows
 │   └── gesture.rs      # Gesture receiver (placeholder)
 ├── theme/
-│   └── mod.rs          # Theme engine + 5 built-in themes
+│   └── mod.rs          # Theme engine + 12 built-in themes
 └── ipc/
     └── mod.rs          # Named pipe IPC server
 ```
