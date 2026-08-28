@@ -61,6 +61,18 @@ All notable changes to UltraWM will be documented in this file.
 - App uses `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2` for correct per-monitor rendering
 - Floating windows auto-rescale when dragged between monitors with different DPI
 
+## [8.6.0] - 2026-08-29 — IPC Screenshot Capture
+### Added
+- `screenshot` IPC command captures focused window to PNG
+- Screenshots saved to `%Pictures%/UltraWM/screenshot_YYYYMMDD_HHMMSS.png`
+- Uses BitBlt + GetDIBits for pixel capture, png crate for encoding
+- BGRA to RGBA color conversion for correct PNG output
+- Returns file path and success status in IPC response
+- Win32_Graphics_Gdi and Win32_Graphics_Printing features added to Cargo.toml
+
+### Changed
+- `get-dpi` and `screenshot` return data directly from IPC thread using PLATFORM_PTR
+
 ## [Unreleased]
 ### Planned
 - Window snapping to screen edges (resize/move windows with Win+Grab)

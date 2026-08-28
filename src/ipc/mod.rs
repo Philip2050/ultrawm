@@ -278,6 +278,14 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 },
             });
         }
+        "screenshot" => {
+            let result = capture_screenshot();
+            return serde_json::json!({
+                "success": result.get("success").and_then(|v| v.as_bool()).unwrap_or(false),
+                "command": cmd_str,
+                "data": result,
+            });
+        }
         "get-config" => {
             let config_data = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
@@ -537,4 +545,113 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
     }
 
     TRUE
+}
+
+fn capture_screenshot() -> serde_json::Value {
+    unsafe {
+        use windows::Win32::{
+            Foundation::*,
+            Graphics::Gdi::*,
+            UI::WindowsAndMessaging::*,
+        };
+
+        let ptr = crate::platform::keyboard::PLATFORM_PTR;
+        if ptr.is_null() {
+            return serde_json::json!({
+                "success": false,
+                "message": "platform not available",
+                "path": null,
+            });
+        }
+
+        let platform = &*ptr;
+        let hwnd = match platform.focused_hwnd {
+            Some(h) => h.0,
+            None => {
+                return serde_json::json!({
+                    "success": false,
+                    "message": "no focused window",
+                    "path": null,
+                });
+            }
+        };
+
+        let mut rect = RECT::default();
+        if GetWindowRect(hwnd, &mut rect).is_err() {
+            return serde_json::json!({
+                "success": false,
+                "message": "failed to get window rect",
+                "path": null,
+            });
+        }
+
+        let w = (rect.right - rect.left).max(1);
+        let h = (rect.bottom - rect.top).max(1);
+
+        let hdc_screen = GetDC(HWND(std::ptr::null_mut()));
+        let hdc_mem = CreateCompatibleDC(hdc_screen);
+        let hbm = CreateCompatibleBitmap(hdc_screen, w, h);
+        let old_bmp = SelectObject(hdc_mem, hbm);
+
+        // Capture from screen at window position
+        let _ = BitBlt(hdc_mem, 0, 0, w, h, hdc_screen, rect.left, rect.top, SRCCOPY);
+
+        // Extract pixel data
+        let mut bmi = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: 0u32,
+                biSizeImage: 0,
+                biXPelsPerMeter: 0,
+                biYPelsPerMeter: 0,
+                biClrUsed: 0,
+                biClrImportant: 0,
+            },
+            bmiColors: [Default::default(); 1],
+        };
+
+        let mut pixels = vec![0u8; (w * h * 4) as usize];
+        let _ = GetDIBits(hdc_mem, hbm, 0, h as u32, Some(pixels.as_mut_ptr() as *mut _), &mut bmi, DIB_RGB_COLORS);
+
+        // Convert BGRA to RGBA
+        for px in pixels.chunks_exact_mut(4) {
+            px.swap(0, 2);
+        }
+
+        // Save PNG
+        let screenshots_dir = match dirs::picture_dir() {
+            Some(d) => d.join("UltraWM"),
+            None => std::path::PathBuf::from(".").join("UltraWM"),
+        };
+        let _ = std::fs::create_dir_all(&screenshots_dir);
+
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+        let path = screenshots_dir.join(format!("screenshot_{}.png", timestamp));
+
+        if let Ok(file) = std::fs::File::create(&path) {
+            let mut encoder = png::Encoder::new(file, w as u32, h as u32);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            if let Ok(mut writer) = encoder.write_header() {
+                let _ = writer.write_image_data(&pixels);
+            }
+        }
+
+        // Cleanup
+        SelectObject(hdc_mem, old_bmp);
+        DeleteObject(hbm);
+        DeleteDC(hdc_mem);
+        ReleaseDC(HWND(std::ptr::null_mut()), hdc_screen);
+
+        let path_str = path.to_string_lossy().to_string();
+        serde_json::json!({
+            "success": true,
+            "message": format!("screenshot saved: {}", path_str),
+            "path": path_str,
+        })
+    }
 }

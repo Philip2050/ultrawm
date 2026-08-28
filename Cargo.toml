@@ -1,6 +1,6 @@
 [package]
 name = "ultrawm"
-version = "8.5.0"
+version = "8.6.0"
 edition = "2021"
 authors = ["Blake"]
 license = "MIT"
@@ -31,6 +31,7 @@ windows = { version = "0.58", features = [
     "Win32_System_Power",
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Gdi",
+    "Win32_Graphics_Printing",
     "Win32_Storage_FileSystem",
     "Win32_System_Pipes",
     "Win32_Security",
