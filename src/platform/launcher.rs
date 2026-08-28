@@ -46,7 +46,7 @@ impl AppLauncher {
             RegisterClassW(&class);
 
             let hwnd = CreateWindowExW(
-                WINDOW_EX_STYLE(WS_EX_TOPMOST.0),
+                WINDOW_EX_STYLE((WS_EX_TOPMOST.0 | WS_EX_LAYERED.0)),
                 w!("UltraWMLauncher"),
                 w!("UltraWM Launcher"),
                 WINDOW_STYLE(WS_POPUP.0 | WS_VISIBLE.0),
@@ -92,6 +92,7 @@ impl AppLauncher {
             LAUNCHER_PTR = leaked as *mut AppLauncher;
 
             SetFocus(edit_hwnd);
+            let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 240, LWA_ALPHA);
             Ok(())
         }
     }

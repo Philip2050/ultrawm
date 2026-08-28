@@ -55,6 +55,11 @@ All notable changes to UltraWM will be documented in this file.
 - `IpcCommand::Single { command }` and `IpcCommand::Batch { commands }` enum variants for cleaner IPC protocol
 - `process_single_command()` helper for unified command processing in IPC thread
 
+## [0.5.5] - 2026-08-28 — Launcher Transparency + Docs Polish
+
+### Changed
+- App launcher now uses `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with 240/255 alpha (94% opacity)
+- Launcher window has subtle transparency matching the bar aesthetic
 ## [0.4.2] - 2026-08-28 — Swap Flash Animation
 
 ### Added
