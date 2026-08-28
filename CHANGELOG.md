@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.7.0] - 2026-08-29 — Per-App Bar Color
+### Added
+- Bar title color adapts to focused app's identity via exe name hash
+- `exe_hash_color()` function: deterministic color from app exe name using DefaultHasher
+- Each app gets a unique bar title color for visual differentiation
+- Falls back to theme accent color when no window is focused
+- Bar title updated with both text and color on every focus change
+
+### Changed
+- `BarState::title_color` field set dynamically based on focused window's exe
+- `DefaultHasher` import added to platform module
+
 ## [5.6.0] - 2026-08-29 — Enhanced Bar Title Rendering
 ### Added
 - Title color rendering in status bar (configurable per-focus via `set_title_color`)

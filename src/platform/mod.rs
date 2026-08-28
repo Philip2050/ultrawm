@@ -4,7 +4,7 @@ use crate::theme::ThemeManager;
 use log::{debug, info, warn};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ptr::null_mut;
 use std::sync::mpsc;
 use windows::{
@@ -641,14 +641,21 @@ impl Platform {
             // Save session every ~5 seconds
             self.save_session();
 
-            // Update bar with focused window title and clock
+            // Update bar with focused window title, color, and clock
             if let Some(ref bar) = self.bar {
-                let title = self
+                let (title, title_color) = self
                     .focused_hwnd
                     .and_then(|hwnd| self.windows.get(&hwnd))
-                    .map(|info| info.title.clone())
-                    .unwrap_or_default();
+                    .map(|info| {
+                        let color = exe_hash_color(&info.exe);
+                        (info.title.clone(), color)
+                    })
+                    .unwrap_or_else(|| {
+                        let accent = hex_to_rgb(&theme_mgr.current_theme().accent);
+                        (String::new(), accent)
+                    });
                 bar.set_title(&title);
+                bar.set_title_color(title_color);
 
                 // Update clock every second
                 let now = chrono::Local::now();
@@ -2632,6 +2639,17 @@ fn hex_to_rgb(hex: &str) -> u32 {
     } else {
         0
     }
+}
+
+fn exe_hash_color(exe: &str) -> u32 {
+    use std::hash::{DefaultHasher, Hasher};
+    let mut hasher = DefaultHasher::new();
+    hasher.write(exe.as_bytes());
+    let h = hasher.finish();
+    let r = ((h >> 0) & 0xFF) as u32;
+    let g = ((h >> 8) & 0xFF) as u32;
+    let b = ((h >> 16) & 0xFF) as u32;
+    (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
 }
 
 fn apply_rounded_corners(hwnd: HWND, x: i32, y: i32, w: i32, h: i32, radius: i32) {
