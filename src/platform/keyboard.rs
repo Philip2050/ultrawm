@@ -222,6 +222,11 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
+        0x4F => {
+            // O — toggle always-on-top
+            platform.toggle_always_on_top();
+            return LRESULT(1);
+        }
         _ => {}
     }
 

@@ -287,6 +287,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "minimize" => IpcCommand::Single { command: "minimize".into() },
         "restore" => IpcCommand::Single { command: "restore".into() },
         "maximize" => IpcCommand::Single { command: "maximize".into() },
+        "always-on-top" => IpcCommand::Single { command: "always-on-top".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

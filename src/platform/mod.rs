@@ -1336,6 +1336,26 @@ impl Platform {
         }
     }
 
+    pub fn toggle_always_on_top(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                info.always_on_top = !info.always_on_top;
+                unsafe {
+                    let _ = SetWindowPos(
+                        info.hwnd,
+                        if info.always_on_top { HWND_TOPMOST } else { HWND_NOTOPMOST },
+                        info.saved_x,
+                        info.saved_y,
+                        info.saved_w,
+                        info.saved_h,
+                        SWP_NOMOVE | SWP_NOSIZE,
+                    );
+                }
+                info!("Always-on-top toggled: {} (id={}, always_on_top={})", info.title, info.id, info.always_on_top);
+            }
+        }
+    }
+
     pub fn minimize_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -1399,6 +1419,10 @@ impl Platform {
                 }
                 if command == "maximize" {
                     self.toggle_maximize();
+                    return;
+                }
+                if command == "always-on-top" {
+                    self.toggle_always_on_top();
                     return;
                 }
                 match command.as_str() {

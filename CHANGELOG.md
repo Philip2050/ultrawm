@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.6.0] - 2026-08-28 — Always-on-Top Toggle
+### Added
+- **`toggle_always_on_top()`**: pin focused window above all others with `Win+O`
+- `WindowInfo.always_on_top` field tracks per-window state
+- Uses `SetWindowPos` with `HWND_TOPMOST` / `HWND_NOTOPMOST`
+- **IPC command**: `always-on-top` (`echo '{"command":"always-on-top"}' > \\.\pipe\ultrawm-ipc`)
+
 ## [2.5.0] - 2026-08-28 — IPC get-config Command
 ### Added
 - **`get-config` IPC command**: returns runtime config as JSON (layout, bar, theme, launcher settings)
