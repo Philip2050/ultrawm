@@ -39,6 +39,7 @@ mod theme_picker;
 mod blur;
 mod scratchpad;
 mod wallpaper;
+mod keybinds;
 
 #[derive(Debug, Clone, Copy)]
 pub struct HWnd(pub HWND);
@@ -125,6 +126,7 @@ pub struct Platform {
     pub focused_hwnd: Option<HWnd>,
     pub monitors: Vec<MonitorInfo>,
     pub keyboard_hook: Option<keyboard::KeyboardHook>,
+    pub keybinds: keybinds::ParsedKeybinds,
     pub border_overlay: Option<BorderOverlay>,
     pub bar: Option<AppBar>,
     pub notifier: Option<Notifier>,
@@ -204,6 +206,7 @@ impl Platform {
             focused_hwnd: None,
             monitors,
             keyboard_hook: None,
+            keybinds: keybinds::parse_keybinds(&crate::config::Config::default().keybinds),
             border_overlay: None,
             bar: None,
             notifier: None,
@@ -716,6 +719,9 @@ impl Platform {
                     let old_peek_x = self.config.layout.peek_x;
                     let old_peek_y = self.config.layout.peek_y;
                     self.config = new_config;
+
+                    // Re-parse keybinds from updated config
+                    self.keybinds = keybinds::parse_keybinds(&self.config.keybinds);
 
                     // Apply layout changes to grid if they changed
                     if self.config.layout.gaps != old_gaps

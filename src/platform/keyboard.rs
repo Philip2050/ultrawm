@@ -57,6 +57,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
         None => return CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam),
     };
 
+    let kb = &platform.keybinds;
     match vk {
         x if x == VK_ESCAPE.0 as u32 => {
             if platform.overview {
@@ -64,7 +65,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
                 return LRESULT(1);
             }
         }
-        x if x == VK_LEFT.0 as u32 => {
+        x if x == kb.focus_left => {
             if ctrl {
                 platform.pan_camera(0, -1);
             } else if shift {
@@ -74,7 +75,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        x if x == VK_RIGHT.0 as u32 => {
+        x if x == kb.focus_right => {
             if ctrl {
                 platform.pan_camera(0, 1);
             } else if shift {
@@ -84,7 +85,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        x if x == VK_UP.0 as u32 => {
+        x if x == kb.focus_up => {
             if ctrl {
                 platform.pan_camera(-1, 0);
             } else if shift {
@@ -94,7 +95,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        x if x == VK_DOWN.0 as u32 => {
+        x if x == kb.focus_down => {
             if ctrl {
                 platform.pan_camera(1, 0);
             } else if shift {
@@ -104,7 +105,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        x if x == VK_OEM_MINUS.0 as u32 => {
+        x if x == kb.grow_width => {
             if shift {
                 platform.resize_height(false);
             } else {
@@ -112,7 +113,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        x if x == VK_OEM_PLUS.0 as u32 => {
+        x if x == kb.shrink_width => {
             if shift {
                 platform.resize_height(true);
             } else {
@@ -120,8 +121,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        0x46 => {
-            // F — fullscreen toggle (Win+F), maximize toggle (Win+Shift+F)
+        x if x == kb.fullscreen => {
             if shift {
                 platform.toggle_maximize();
             } else {
@@ -129,8 +129,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        0x43 => {
-            // C — close / float
+        x if x == kb.close => {
             if shift {
                 platform.toggle_floating();
             } else {
@@ -138,13 +137,11 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        0x59 => {
-            // Y — toggle sticky
+        x if x == kb.sticky => {
             platform.toggle_sticky();
             return LRESULT(1);
         }
-        0x54 => {
-            // T — next theme (Win+T), prev theme (Win+Shift+T), or tab (Win+Alt+T)
+        x if x == kb.theme_next => {
             if alt {
                 if shift {
                     platform.untab_focused();
@@ -155,6 +152,14 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
                 platform.cycle_theme(false);
             } else {
                 platform.next_theme();
+            }
+            return LRESULT(1);
+        }
+        x if x == kb.theme_prev => {
+            if shift {
+                platform.cycle_theme(false);
+            } else {
+                platform.cycle_theme(true);
             }
             return LRESULT(1);
         }
@@ -172,22 +177,29 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        0x47 => {
-            // G — theme picker
+        x if x == kb.theme_picker => {
             platform.toggle_theme_picker();
             return LRESULT(1);
         }
-        0x20 => {
-            // Space — launcher
+        x if x == kb.launcher => {
             platform.toggle_launcher();
             return LRESULT(1);
         }
-        0x57 => {
-            // W — overview toggle
-            platform.toggle_overview();
+        x if x == kb.sticky => {
+            platform.toggle_sticky();
             return LRESULT(1);
         }
-        0x53 => {
+        x if x == 0x57 => {
+            // W — overview toggle (Win+W), delete workspace (Win+Shift+W)
+            if shift {
+                platform.remove_workspace();
+                return LRESULT(1);
+            } else {
+                platform.toggle_overview();
+                return LRESULT(1);
+            }
+        }
+        x if x == 0x53 => {
             // S — scratchpad toggle (Win+S), shade toggle (Win+Shift+S)
             if shift {
                 platform.toggle_shade();
@@ -196,28 +208,28 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        0x48 => {
+        x if x == 0x48 => {
             // H — split horizontally (Win+Alt+H)
             if alt {
                 platform.split_focused(true);
                 return LRESULT(1);
             }
         }
-        0x56 => {
+        x if x == 0x56 => {
             // V — split vertically (Win+Alt+V)
             if alt {
                 platform.split_focused(false);
                 return LRESULT(1);
             }
         }
-        0x55 => {
+        x if x == 0x55 => {
             // U — unsplit (Win+Alt+U)
             if alt {
                 platform.unsplit_focused();
                 return LRESULT(1);
             }
         }
-        0x4D => {
+        x if x == 0x4D => {
             // M — minimize (Win+M) / restore (Win+Shift+M)
             if shift {
                 platform.restore_minimized();
@@ -226,7 +238,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        0x4F => {
+        x if x == 0x4F => {
             // O — toggle always-on-top
             platform.toggle_always_on_top();
             return LRESULT(1);
@@ -241,22 +253,15 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.adjust_gap(1);
             return LRESULT(1);
         }
-        0x47 => {
+        x if x == 0x47 => {
             // G — window snap mode (Win+G to enter, arrow/number keys to snap, Esc to exit)
             platform.toggle_snap_mode();
             return LRESULT(1);
         }
-        0x4E => {
+        x if x == 0x4E => {
             // N — create new workspace (Win+Shift+N)
             if shift {
                 platform.add_workspace();
-                return LRESULT(1);
-            }
-        }
-        0x57 => {
-            // W — overview toggle (Win+W), delete workspace (Win+Shift+W)
-            if shift {
-                platform.remove_workspace();
                 return LRESULT(1);
             }
         }

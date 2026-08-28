@@ -73,10 +73,34 @@ All notable changes to UltraWM will be documented in this file.
 ### Changed
 - `get-dpi` and `screenshot` return data directly from IPC thread using PLATFORM_PTR
 
+## [9.0.0] - 2026-08-29 — Configurable Keybinds via config.toml
+### Added
+- All Win+key bindings now configurable in config.toml `[keybinds]` section
+- `focus_left/right/up/down` — focus movement keys (default: arrows)
+- `move_left/right/up/down` — window movement keys (default: arrows + Shift)
+- `pan_left/right/up/down` — camera pan keys (default: arrows + Ctrl)
+- `grow_width/shrink_width` — width resize keys (default: OemMinus/Oemplus)
+- `grow_height/shrink_height` — height resize keys (default: OemMinus+Shift/Oemplus+Shift)
+- `fullscreen` — fullscreen toggle key (default: F)
+- `close` — close window key (default: C)
+- `float` — toggle float key (same as close + Shift)
+- `sticky` — toggle sticky key (default: Y)
+- `theme_next/theme_prev/theme_picker` — theme control keys (default: T/G)
+- `launcher` — app launcher key (default: Space)
+- String values parsed to VK codes: names ("left", "space", "escape") and chars ("F", "C", "G")
+- Special key names: OemMinus, OemPlus, OemComma, OemPeriod, Tab, Return, Back, etc.
+- `ParsedKeybinds` struct stores all VK codes for fast comparison in keyboard hook
+- `keybinds` field on Platform for runtime access
+- Keybinds re-parsed automatically on config hot-reload
+
+### Changed
+- Keyboard hook uses `platform.keybinds` instead of hardcoded VK constants
+- Modifier keys (Shift/Ctrl/Alt) still handled separately — only base key is configurable
+
 ## [Unreleased]
 ### Planned
-- Window rule import/export via IPC (JSON config backup)
 - Config hot-reload notification in bar
+- Window rule import/export via IPC (JSON config backup)
 - Window minimize-to-tray support
 - Multi-step window resize with visual guides
 - Configurable snap positions (custom grid layouts)
