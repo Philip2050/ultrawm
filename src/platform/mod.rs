@@ -362,9 +362,11 @@ impl Platform {
         let overlay_w = self.primary_monitor().map(|m| m.width()).unwrap_or(unsafe { GetSystemMetrics(SM_CXSCREEN) });
         let overlay_h = self.primary_monitor().map(|m| m.height()).unwrap_or(unsafe { GetSystemMetrics(SM_CYSCREEN) });
         match BorderOverlay::create(overlay_w, overlay_h) {
-            Ok(overlay) => {
+            Ok(mut overlay) => {
+                overlay.border_width = self.config.layout.border_width as i32;
+                overlay.border_radius = self.config.layout.corner_radius as i32;
                 self.border_overlay = Some(overlay);
-                info!("Border overlay created");
+                info!("Border overlay created (border_width={}, radius={})", self.config.layout.border_width, self.config.layout.corner_radius);
             }
             Err(e) => {
                 warn!("Border overlay creation failed: {}", e);
@@ -543,6 +545,11 @@ impl Platform {
                             self.config.layout.peek_x,
                             self.config.layout.peek_y
                         );
+                    }
+                    // Update border width and radius from config
+                    if let Some(ref mut overlay) = self.border_overlay {
+                        overlay.border_width = self.config.layout.border_width as i32;
+                        overlay.border_radius = self.config.layout.corner_radius as i32;
                     }
                 }
             }
@@ -1463,6 +1470,7 @@ impl Platform {
         }
         println!("  Corner radius: {}", self.config.layout.corner_radius);
         println!("  Gaps: {}", self.config.layout.gaps);
+        println!("  Border width: {}", self.config.layout.border_width);
         println!("  Inner padding: {}", self.config.layout.inner_padding);
 
         // Themes
