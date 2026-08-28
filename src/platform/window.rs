@@ -19,6 +19,10 @@ pub struct WindowInfo {
     pub maximized: bool,
     pub floating: bool,
     pub fullscreen: bool,
+    pub saved_x: i32,
+    pub saved_y: i32,
+    pub saved_w: i32,
+    pub saved_h: i32,
 }
 
 impl WindowInfo {
@@ -61,6 +65,9 @@ impl WindowInfo {
                 }
             };
 
+            let mut rect = RECT::default();
+            let _ = GetWindowRect(hwnd, &mut rect);
+
             Ok(Self {
                 hwnd,
                 id: 0,
@@ -72,6 +79,10 @@ impl WindowInfo {
                 maximized,
                 floating: false,
                 fullscreen: false,
+                saved_x: rect.left,
+                saved_y: rect.top,
+                saved_w: rect.right - rect.left,
+                saved_h: rect.bottom - rect.top,
             })
         }
     }

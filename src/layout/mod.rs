@@ -321,11 +321,13 @@ impl GridState {
             None => return,
         };
 
-        if let Some(CellNode::Split { mut ratio, ref mut primary, ref mut secondary, .. }) = self.cell_nodes.get_mut(&cell) {
+        if let Some(CellNode::Split { ratio, .. }) = self.cell_nodes.get_mut(&cell) {
             if grow_primary {
-                *ratio = (ratio + 0.1).min(0.9);
+                *ratio += 0.1;
+                if *ratio > 0.9 { *ratio = 0.9; }
             } else {
-                *ratio = (ratio - 0.1).max(0.1);
+                *ratio -= 0.1;
+                if *ratio < 0.1 { *ratio = 0.1; }
             }
         }
     }
@@ -480,24 +482,32 @@ impl GridState {
 
     fn cleanup_splits(&mut self, cell: Cell, removed_wid: WindowId) {
         if let Some(node) = self.cell_nodes.get_mut(&cell) {
-            self.cleanup_node(node, removed_wid);
+            cleanup_node(node, removed_wid);
         }
     }
+}
 
-    fn cleanup_node(&self, node: &mut CellNode, removed: WindowId) {
-        match node {
-            CellNode::Leaf(w) => {
-                if *w == removed {
-                    // This leaf was already removed from window_positions
-                }
-            }
-            CellNode::Split { primary, secondary, .. } => {
-                self.cleanup_node(primary, removed);
-                self.cleanup_node(secondary, removed);
+fn cleanup_node(node: &mut CellNode, removed: WindowId) {
+    match node {
+        CellNode::Leaf(w) => {
+            if *w == removed {
+                // This leaf was already removed from window_positions
             }
         }
+        CellNode::Tab(tg) => {
+            tg.windows.retain(|w| *w != removed);
+            if tg.active >= tg.windows.len() && !tg.windows.is_empty() {
+                tg.active = tg.windows.len() - 1;
+            }
+        }
+        CellNode::Split { primary, secondary, .. } => {
+            cleanup_node(primary, removed);
+            cleanup_node(secondary, removed);
+        }
     }
+}
 
+impl GridState {
     pub fn apply_layout_config(&mut self, gaps: u32, peek_x: i32, peek_y: i32) {
         self.gap_x = gaps as i32;
         self.gap_y = gaps as i32;

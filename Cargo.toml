@@ -1,6 +1,6 @@
 [package]
 name = "ultrawm"
-version = "0.3.0"
+version = "0.4.1"
 edition = "2021"
 authors = ["Blake"]
 license = "MIT"
@@ -35,6 +35,7 @@ windows = { version = "0.58", features = [
     "Win32_System_IO",
     "Win32_UI_HiDpi",
     "Win32_UI_Accessibility",
+    "Win32_UI_Input_Touch",
 ] }
 
 # Utilities

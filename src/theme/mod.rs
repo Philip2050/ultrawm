@@ -225,6 +225,10 @@ impl ThemeManager {
         Ok(tm)
     }
 
+    pub fn theme_count(&self) -> usize {
+        self.themes.len()
+    }
+
     pub fn current_theme(&self) -> &Theme {
         &self.themes[self.current]
     }

@@ -59,6 +59,15 @@ An **ultimate tiling window manager for Windows 11** that combines:
 | `Win + Alt + T` | Tab focused window with neighbor |
 | `Win + Alt + Shift + T` | Untab focused cell |
 
+## Touchpad Gestures
+
+| Gesture | Action |
+|---|---|
+| Single-finger swipe | Move focus |
+| Two-finger drag | Pan camera |
+| Pinch | Resize window width |
+| Two-finger tap | Toggle fullscreen |
+
 ## Build
 
 ```powershell

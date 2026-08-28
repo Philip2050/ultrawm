@@ -110,7 +110,7 @@ pub fn start_ipc_server(tx: mpsc::Sender<IpcCommand>) -> anyhow::Result<thread::
                 // Write response back
                 let resp_str = serde_json::to_string(&response).unwrap_or_default();
                 let resp_bytes = resp_str.as_bytes();
-                let _ = WriteFile(pipe, resp_bytes, None);
+                let _ = WriteFile(pipe, Some(resp_bytes), None, None);
 
                 let _ = CloseHandle(pipe);
             }

@@ -2,6 +2,16 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [0.4.1] - 2026-08-28 — Touchpad Gesture Support
+
+### Added
+- **Touchpad gesture support**: transparent overlay receives WM_GESTURE messages
+- Pan gesture (single-finger swipe): focus movement; (two-finger drag): camera panning
+- Pinch zoom gesture: resize focused window width
+- Two-finger tap gesture: toggle fullscreen
+- Dead window cleanup: tile_all_windows removes closed windows automatically
+- Fixed fullscreen toggle with proper saved/restored window rects
+
 ## [0.4.0] - 2026-08-28 — Window Tab Stacking
 
 ### Added

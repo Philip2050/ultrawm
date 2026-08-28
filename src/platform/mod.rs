@@ -131,6 +131,8 @@ pub struct Platform {
     pub win_event_hook: HWINEVENTHOOK,
     pub overview: bool,
     pub gesture_receiver: Option<GestureReceiver>,
+    pub gesture_pan_start: Option<(i32, i32)>,
+    pub gesture_pan_last: Option<(i32, i32)>,
     pub theme_picker: Option<ThemePicker>,
     pub session: Option<crate::session::SessionState>,
     pub scratchpad: Option<ScratchpadManager>,
@@ -178,6 +180,8 @@ impl Platform {
             win_event_hook: HWINEVENTHOOK(std::ptr::null_mut()),
             overview: false,
             gesture_receiver: None,
+            gesture_pan_start: None,
+            gesture_pan_last: None,
             theme_picker: None,
             session: crate::session::SessionState::load().ok().flatten(),
             scratchpad: None,
@@ -207,7 +211,8 @@ impl Platform {
 
     /// Get mutable reference to the current grid for a specific monitor
     pub fn grid_for_monitor(&mut self, monitor_idx: usize) -> &mut GridState {
-        &mut self.monitor_workspaces[monitor_idx].grids[self.monitor_workspaces[monitor_idx].current]
+        let current = self.monitor_workspaces[monitor_idx].current;
+        &mut self.monitor_workspaces[monitor_idx].grids[current]
     }
 
     /// Get current grid for the monitor containing the focused window
@@ -236,10 +241,10 @@ impl Platform {
         let old_ws = self.monitor_workspaces[monitor_idx].current;
 
         // Hide windows on old workspace for this monitor
-        for (&wid, info) in &self.windows {
-            if let Some(wm) = self.window_monitors.get(&wid) {
+        for (_, info) in &self.windows {
+            if let Some(wm) = self.window_monitors.get(&info.id) {
                 if *wm == monitor_idx {
-                    if let Some(ws_id) = self.window_workspaces.get(&wid) {
+                    if let Some(ws_id) = self.window_workspaces.get(&info.id) {
                         if *ws_id == old_ws {
                             unsafe {
                                 let _ = ShowWindow(info.hwnd, SW_HIDE);
@@ -261,10 +266,10 @@ impl Platform {
         }
 
         // Show windows on new workspace for this monitor
-        for (&wid, info) in &self.windows {
-            if let Some(wm) = self.window_monitors.get(&wid) {
+        for (_, info) in &self.windows {
+            if let Some(wm) = self.window_monitors.get(&info.id) {
                 if *wm == monitor_idx {
-                    if let Some(ws_id) = self.window_workspaces.get(&wid) {
+                    if let Some(ws_id) = self.window_workspaces.get(&info.id) {
                         if *ws_id == ws {
                             unsafe {
                                 let _ = ShowWindow(info.hwnd, SW_SHOW);
@@ -445,13 +450,12 @@ impl Platform {
                         || self.config.layout.peek_x != old_peek_x
                         || self.config.layout.peek_y != old_peek_y
                     {
+                        let gaps = self.config.layout.gaps;
+                        let peek_x = self.config.layout.peek_x;
+                        let peek_y = self.config.layout.peek_y;
                         let grid = self.current_grid();
                         {
-                            grid.apply_layout_config(
-                                self.config.layout.gaps,
-                                self.config.layout.peek_x,
-                                self.config.layout.peek_y,
-                            );
+                            grid.apply_layout_config(gaps, peek_x, peek_y);
                         }
                         info!(
                             "Config reloaded: gaps={}, peek_x={}, peek_y={}",
@@ -519,10 +523,11 @@ impl Platform {
             }
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
                 if info.id > 0 {
+                    let wid = info.id;
                     let _ = SetForegroundWindow(hwnd);
                     self.focused_hwnd = Some(hwnd_wrapper);
                     let grid = self.current_grid();
-                    grid.focus_window(info.id);
+                    grid.focus_window(wid);
                 }
             }
         }
@@ -540,27 +545,56 @@ impl Platform {
             return;
         }
 
-        // Tile windows per-monitor (each monitor has its own workspace)
+        // Pre-compute monitor assignments to avoid borrow conflicts
+        // Clone monitor handles for position-based assignment
+        let mon_handles: Vec<_> = self.monitors.iter().map(|m| m.handle).collect();
+
+        // Build a temporary map of wid -> mon_idx for this pass
+        let mut window_mon_map: HashMap<u64, usize> = HashMap::new();
+        for (&hwnd_wrapper, info) in &self.windows {
+            if let Some(&wm) = self.window_monitors.get(&info.id) {
+                window_mon_map.insert(info.id, wm);
+            } else {
+                let mut pt = POINT::default();
+                unsafe {
+                    let _ = GetCursorPos(&mut pt);
+                    let mon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
+                    if let Some(m_idx) = mon_handles.iter().position(|&h| h == mon) {
+                        window_mon_map.insert(info.id, m_idx);
+                    } else {
+                        window_mon_map.insert(info.id, 0);
+                    }
+                }
+            }
+        }
+
+        // Remove dead windows
+        let mut dead_wids = Vec::new();
+        for (&hwnd_wrapper, info) in &self.windows {
+            if !is_window_alive(hwnd_wrapper.0) {
+                dead_wids.push(info.id);
+            }
+        }
+        for wid in dead_wids {
+            self.remove_window_by_id(wid);
+        }
+
+        // Get focused hwnd for border coloring
+        let focused_hwnd = self.focused_hwnd;
+
+        // Tile windows per-monitor
         for (mon_idx, mws) in self.monitor_workspaces.iter_mut().enumerate() {
             let (vw, vh) = (mws.monitor.work_width(), mws.monitor.work_height());
             let grid = &mut mws.grids[mws.current];
 
             for (&hwnd_wrapper, info) in &self.windows {
                 // Only tile windows belonging to this monitor
-                if let Some(&wm) = self.window_monitors.get(&info.id) {
+                if let Some(&wm) = window_mon_map.get(&info.id) {
                     if wm != mon_idx {
                         continue;
                     }
                 } else {
-                    // Assign window to monitor based on position if not yet assigned
-                    if let Some(mon) = self.monitor_for_hwnd(hwnd_wrapper.0) {
-                        let assigned = self.monitors.iter().position(|m| m.handle == mon.handle).unwrap_or(0);
-                        if assigned != mon_idx {
-                            continue;
-                        }
-                    } else {
-                        continue;
-                    }
+                    continue;
                 }
 
                 // Skip floating windows
@@ -573,13 +607,8 @@ impl Platform {
                     continue;
                 }
 
-                // Check if window still exists
-                if !is_window_alive(hwnd_wrapper.0) {
-                    continue;
-                }
-
-                if let Some((x, y, w, h)) = self.position_for_hwnd(hwnd_wrapper.0, grid, vw, vh) {
-                    let wid = info.id;
+                let wid = info.id;
+                if let Some((x, y, w, h)) = Self::position_for_hwnd(wid, grid, vw, vh, mws.monitor.work_left, mws.monitor.work_top) {
                     let target_x = x as f32;
                     let target_y = y as f32;
                     let target_w = w as f32;
@@ -603,7 +632,7 @@ impl Platform {
                         );
                     }
 
-                    let is_focused = self.focused_hwnd == Some(hwnd_wrapper);
+                    let is_focused = focused_hwnd == Some(hwnd_wrapper);
                     let color = if is_focused {
                         accent_rgb
                     } else {
@@ -678,17 +707,16 @@ impl Platform {
     }
 
     fn position_for_hwnd(
-        &self,
-        hwnd: HWND,
+        wid: u64,
         grid: &GridState,
         vw: i32,
         vh: i32,
+        work_left: i32,
+        work_top: i32,
     ) -> Option<(i32, i32, u32, u32)> {
-        let wid = self.windows.get(&HWnd(hwnd))?.id;
         let cell = grid.window_positions.get(&wid)?;
         let (x, y, w, h) = grid.cell_rect(*cell, vw, vh);
-        let (wl, wt, _, _) = self.current_work_area();
-        Some((x + wl, y + wt, w, h))
+        Some((x + work_left, y + work_top, w, h))
     }
 
     pub fn manage_window(&mut self, hwnd: HWND) {
@@ -751,11 +779,12 @@ impl Platform {
     pub fn split_focused(&mut self, horizontal: bool) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
-                if info.id > 0 {
+                let wid = info.id;
+                if wid > 0 {
                     let dir = if horizontal { crate::layout::SplitDir::Horizontal } else { crate::layout::SplitDir::Vertical };
                     let grid = self.current_grid();
-                    if grid.split_cell(info.id, dir) {
-                        info!("Split cell {} {:?}", info.id, dir);
+                    if grid.split_cell(wid, dir) {
+                        info!("Split cell {} {:?}", wid, dir);
                         self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
                     }
                 }
@@ -767,10 +796,11 @@ impl Platform {
     pub fn unsplit_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
-                if info.id > 0 {
+                let wid = info.id;
+                if wid > 0 {
                     let grid = self.current_grid();
-                    if grid.unsplit_cell(info.id) {
-                        info!("Unsplit cell for window {}", info.id);
+                    if grid.unsplit_cell(wid) {
+                        info!("Unsplit cell for window {}", wid);
                         self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
                     }
                 }
@@ -782,9 +812,10 @@ impl Platform {
     pub fn adjust_split(&mut self, grow: bool) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
-                if info.id > 0 {
+                let wid = info.id;
+                if wid > 0 {
                     let grid = self.current_grid();
-                    grid.adjust_split_ratio(info.id, grow);
+                    grid.adjust_split_ratio(wid, grow);
                     self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
                 }
             }
@@ -795,14 +826,15 @@ impl Platform {
     pub fn tab_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
-                if info.id > 0 {
+                let wid = info.id;
+                if wid > 0 {
                     let grid = self.current_grid();
                     // Find another window in the same cell
-                    if let Some(&cell) = grid.window_positions.get(&info.id) {
+                    if let Some(&cell) = grid.window_positions.get(&wid) {
                         if let Some(&other_wid) = grid.cells.get(&cell) {
-                            if other_wid != info.id {
-                                if grid.tab_cell(info.id, other_wid) {
-                                    info!("Tabbed {} with {}", info.id, other_wid);
+                            if other_wid != wid {
+                                if grid.tab_cell(wid, other_wid) {
+                                    info!("Tabbed {} with {}", wid, other_wid);
                                     self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
                                 }
                             }
@@ -817,10 +849,11 @@ impl Platform {
     pub fn untab_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
-                if info.id > 0 {
+                let wid = info.id;
+                if wid > 0 {
                     let grid = self.current_grid();
-                    if grid.untab_cell(info.id) {
-                        info!("Untabbed cell for window {}", info.id);
+                    if grid.untab_cell(wid) {
+                        info!("Untabbed cell for window {}", wid);
                         self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
                     }
                 }
@@ -832,9 +865,10 @@ impl Platform {
     pub fn cycle_tab(&mut self, forward: bool) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get(&hwnd_wrapper) {
-                if info.id > 0 {
+                let wid = info.id;
+                if wid > 0 {
                     let grid = self.current_grid();
-                    if grid.cycle_tab(info.id, forward) {
+                    if grid.cycle_tab(wid, forward) {
                         self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
                     }
                 }
@@ -845,13 +879,48 @@ impl Platform {
     pub fn on_focus_changed(&mut self, hwnd: HWND) {
         self.focused_hwnd = Some(HWnd(hwnd));
 
-        {
+        let wid = self.windows.get(&HWnd(hwnd)).map(|i| i.id).unwrap_or(0);
+        let grid = self.current_grid();
+        if wid > 0 {
+            grid.focus_window(wid);
+        }
+    }
+
+    /// Remove a window by its internal ID (for dead window cleanup)
+    pub fn remove_window_by_id(&mut self, wid: u64) {
+        let (was_focused, info_clone, hwnd_wrapper) = {
+            let hw = self.windows.iter().find(|(_, i)| i.id == wid).map(|(hw, _)| *hw);
+            let wf = self.focused_hwnd == hw;
+            let info = self.windows.values().find(|i| i.id == wid).cloned();
+            (wf, info, hw)
+        };
+
+        if let Some(info) = info_clone {
+            let hwnd = info.hwnd;
+            self.windows.remove(&HWnd(hwnd));
+
             let grid = self.current_grid();
-            if let Some(info) = self.windows.get(&HWnd(hwnd)) {
-                if info.id > 0 {
-                    grid.focus_window(info.id);
+            grid.remove_window(info.id);
+
+            let next_hwnd = if was_focused {
+                find_nearest_window(&grid, info.id)
+                    .and_then(|nwid| self.windows.iter().find(|(_, wi)| wi.id == nwid).map(|(hw, _)| *hw))
+            } else {
+                None
+            };
+
+            if let Some(hw) = next_hwnd {
+                unsafe {
+                    let _ = SetForegroundWindow(hw.0);
                 }
+                self.focused_hwnd = Some(hw);
+            } else if was_focused {
+                self.focused_hwnd = None;
             }
+
+            self.window_workspaces.remove(&info.id);
+            self.anim.remove(&info.id);
+            debug!("Removed dead window: {} (id={})", info.title, info.id);
         }
     }
 
@@ -862,26 +931,25 @@ impl Platform {
         if let Some(info) = self.windows.remove(&hwnd_wrapper) {
             let grid = self.current_grid();
             grid.remove_window(info.id);
-            self.window_workspaces.remove(&info.id);
-            self.anim.remove(&info.id);
 
             // Auto-focus neighbor when focused window is closed
             if was_focused {
-                if let Some(next_wid) = find_nearest_window(&self.windows, &grid, info.id) {
-                    for (&hw, wi) in &self.windows {
-                        if wi.id == next_wid {
-                            unsafe {
-                                let _ = SetForegroundWindow(hw.0);
-                            }
-                            self.focused_hwnd = Some(hw);
-                            debug!("Swallowed window, focused next: {}", wi.title);
-                            break;
-                        }
+                let next_hwnd = find_nearest_window(&grid, info.id)
+                    .and_then(|nwid| self.windows.iter().find(|(_, wi)| wi.id == nwid).map(|(hw, _)| *hw));
+
+                if let Some(hw) = next_hwnd {
+                    unsafe {
+                        let _ = SetForegroundWindow(hw.0);
                     }
+                    self.focused_hwnd = Some(hw);
+                    debug!("Swallowed window, focused next");
                 } else {
                     self.focused_hwnd = None;
                 }
             }
+
+            self.window_workspaces.remove(&info.id);
+            self.anim.remove(&info.id);
             debug!("Removed window: {} (id={})", info.title, info.id);
         }
     }
@@ -955,21 +1023,40 @@ impl Platform {
                 info.fullscreen = !info.fullscreen;
                 unsafe {
                     if info.fullscreen {
-                        let _ = SetWindowPos(
-                            info.hwnd,
-                            HWND_TOPMOST,
-                            0, 0,
-                            info.monitor_width.unwrap_or(1920),
-                            info.monitor_height.unwrap_or(1080),
-                            SWP_FRAMECHANGED.0,
-                        );
+                        let mut rect = RECT::default();
+                        let _ = GetWindowRect(info.hwnd, &mut rect);
+                        info.saved_x = rect.left;
+                        info.saved_y = rect.top;
+                        info.saved_w = rect.right - rect.left;
+                        info.saved_h = rect.bottom - rect.top;
+
+                        let mon = MonitorFromWindow(info.hwnd, MONITOR_DEFAULTTONULL);
+                        if !mon.is_invalid() {
+                            let mut mi = MONITORINFO {
+                                cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+                                ..Default::default()
+                            };
+                            if GetMonitorInfoW(mon, &mut mi).as_bool() {
+                                let _ = SetWindowPos(
+                                    info.hwnd,
+                                    HWND_TOPMOST,
+                                    mi.rcWork.left,
+                                    mi.rcWork.top,
+                                    mi.rcWork.right - mi.rcWork.left,
+                                    mi.rcWork.bottom - mi.rcWork.top,
+                                    SWP_FRAMECHANGED,
+                                );
+                            }
+                        }
                     } else {
                         let _ = SetWindowPos(
                             info.hwnd,
                             HWND_NOTOPMOST,
-                            info.x, info.y,
-                            info.width, info.height,
-                            SWP_FRAMECHANGED.0,
+                            info.saved_x,
+                            info.saved_y,
+                            info.saved_w,
+                            info.saved_h,
+                            SWP_FRAMECHANGED,
                         );
                     }
                 }
@@ -980,21 +1067,22 @@ impl Platform {
 
     pub fn toggle_floating(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
+            let was_floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
+
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
                 info.floating = !info.floating;
+                let wid = info.id;
+                let title = info.title.clone();
+
                 if info.floating {
                     let grid = self.current_grid();
-                    {
-                        grid.remove_window(info.id);
-                    }
-                    info!("Floating window: {} (id={})", info.title, info.id);
+                    grid.remove_window(wid);
+                    info!("Floating window: {} (id={})", title, wid);
                 } else {
                     let grid = self.current_grid();
-                    {
-                        grid.place_window(info.id);
-                        grid.focus_window(info.id);
-                    }
-                    info!("Unfloating window: {} (id={})", info.title, info.id);
+                    grid.place_window(wid);
+                    grid.focus_window(wid);
+                    info!("Unfloating window: {} (id={})", title, wid);
                 }
                 self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
             }
@@ -1095,7 +1183,7 @@ impl Platform {
         }
     }
 
-    pub fn apply_rules(&self, win_info: &mut WindowInfo, raw_info: &WindowInfo) {
+    pub fn apply_rules(&mut self, win_info: &mut WindowInfo, raw_info: &WindowInfo) {
         for rule in &self.config.rules {
             let matches = raw_info.title.contains(&rule.match_)
                 || raw_info.class.contains(&rule.match_)
@@ -1137,7 +1225,7 @@ impl Platform {
     pub fn toggle_scratchpad(&mut self) {
         if self.scratchpad.is_none() {
             if let Ok(()) = ScratchpadManager::create() {
-                self.scratchpad = Some(ScratchpadManager::create().unwrap_or_default());
+                ScratchpadManager::create().ok();
             }
         }
         if let Some(ref mut sp) = self.scratchpad {
@@ -1155,8 +1243,8 @@ impl Platform {
                     Ok(t) => t,
                     Err(_) => return,
                 };
-                let current = self.theme_mgr.as_ref().map(|m| m.borrow().current).unwrap_or(0);
-                let _ = ThemePicker::create(themes, current);
+                let current = self.theme_mgr.as_ref().map(|m| m.borrow().theme_count()).unwrap_or(0);
+                let _ = ThemePicker::create(themes, current.saturating_sub(1));
             }
         }
     }
@@ -1330,7 +1418,6 @@ fn is_window_alive(hwnd: HWND) -> bool {
 }
 
 fn find_nearest_window(
-    windows: &HashMap<HWnd, WindowInfo>,
     grid: &GridState,
     removed_id: u64,
 ) -> Option<u64> {
@@ -1406,8 +1493,9 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
                 0
             };
             platform.window_monitors.insert(wid, mon_idx);
-            platform.window_workspaces.insert(wid, platform.monitor_workspaces[mon_idx].current);
-            platform.monitor_workspaces[mon_idx].grids[platform.monitor_workspaces[mon_idx].current].place_window(wid);
+            let ws_idx = platform.monitor_workspaces[mon_idx].current;
+            platform.window_workspaces.insert(wid, ws_idx);
+            platform.monitor_workspaces[mon_idx].grids[ws_idx].place_window(wid);
         }
     }
 
