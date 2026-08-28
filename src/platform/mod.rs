@@ -460,15 +460,17 @@ impl Platform {
                         || self.config.layout.peek_y != old_peek_y
                     {
                         let gaps = self.config.layout.gaps;
+                        let inner_padding = self.config.layout.inner_padding;
                         let peek_x = self.config.layout.peek_x;
                         let peek_y = self.config.layout.peek_y;
                         let grid = self.current_grid();
                         {
-                            grid.apply_layout_config(gaps, peek_x, peek_y);
+                            grid.apply_layout_config(gaps, inner_padding, peek_x, peek_y);
                         }
                         info!(
-                            "Config reloaded: gaps={}, peek_x={}, peek_y={}",
+                            "Config reloaded: gaps={}, inner_padding={}, peek_x={}, peek_y={}",
                             self.config.layout.gaps,
+                            self.config.layout.inner_padding,
                             self.config.layout.peek_x,
                             self.config.layout.peek_y
                         );
@@ -642,14 +644,20 @@ impl Platform {
                     let dt: f32 = (1.0f32 / 60.0).min(1.0f32 / 30.0);
                     let (ax, ay, aw, ah) = anim.step(dt);
 
+                    let pad = self.config.layout.inner_padding as i32;
+                    let px = ax as i32 + pad;
+                    let py = ay as i32 + pad;
+                    let pw = (aw as i32 - pad * 2).max(pad * 2);
+                    let ph = (ah as i32 - pad * 2).max(pad * 2);
+
                     unsafe {
                         let _ = SetWindowPos(
                             hwnd_wrapper.0,
                             HWND(null_mut()),
-                            ax as i32,
-                            ay as i32,
-                            aw as i32,
-                            ah as i32,
+                            px,
+                            py,
+                            pw,
+                            ph,
                             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
                         );
                     }
@@ -661,11 +669,18 @@ impl Platform {
                     }
 
                     // Apply rounded corners when size changes
-                    let radius = self.config.layout.corner_radius as i32;
+                    let pad = self.config.layout.inner_padding as i32;
+                    let radius = (self.config.layout.corner_radius as i32).saturating_sub(pad);
+                    let cur_w = if pad == 0 { aw as i32 } else { pw };
+                    let cur_h = if pad == 0 { ah as i32 } else { ph };
                     let prev = self.last_rounded.get(&wid);
-                    if prev.map_or(true, |&(pw, ph, pr)| pw != aw as i32 || ph != ah as i32 || pr != radius) {
-                        apply_rounded_corners(hwnd_wrapper.0, ax as i32, ay as i32, aw as i32, ah as i32, radius);
-                        self.last_rounded.insert(wid, (aw as i32, ah as i32, radius));
+                    if prev.map_or(true, |&(pw, ph, pr)| pw != cur_w || ph != cur_h || pr != radius) {
+                        let rx = if pad == 0 { ax as i32 } else { px };
+                        let ry = if pad == 0 { ay as i32 } else { py };
+                        let rw = if pad == 0 { aw as i32 } else { pw };
+                        let rh = if pad == 0 { ah as i32 } else { ph };
+                        apply_rounded_corners(hwnd_wrapper.0, rx, ry, rw, rh, radius);
+                        self.last_rounded.insert(wid, (cur_w, cur_h, radius));
                     }
 
                     let is_focused = focused_hwnd == Some(hwnd_wrapper);
@@ -736,14 +751,20 @@ impl Platform {
             let x = wl + col * (cell_w + gap) + (vw - cols * (cell_w + gap)) / 2;
             let y = wt + row * (cell_h + gap) + (vh - rows * (cell_h + gap)) / 2;
 
+            let pad = self.config.layout.inner_padding as i32;
+            let px = x + pad;
+            let py = y + pad;
+            let pw = (cell_w - pad * 2).max(pad * 2);
+            let ph = (cell_h - pad * 2).max(pad * 2);
+
             unsafe {
                 let _ = SetWindowPos(
                     *hwnd,
                     HWND(null_mut()),
-                    x,
-                    y,
-                    cell_w,
-                    cell_h,
+                    px,
+                    py,
+                    pw,
+                    ph,
                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
                 );
             }
@@ -1353,6 +1374,7 @@ impl Platform {
         }
         println!("  Corner radius: {}", self.config.layout.corner_radius);
         println!("  Gaps: {}", self.config.layout.gaps);
+        println!("  Inner padding: {}", self.config.layout.inner_padding);
 
         // Themes
         println!("Themes:");

@@ -508,7 +508,7 @@ fn cleanup_node(node: &mut CellNode, removed: WindowId) {
 }
 
 impl GridState {
-    pub fn apply_layout_config(&mut self, gaps: u32, peek_x: i32, peek_y: i32) {
+    pub fn apply_layout_config(&mut self, gaps: u32, _inner_padding: u32, peek_x: i32, peek_y: i32) {
         self.gap_x = gaps as i32;
         self.gap_y = gaps as i32;
         self.peek_x = peek_x;

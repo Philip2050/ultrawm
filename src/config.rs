@@ -31,6 +31,7 @@ pub struct WindowRule {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LayoutConfig {
     pub gaps: u32,
+    pub inner_padding: u32,
     pub peek_x: i32,
     pub peek_y: i32,
     pub center_focused: bool,
@@ -96,6 +97,7 @@ impl Default for Config {
         Self {
             layout: LayoutConfig {
                 gaps: 8,
+                inner_padding: 4,
                 peek_x: 80,
                 peek_y: 40,
                 center_focused: false,
