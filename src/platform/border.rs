@@ -154,15 +154,31 @@ impl BorderOverlay {
                     SelectObject(self.mem_dc, old_pen);
                     let _ = DeleteObject(pen);
 
-                    // Window title
+                    // Window title with background
                     if let Some(ref t) = title {
                         let old_font = SelectObject(self.mem_dc, self.title_font);
                         SetBkMode(self.mem_dc, TRANSPARENT);
-                        SetTextColor(self.mem_dc, COLORREF(color_rgb));
+                        SetTextColor(self.mem_dc, COLORREF(0xFFFFFF));
+
                         let text_y = y + half + 2;
                         let text_x = x + half + 6;
                         let mut wide: Vec<u16> = t.encode_utf16().chain(Some(0)).collect();
-                        TextOutW(self.mem_dc, text_x, text_y, &wide);
+
+                        // Measure text width
+                        let mut sz = SIZE { cx: 0, cy: 0 };
+                        let _ = GetTextExtentPoint32W(self.mem_dc, &wide, &mut sz);
+                        let text_w = sz.cx + 12;
+                        let text_h = 16;
+
+                        // Draw title background
+                        let bg_brush = CreateSolidBrush(COLORREF(color_rgb & 0xFF333333));
+                        let old_brush = SelectObject(self.mem_dc, bg_brush);
+                        let _ = PatBlt(self.mem_dc, text_x, text_y, text_w, text_h, PATCOPY);
+                        SelectObject(self.mem_dc, old_brush);
+                        let _ = DeleteObject(bg_brush);
+
+                        // Draw title text
+                        TextOutW(self.mem_dc, text_x + 6, text_y + 1, &wide);
                         SelectObject(self.mem_dc, old_font);
                     }
                 } else {
