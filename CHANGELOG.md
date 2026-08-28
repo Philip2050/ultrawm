@@ -2,6 +2,28 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [0.3.0] - 2026-08-28 — Bidirectional Tiling & JSON IPC
+
+### Added
+- **Bidirectional tiling**: split cells horizontally or vertically with adjustable ratios
+- `SplitDir` enum (Horizontal/Vertical) and `CellNode` enum (Leaf/Split) in layout engine
+- `GridState::split_cell()`: splits a cell, creating primary/secondary children
+- `GridState::unsplit_cell()`: merges children back into a single leaf
+- `GridState::adjust_split_ratio()`: resize split with 0.1 step increments
+- `GridState::all_window_rects()`: computes positions for all windows including split cells
+- `Platform::split_focused()`, `unsplit_focused()`, `adjust_split()` methods
+- Keyboard shortcuts: `Win+Alt+H/V` (split), `Win+Alt+U` (unsplit)
+- **JSON IPC protocol**: named pipe now supports JSON commands with JSON responses
+- `IpcCommand` now tagged with serde for kebab-case serialization
+- `IpcResponse` struct with success/message/data fields
+- Query commands: `get-state`, `list-themes`, `get-windows`
+- New action commands: `split-horizontal`, `split-vertical`, `unsplit`, `overview`, `scratchpad`, `fullscreen`
+
+### Changed
+- IPC backward compatible: still accepts plain text commands
+- Layout engine: `cell_nodes` BTreeMap tracks split trees per cell
+- `place_window()` now creates `CellNode::Leaf` entries
+
 ## [0.2.0] - 2026-08-28 — Multi-Monitor Workspaces
 
 ### Added

@@ -41,6 +41,7 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
         || (GetKeyState(VK_RWIN.0 as i32) & 0x8000u16 as i16) != 0;
     let ctrl = (GetKeyState(VK_CONTROL.0 as i32) & 0x8000u16 as i16) != 0;
     let shift = (GetKeyState(VK_SHIFT.0 as i32) & 0x8000u16 as i16) != 0;
+    let alt = (GetKeyState(VK_MENU.0 as i32) & 0x8000u16 as i16) != 0;
 
     if !win && vk != VK_LWIN.0 as u32 && vk != VK_RWIN.0 as u32 {
         return CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam);
@@ -157,6 +158,27 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             // S — scratchpad toggle
             platform.toggle_scratchpad();
             return LRESULT(1);
+        }
+        0x48 => {
+            // H — split horizontally (Win+Alt+H)
+            if alt {
+                platform.split_focused(true);
+                return LRESULT(1);
+            }
+        }
+        0x56 => {
+            // V — split vertically (Win+Alt+V)
+            if alt {
+                platform.split_focused(false);
+                return LRESULT(1);
+            }
+        }
+        0x55 => {
+            // U — unsplit (Win+Alt+U)
+            if alt {
+                platform.unsplit_focused();
+                return LRESULT(1);
+            }
         }
         0x31..=0x34 => {
             // 1-4 — switch workspace

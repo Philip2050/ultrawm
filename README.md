@@ -12,6 +12,7 @@ An **ultimate tiling window manager for Windows 11** that combines:
 
 **Phase 1 MVP** — compiling and running. Core features implemented:
 - 2D lattice layout engine with camera panning and collision-swapping focus
+- **Bidirectional tiling**: split cells horizontally or vertically with adjustable ratios
 - Multi-monitor workspaces (each monitor has independent workspace set)
 - Window enumeration and tiling via SetWindowPos
 - Theme engine with 5 built-in themes + JSON theme support
@@ -19,7 +20,7 @@ An **ultimate tiling window manager for Windows 11** that combines:
 - Config system (TOML) with defaults and hot-reload
 - Spring animation primitives
 - Doctor diagnostics
-- IPC named pipe for external control
+- IPC named pipe with **JSON query/response** protocol for external control
 - Session save/restore
 - App launcher with search
 - Theme picker UI
@@ -51,6 +52,9 @@ An **ultimate tiling window manager for Windows 11** that combines:
 | `Win + =` | Grow width |
 | `Win + Shift + -` | Shrink height |
 | `Win + Shift + =` | Grow height |
+| `Win + Alt + H` | Split focused cell horizontally |
+| `Win + Alt + V` | Split focused cell vertically |
+| `Win + Alt + U` | Unsplit focused cell |
 
 ## Build
 
@@ -111,13 +115,31 @@ Themes in `%USERPROFILE%\.config\ultrawm\themes\` (JSON). Ships with 5 built-in 
 
 ## IPC Commands
 
-Via named pipe `\\.\pipe\ultrawm-ipc`:
+Via named pipe `\\.\pipe\ultrawm-ipc`. Supports both plain text (legacy) and JSON with responses.
+
+**Plain text** (backward compatible):
+```
+echo next-theme > \\.\pipe\ultrawm-ipc
+```
+
+**JSON with response**:
+```json
+{"command": "list-themes"}
+{"command": "get-state"}
+{"command": "focus-left"}
+{"command": "split-horizontal"}
+```
+
+Available commands:
 - `next-theme`, `prev-theme`
-- `focus-left`, `focus-right`, `focus-up`, `focus-down`
+- `focus-left`, `focus-right`, `focus-up`, `focus-down`, `focus-next`, `focus-prev`
 - `pan-left`, `pan-right`, `pan-up`, `pan-down`
 - `grow-width`, `shrink-width`, `grow-height`, `shrink-height`
 - `close`, `float`, `unfloat`
-- `launcher`, `quit`
+- `split-horizontal`, `split-vertical`, `unsplit`
+- `launcher`, `overview`, `scratchpad`, `fullscreen`
+- `quit`
+- **Queries**: `get-state`, `list-themes`, `get-windows`
 
 ## Architecture
 

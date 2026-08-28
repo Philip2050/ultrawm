@@ -747,6 +747,50 @@ impl Platform {
         }
     }
 
+    /// Split the focused window's cell horizontally or vertically
+    pub fn split_focused(&mut self, horizontal: bool) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                if info.id > 0 {
+                    let dir = if horizontal { crate::layout::SplitDir::Horizontal } else { crate::layout::SplitDir::Vertical };
+                    let grid = self.current_grid();
+                    if grid.split_cell(info.id, dir) {
+                        info!("Split cell {} {:?}", info.id, dir);
+                        self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Unsplit the focused window's cell (merge children)
+    pub fn unsplit_focused(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                if info.id > 0 {
+                    let grid = self.current_grid();
+                    if grid.unsplit_cell(info.id) {
+                        info!("Unsplit cell for window {}", info.id);
+                        self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Adjust the split ratio for the focused window
+    pub fn adjust_split(&mut self, grow: bool) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                if info.id > 0 {
+                    let grid = self.current_grid();
+                    grid.adjust_split_ratio(info.id, grow);
+                    self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                }
+            }
+        }
+    }
+
     pub fn on_focus_changed(&mut self, hwnd: HWND) {
         self.focused_hwnd = Some(HWnd(hwnd));
 
@@ -967,6 +1011,29 @@ impl Platform {
             }
             crate::ipc::IpcCommand::ToggleLauncher => {
                 self.toggle_launcher();
+            }
+            crate::ipc::IpcCommand::ToggleOverview => {
+                self.toggle_overview();
+            }
+            crate::ipc::IpcCommand::ToggleScratchpad => {
+                self.toggle_scratchpad();
+            }
+            crate::ipc::IpcCommand::ToggleFullscreen => {
+                self.toggle_fullscreen();
+            }
+            crate::ipc::IpcCommand::SplitHorizontal => {
+                self.split_focused(true);
+            }
+            crate::ipc::IpcCommand::SplitVertical => {
+                self.split_focused(false);
+            }
+            crate::ipc::IpcCommand::Unsplit => {
+                self.unsplit_focused();
+            }
+            crate::ipc::IpcCommand::GetState |
+            crate::ipc::IpcCommand::ListThemes |
+            crate::ipc::IpcCommand::GetWindows => {
+                // Query commands handled by IPC thread directly
             }
             crate::ipc::IpcCommand::Quit => {
                 log::info!("IPC: quit requested");

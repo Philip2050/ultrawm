@@ -1,9 +1,8 @@
-//! UltraWM Layout Engine — hyprscroll2d-style 2D infinite lattice
+//! UltraWM Layout Engine — hyprscroll2d-style 2D infinite lattice with bidirectional tiling
 //!
 //! Windows live on an infinite 2D grid. A camera pans over it.
 //! Edge peeks keep neighboring rows/columns visible.
-
-mod workspace;
+//! Cells can be split horizontally or vertically for bidirectional tiling.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -24,6 +23,23 @@ impl Cell {
     pub fn neighbor(&self, dr: i32, dc: i32) -> Self {
         Self::new(self.row + dr, self.col + dc)
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SplitDir {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CellNode {
+    Leaf(WindowId),
+    Split {
+        dir: SplitDir,
+        ratio: f32,
+        primary: Box<CellNode>,
+        secondary: Box<CellNode>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,6 +105,8 @@ pub struct GridState {
     pub gap_x: i32,
     pub gap_y: i32,
     pub focused_window: Option<WindowId>,
+    /// Bidirectional split tree per cell
+    pub cell_nodes: BTreeMap<Cell, CellNode>,
 }
 
 impl GridState {
@@ -104,6 +122,7 @@ impl GridState {
             gap_x: 8,
             gap_y: 8,
             focused_window: None,
+            cell_nodes: BTreeMap::new(),
         }
     }
 
@@ -116,9 +135,10 @@ impl GridState {
                 for dr in (-dist..=dist).rev() {
                     if dr == 0 && dc == 0 { continue; }
                     let cell = Cell::new(dr, dc);
-                    if !self.cells.contains_key(&cell) {
+                    if !self.cells.contains_key(&cell) && !self.cell_nodes.contains_key(&cell) {
                         self.cells.insert(cell, wid);
                         self.window_positions.insert(wid, cell);
+                        self.cell_nodes.insert(cell, CellNode::Leaf(wid));
                         return cell;
                     }
                 }
@@ -127,8 +147,130 @@ impl GridState {
         let cell = Cell::new(0, 1000);
         self.cells.insert(cell, wid);
         self.window_positions.insert(wid, cell);
+        self.cell_nodes.insert(cell, CellNode::Leaf(wid));
         cell
     }
+
+    /// Split a cell in the given direction, placing the focused window as primary
+    pub fn split_cell(&mut self, wid: WindowId, dir: SplitDir) -> bool {
+        let cell = match self.window_positions.get(&wid) {
+            Some(&c) => c,
+            None => return false,
+        };
+
+        let existing = match self.cell_nodes.get(&cell) {
+            Some(CellNode::Leaf(w)) => *w,
+            Some(CellNode::Split { .. }) => return false,
+            None => wid,
+        };
+
+        let node = CellNode::Split {
+            dir,
+            ratio: 0.5,
+            primary: Box::new(CellNode::Leaf(wid)),
+            secondary: Box::new(CellNode::Leaf(existing)),
+        };
+
+        self.cell_nodes.insert(cell, node);
+        true
+    }
+
+    /// Remove split from a cell (merge children into one leaf)
+    pub fn unsplit_cell(&mut self, wid: WindowId) -> bool {
+        let cell = match self.window_positions.get(&wid) {
+            Some(&c) => c,
+            None => return false,
+        };
+
+        if let Some(CellNode::Split { primary, .. }) = self.cell_nodes.get(&cell) {
+            if let CellNode::Leaf(keep_wid) = primary.as_ref() {
+                // Keep the primary window, remove secondary
+                self.cell_nodes.insert(cell, CellNode::Leaf(*keep_wid));
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Adjust the split ratio for a cell (0.1 steps, clamped 0.1–0.9)
+    pub fn adjust_split_ratio(&mut self, wid: WindowId, grow_primary: bool) {
+        let cell = match self.window_positions.get(&wid) {
+            Some(&c) => c,
+            None => return,
+        };
+
+        if let Some(CellNode::Split { mut ratio, ref mut primary, ref mut secondary, .. }) = self.cell_nodes.get_mut(&cell) {
+            if grow_primary {
+                *ratio = (ratio + 0.1).min(0.9);
+            } else {
+                *ratio = (ratio - 0.1).max(0.1);
+            }
+        }
+    }
+
+    /// Get all leaf window IDs in a cell's split tree
+    pub fn leaves_in_cell(&self, cell: Cell) -> Vec<WindowId> {
+        let mut result = Vec::new();
+        if let Some(node) = self.cell_nodes.get(&cell) {
+            self.collect_leaves(node, &mut result);
+        }
+        result
+    }
+
+    fn collect_leaves(&self, node: &CellNode, out: &mut Vec<WindowId>) {
+        match node {
+            CellNode::Leaf(wid) => out.push(*wid),
+            CellNode::Split { primary, secondary, .. } => {
+                self.collect_leaves(primary, out);
+                self.collect_leaves(secondary, out);
+            }
+        }
+    }
+
+    /// Get the rect for a leaf within a split tree
+    pub fn leaf_rect(&self, cell: Cell, leaf_wid: WindowId, viewport_w: i32, viewport_h: i32) -> Option<(i32, i32, u32, u32)> {
+        let base_x = (cell.col - self.camera.col) * (self.default_cell_w() as i32 + self.gap_x)
+            - (self.peek_x - self.gap_x / 2).max(0) + viewport_w / 2;
+        let base_y = (cell.row - self.camera.row) * (self.default_cell_h() as i32 + self.gap_y)
+            - (self.peek_y - self.gap_y / 2).max(0) + viewport_h / 2;
+
+        let cw = self.default_cell_w() as i32;
+        let ch = self.default_cell_h() as i32;
+
+        self.leaf_rect_in_node(self.cell_nodes.get(&cell)?, base_x - cw / 2, base_y - ch / 2, cw, ch, leaf_wid)
+    }
+
+    fn leaf_rect_in_node(&self, node: &CellNode, x: i32, y: i32, w: i32, h: i32, target: WindowId) -> Option<(i32, i32, u32, u32)> {
+        match node {
+            CellNode::Leaf(wid) if *wid == target => {
+                Some((x.max(0), y.max(0), w as u32, h as u32))
+            }
+            CellNode::Leaf(_) => None,
+            CellNode::Split { dir, ratio, primary, secondary } => {
+                match dir {
+                    SplitDir::Horizontal => {
+                        let primary_w = (w as f32 * ratio) as i32;
+                        let secondary_w = w - primary_w;
+                        let primary_x = x;
+                        let secondary_x = x + primary_w + self.gap_x;
+                        self.leaf_rect_in_node(primary, primary_x, y, primary_w, h, target)
+                            .or_else(|| self.leaf_rect_in_node(secondary, secondary_x, y, secondary_w, h, target))
+                    }
+                    SplitDir::Vertical => {
+                        let primary_h = (h as f32 * ratio) as i32;
+                        let secondary_h = h - primary_h;
+                        let primary_y = y;
+                        let secondary_y = y + primary_h + self.gap_y;
+                        self.leaf_rect_in_node(primary, x, primary_y, w, primary_h, target)
+                            .or_else(|| self.leaf_rect_in_node(secondary, x, secondary_y, w, secondary_h, target))
+                    }
+                }
+            }
+        }
+    }
+
+    fn default_cell_w(&self) -> u32 { self.presets.default_width() }
+    fn default_cell_h(&self) -> u32 { self.presets.default_height() }
 
     pub fn focus_window(&mut self, wid: WindowId) -> Option<Cell> {
         if let Some(&cell) = self.window_positions.get(&wid) {
@@ -193,10 +335,32 @@ impl GridState {
     pub fn remove_window(&mut self, wid: WindowId) {
         if let Some(cell) = self.window_positions.remove(&wid) {
             self.cells.remove(&cell);
+            // Clean up split nodes containing this window
+            self.cleanup_splits(cell, wid);
         }
         self.window_sizes.remove(&wid);
         if self.focused_window == Some(wid) {
             self.focused_window = None;
+        }
+    }
+
+    fn cleanup_splits(&mut self, cell: Cell, removed_wid: WindowId) {
+        if let Some(node) = self.cell_nodes.get_mut(&cell) {
+            self.cleanup_node(node, removed_wid);
+        }
+    }
+
+    fn cleanup_node(&self, node: &mut CellNode, removed: WindowId) {
+        match node {
+            CellNode::Leaf(w) => {
+                if *w == removed {
+                    // This leaf was already removed from window_positions
+                }
+            }
+            CellNode::Split { primary, secondary, .. } => {
+                self.cleanup_node(primary, removed);
+                self.cleanup_node(secondary, removed);
+            }
         }
     }
 
@@ -205,6 +369,85 @@ impl GridState {
         self.gap_y = gaps as i32;
         self.peek_x = peek_x;
         self.peek_y = peek_y;
+    }
+
+    /// Calculate rects for all windows including split cells
+    pub fn all_window_rects(&self, viewport_w: i32, viewport_h: i32) -> Vec<(WindowId, i32, i32, u32, u32)> {
+        let mut result = Vec::new();
+        for (&cell, &wid) in &self.cells {
+            if let Some(node) = self.cell_nodes.get(&cell) {
+                self.rects_for_node(cell, node, viewport_w, viewport_h, &mut result);
+            }
+        }
+        result
+    }
+
+    fn rects_for_node(&self, cell: Cell, node: &CellNode, vw: i32, vh: i32, out: &mut Vec<(WindowId, i32, i32, u32, u32)>) {
+        let cw = self.default_cell_w() as i32;
+        let ch = self.default_cell_h() as i32;
+        let base_x = (cell.col - self.camera.col) * (cw + self.gap_x)
+            - (self.peek_x - self.gap_x / 2).max(0) + vw / 2;
+        let base_y = (cell.row - self.camera.row) * (ch + self.gap_y)
+            - (self.peek_y - self.gap_y / 2).max(0) + vh / 2;
+
+        match node {
+            CellNode::Leaf(wid) => {
+                out.push((*wid, base_x - cw / 2, base_y - ch / 2, cw as u32, ch as u32));
+            }
+            CellNode::Split { dir, ratio, primary, secondary } => {
+                match dir {
+                    SplitDir::Horizontal => {
+                        let pw = (cw as f32 * ratio) as i32;
+                        let sw = cw - pw;
+                        let sx = base_x + pw / 2 + self.gap_x / 2;
+                        let px = base_x - pw / 2 - self.gap_x / 2;
+                        self.add_rects_for(primary, px, base_y, pw, ch, out);
+                        self.add_rects_for(secondary, sx, base_y, sw, ch, out);
+                    }
+                    SplitDir::Vertical => {
+                        let ph = (ch as f32 * ratio) as i32;
+                        let sh = ch - ph;
+                        let py = base_y + ph / 2 + self.gap_y / 2;
+                        let ty = base_y - ph / 2 - self.gap_y / 2;
+                        self.add_rects_for(primary, base_x, ty, cw, ph, out);
+                        self.add_rects_for(secondary, base_x, py, cw, sh, out);
+                    }
+                }
+            }
+        }
+    }
+
+    fn add_rects_for(&self, node: &CellNode, x: i32, y: i32, w: i32, h: i32, out: &mut Vec<(WindowId, i32, i32, u32, u32)>) {
+        match node {
+            CellNode::Leaf(wid) => {
+                out.push((*wid, x, y, w as u32, h as u32));
+            }
+            CellNode::Split { primary, secondary, .. } => {
+                match node {
+                    CellNode::Split { dir, ratio, .. } => {
+                        match dir {
+                            SplitDir::Horizontal => {
+                                let pw = (w as f32 * ratio) as i32;
+                                let sw = w - pw;
+                                let px = x;
+                                let sx = x + pw + self.gap_x;
+                                self.add_rects_for(primary, px, y, pw, h, out);
+                                self.add_rects_for(secondary, sx, y, sw, h, out);
+                            }
+                            SplitDir::Vertical => {
+                                let ph = (h as f32 * ratio) as i32;
+                                let sh = h - ph;
+                                let py = y;
+                                let sy = y + ph + self.gap_y;
+                                self.add_rects_for(primary, x, py, w, ph, out);
+                                self.add_rects_for(secondary, x, sy, w, sh, out);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
 
     pub fn cell_rect(&self, cell: Cell, viewport_w: i32, viewport_h: i32) -> (i32, i32, u32, u32) {
