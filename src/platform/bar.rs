@@ -3,6 +3,7 @@ use windows::{
     Win32::{
         Foundation::*,
         Graphics::Gdi::*,
+        Media::Audio::*,
         System::{LibraryLoader::*, Power::*},
         UI::WindowsAndMessaging::*,
     },
@@ -18,6 +19,11 @@ struct BarState {
     battery: u32,
     volume: u32,
     corner_radius: i32,
+    show_workspaces: bool,
+    show_clock: bool,
+    show_volume: bool,
+    show_battery: bool,
+    workspace_count: usize,
 }
 
 pub struct AppBar {
@@ -27,7 +33,18 @@ pub struct AppBar {
 }
 
 impl AppBar {
-    pub fn create(width: i32, height: i32, bg_color: u32, fg_color: u32, transparency: f32) -> anyhow::Result<Self> {
+    pub fn create(
+        width: i32,
+        height: i32,
+        bg_color: u32,
+        fg_color: u32,
+        transparency: f32,
+        workspace_count: usize,
+        show_workspaces: bool,
+        show_clock: bool,
+        show_volume: bool,
+        show_battery: bool,
+    ) -> anyhow::Result<Self> {
         unsafe {
             let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
             let class = WNDCLASSW {
@@ -51,8 +68,15 @@ impl AppBar {
             let alpha = (transparency * 255.0).clamp(0.0, 255.0) as u8;
             let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA);
 
+            // Apply rounded corners
+            let rgn = CreateRoundRectRgn(0, 0, width, height, 10, 10);
+            if !rgn.is_invalid() {
+                let _ = SetWindowRgn(hwnd, rgn, false);
+            }
+
+            let workspaces: Vec<String> = (1..=workspace_count).map(|i| i.to_string()).collect();
             let state = BarState {
-                workspaces: vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
+                workspaces,
                 active_workspace: 0,
                 title: String::new(),
                 bg_color,
@@ -61,6 +85,11 @@ impl AppBar {
                 battery: 0,
                 volume: 0,
                 corner_radius: 6,
+                show_workspaces,
+                show_clock,
+                show_volume,
+                show_battery,
+                workspace_count,
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -130,6 +159,17 @@ impl AppBar {
             }
         }
     }
+
+    pub fn set_workspace_count(&self, count: usize) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).workspace_count = count;
+                (*ptr).workspaces = (1..=count).map(|i| i.to_string()).collect();
+                self.update();
+            }
+        }
+    }
 }
 
 impl Drop for AppBar {
@@ -149,6 +189,22 @@ pub fn get_battery_level() -> u32 {
         let mut status = SYSTEM_POWER_STATUS::default();
         if GetSystemPowerStatus(&mut status).is_ok() {
             status.BatteryLifePercent as u32
+        } else {
+            0
+        }
+    }
+}
+
+pub fn get_volume_level() -> u32 {
+    unsafe {
+        let mut vol: u32 = 0;
+        let hwo = HWAVEOUT(WAVE_MAPPER as *mut _);
+        let result = waveOutGetVolume(hwo, &mut vol);
+        if result == 0 {
+            let left = (vol & 0xFFFF) as u32;
+            let right = ((vol >> 16) & 0xFFFF) as u32;
+            let avg = (left + right) / 2;
+            ((avg as f32 / 0xFFFF as f32) * 100.0).round() as u32
         } else {
             0
         }
@@ -187,43 +243,47 @@ unsafe extern "system" fn bar_wnd_proc(
 
             // Draw workspace indicators
             let mut x = 10i32;
-            for (i, ws) in state.workspaces.iter().enumerate() {
-                let ws_text = format!(" {} ", ws);
-                let ws_w: Vec<u16> = ws_text.encode_utf16().chain(Some(0)).collect();
+            if state.show_workspaces {
+                for (i, ws) in state.workspaces.iter().enumerate() {
+                    if i >= state.workspace_count { break; }
+                    let ws_text = format!(" {} ", ws);
+                    let ws_w: Vec<u16> = ws_text.encode_utf16().chain(Some(0)).collect();
 
-                if i == state.active_workspace {
-                    let _ = SetTextColor(hdc, COLORREF(state.bg_color));
-                    RoundRect(
+                    if i == state.active_workspace {
+                        let _ = SetTextColor(hdc, COLORREF(state.bg_color));
+                        RoundRect(
+                            hdc,
+                            x, 4, x + 36, 26,
+                            state.corner_radius, state.corner_radius,
+                        );
+                        let active_brush = CreateSolidBrush(COLORREF(state.fg_color));
+                        let _ = FillRect(hdc, &RECT { left: x + 1, top: 5, right: x + 35, bottom: 25 }, active_brush);
+                        let _ = DeleteObject(active_brush);
+                    } else {
+                        let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+                        RoundRect(
+                            hdc,
+                            x, 4, x + 36, 26,
+                            state.corner_radius, state.corner_radius,
+                        );
+                    }
+
+                    let mut ws_rect = RECT {
+                        left: x,
+                        top: 2,
+                        right: x + 40,
+                        bottom: 28,
+                    };
+                    let _ = DrawTextW(
                         hdc,
-                        x, 4, x + 36, 26,
-                        state.corner_radius, state.corner_radius,
+                        &mut ws_w.clone(),
+                        &mut ws_rect,
+                        DT_VCENTER | DT_SINGLELINE | DT_CENTER,
                     );
-                    let active_brush = CreateSolidBrush(COLORREF(state.fg_color));
-                    let _ = FillRect(hdc, &RECT { left: x + 1, top: 5, right: x + 35, bottom: 25 }, active_brush);
-                    let _ = DeleteObject(active_brush);
-                } else {
-                    let _ = SetTextColor(hdc, COLORREF(state.fg_color));
-                    RoundRect(
-                        hdc,
-                        x, 4, x + 36, 26,
-                        state.corner_radius, state.corner_radius,
-                    );
+
+                    x += 40;
                 }
-
-                let mut ws_rect = RECT {
-                    left: x,
-                    top: 2,
-                    right: x + 40,
-                    bottom: 28,
-                };
-                let _ = DrawTextW(
-                    hdc,
-                    &mut ws_w.clone(),
-                    &mut ws_rect,
-                    DT_VCENTER | DT_SINGLELINE | DT_CENTER,
-                );
-
-                x += 40;
+                x += 10;
             }
 
             // Draw title
@@ -243,10 +303,17 @@ unsafe extern "system" fn bar_wnd_proc(
             );
 
             // Draw clock (right-aligned)
-            if !state.clock.is_empty() {
+            let mut right_x = 9999i32;
+            if state.show_battery {
+                right_x -= 80;
+            }
+            if state.show_volume {
+                right_x -= 80;
+            }
+            if state.show_clock && !state.clock.is_empty() {
                 let clock_w: Vec<u16> = state.clock.encode_utf16().chain(Some(0)).collect();
                 let mut clock_rect = RECT {
-                    left: 9999,
+                    left: right_x,
                     top: 0,
                     right: 9999,
                     bottom: 9999,
@@ -259,42 +326,46 @@ unsafe extern "system" fn bar_wnd_proc(
                 );
             }
 
-            // Draw battery indicator
-            let bat_text = format!("{}%", state.battery);
-            let bat_w: Vec<u16> = bat_text.encode_utf16().chain(Some(0)).collect();
-            let bat_x = 9999 - 180;
-            let mut bat_rect = RECT {
-                left: bat_x,
-                top: 0,
-                right: bat_x + 60,
-                bottom: 9999,
-            };
-            let bat_color = if state.battery > 20 { state.fg_color } else { 0xFFFF4444 };
-            let _ = SetTextColor(hdc, COLORREF(bat_color));
-            let _ = DrawTextW(
-                hdc,
-                &mut bat_w.clone(),
-                &mut bat_rect,
-                DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
-            );
-
             // Draw volume indicator
-            let vol_text = format!("{}%", state.volume);
-            let vol_w: Vec<u16> = vol_text.encode_utf16().chain(Some(0)).collect();
-            let vol_x = 9999 - 90;
-            let mut vol_rect = RECT {
-                left: vol_x,
-                top: 0,
-                right: vol_x + 60,
-                bottom: 9999,
-            };
-            let _ = SetTextColor(hdc, COLORREF(state.fg_color));
-            let _ = DrawTextW(
-                hdc,
-                &mut vol_w.clone(),
-                &mut vol_rect,
-                DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
-            );
+            if state.show_volume {
+                right_x += 80;
+                let vol_text = format!(" {}% ", state.volume);
+                let vol_w: Vec<u16> = vol_text.encode_utf16().chain(Some(0)).collect();
+                let mut vol_rect = RECT {
+                    left: right_x - 70,
+                    top: 0,
+                    right: right_x + 60,
+                    bottom: 9999,
+                };
+                let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+                let _ = DrawTextW(
+                    hdc,
+                    &mut vol_w.clone(),
+                    &mut vol_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
+                );
+            }
+
+            // Draw battery indicator
+            if state.show_battery {
+                let bat_text = format!(" {}% ", state.battery);
+                let bat_w: Vec<u16> = bat_text.encode_utf16().chain(Some(0)).collect();
+                let bat_x = 9999 - 80;
+                let mut bat_rect = RECT {
+                    left: bat_x - 60,
+                    top: 0,
+                    right: bat_x + 60,
+                    bottom: 9999,
+                };
+                let bat_color = if state.battery > 20 { state.fg_color } else { 0xFFFF4444 };
+                let _ = SetTextColor(hdc, COLORREF(bat_color));
+                let _ = DrawTextW(
+                    hdc,
+                    &mut bat_w.clone(),
+                    &mut bat_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
+                );
+            }
             let _ = SetTextColor(hdc, COLORREF(state.fg_color));
 
             let _ = EndPaint(hwnd, &ps);

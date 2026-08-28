@@ -394,19 +394,27 @@ impl Platform {
         let bar_height = 28i32;
         let bar_bg = 0xFF1E1E2E; // catppuccin base
         let bar_fg = 0xFFCDD6F4; // catppuccin text
-        match AppBar::create(bar_width, bar_height, bar_bg, bar_fg, 0.85) {
-            Ok(bar) => {
-                self.bar = Some(bar);
-                info!("AppBar created");
-                if let Some(ref bar) = self.bar {
-                    bar.set_workspaces(
-                        (0..self.monitor_workspaces[0].grids.len()).map(|i| (i + 1).to_string()).collect(),
-                        0,
-                    );
+        let bar_cfg = &self.config.bar;
+        if bar_cfg.enabled {
+            match AppBar::create(
+                bar_width,
+                bar_height,
+                bar_bg,
+                bar_fg,
+                bar_cfg.transparency,
+                self.config.layout.workspace_count,
+                bar_cfg.show_workspaces,
+                bar_cfg.show_clock,
+                bar_cfg.show_volume,
+                bar_cfg.show_battery,
+            ) {
+                Ok(bar) => {
+                    self.bar = Some(bar);
+                    info!("AppBar created");
                 }
-            }
-            Err(e) => {
-                warn!("AppBar creation failed: {}", e);
+                Err(e) => {
+                    warn!("AppBar creation failed: {}", e);
+                }
             }
         }
 
@@ -608,6 +616,12 @@ impl Platform {
                 if self.config_reload_counter % 600 == 0 {
                     let bat = crate::platform::bar::get_battery_level();
                     bar.set_battery(bat);
+                }
+
+                // Update volume every 5 seconds
+                if self.config_reload_counter % 300 == 0 {
+                    let vol = crate::platform::bar::get_volume_level();
+                    bar.set_volume(vol);
                 }
             }
 

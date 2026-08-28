@@ -2,6 +2,14 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.3.0] - 2026-08-29 — Status Bar Improvements: Conditional Display, Volume Polling, Rounded Bar
+### Added
+- **Conditional bar elements**: `show_workspaces`, `show_clock`, `show_volume`, `show_battery` in BarConfig
+- **Volume polling**: `get_volume_level()` via `waveOutGetVolume` (WAVE_MAPPER), updated every 5 seconds
+- **Rounded bar corners**: `CreateRoundRectRgn` + `SetWindowRgn` applied to bar window
+- `set_workspace_count()` method updates bar workspace indicators when workspace_count changes
+- Battery indicator turns red below 20%
+
 ## [4.2.0] - 2026-08-29 — Window Visual Effects: Rounded Corners, DWM Shadows, Opacity
 ### Added
 - **Rounded corners**: hardware-accelerated via `SetWindowRgn` + `CreateRoundRectRgn`
