@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,12 +12,29 @@ pub struct SessionWindowState {
     pub maximized: bool,
     pub always_on_top: bool,
     pub z_order: usize,
+    pub float_x: Option<i32>,
+    pub float_y: Option<i32>,
+    pub float_w: Option<i32>,
+    pub float_h: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GridSessionState {
+    pub windows: Vec<SessionWindowState>,
+    pub camera: crate::layout::Cell,
+    pub focused: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitorSessionState {
+    pub grids: Vec<GridSessionState>,
+    pub current: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionState {
-    pub windows: Vec<SessionWindowState>,
-    pub camera: crate::layout::Cell,
+    pub version: u32,
+    pub monitors: Vec<MonitorSessionState>,
 }
 
 impl SessionState {
@@ -27,8 +43,7 @@ impl SessionState {
         let base = xdg
             .as_deref()
             .map(PathBuf::from)
-            .or_else(|| dirs::home_dir())
-            .unwrap_or_else(|| PathBuf::from("."));
+            .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")));
         base.join(".config/ultrawm/session.json")
     }
 
@@ -38,8 +53,46 @@ impl SessionState {
             return Ok(None);
         }
         let contents = std::fs::read_to_string(&path)?;
-        let state: SessionState = serde_json::from_str(&contents)?;
-        Ok(Some(state))
+
+        // Try new format (version 2)
+        #[derive(Deserialize)]
+        struct NewFormat {
+            version: u32,
+            monitors: Vec<MonitorSessionState>,
+        }
+
+        if let Ok(new) = serde_json::from_str::<NewFormat>(&contents) {
+            if new.version >= 2 && !new.monitors.is_empty() {
+                return Ok(Some(Self {
+                    version: new.version,
+                    monitors: new.monitors,
+                }));
+            }
+        }
+
+        // Fall back to old format (version 1)
+        #[derive(Deserialize)]
+        struct OldFormat {
+            windows: Vec<SessionWindowState>,
+            camera: crate::layout::Cell,
+        }
+
+        if let Ok(old) = serde_json::from_str::<OldFormat>(&contents) {
+            let monitor = MonitorSessionState {
+                grids: vec![GridSessionState {
+                    windows: old.windows,
+                    camera: old.camera,
+                    focused: None,
+                }],
+                current: 0,
+            };
+            return Ok(Some(Self {
+                version: 2,
+                monitors: vec![monitor],
+            }));
+        }
+
+        Ok(None)
     }
 
     pub fn save(&self) -> anyhow::Result<()> {

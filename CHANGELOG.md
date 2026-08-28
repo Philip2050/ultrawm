@@ -2,6 +2,21 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.2.0] - 2026-08-29 — Session Save/Restore (Multi-Monitor)
+### Added
+- Session now saves all monitors, all workspaces, and floating windows
+- Floating windows saved with float_x/y/w/h positions
+- Session restored across all monitors (was only monitor 0)
+- Session restored across all workspaces (was only current workspace)
+- Session saved automatically on: window close, workspace switch, float toggle, app exit
+- Backward-compatible with old session.json format (version 1)
+
+### Changed
+- `SessionState` now includes per-monitor `MonitorSessionState` with per-workspace `GridSessionState`
+- `SessionWindowState` includes float_x/y/w/h for floating window restoration
+- `save_session` iterates all monitors and workspaces
+- Session restore searches all monitors/workspaces by exe name match
+
 ## [7.1.0] - 2026-08-29 — Window Rules Engine
 ### Added
 - Window rules are now fully applied at window creation time

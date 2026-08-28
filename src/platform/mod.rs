@@ -327,6 +327,7 @@ impl Platform {
         }
 
         info!("Moved window to workspace {} on monitor {}", ws + 1, mon_idx + 1);
+        self.save_session();
     }
 
     pub fn primary_monitor(&self) -> Option<&MonitorInfo> {
@@ -554,6 +555,7 @@ impl Platform {
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 } else {
+                    self.save_session();
                     break;
                 }
             }
@@ -591,6 +593,7 @@ impl Platform {
                                     }
                                 }
                                 self.monitor_workspaces[mon].current = ws;
+                                self.save_session();
                                 // Update bar with workspace names
                                 if let Some(ref bar) = self.bar {
                                     let names = self.workspace_names(mon);
@@ -1072,36 +1075,55 @@ impl Platform {
                             }
                         }
                     }
-                    grid.place_window(wid);
-
-                    // Restore state from session if available
+                    // Restore state from session if available (search all monitors/workspaces)
+                    let mut session_cell: Option<crate::layout::Cell> = None;
+                    let mut session_floating = false;
                     if let Some(ref session) = self.session {
-                        for sw in &session.windows {
-                            if sw.exe == exe {
-                                grid.window_positions.insert(wid, sw.cell);
-                                grid.cells.insert(sw.cell, wid);
-                                // Restore window properties
-                                if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
-                                    info.floating = sw.floating;
-                                    info.opacity = sw.opacity;
-                                    info.sticky = sw.sticky;
-                                    info.maximized = sw.maximized;
-                                    info.always_on_top = sw.always_on_top;
-                                    info.z_order = sw.z_order;
-                                    if sw.floating {
-                                        // Float: remove from grid, position manually
-                                        grid.remove_window(wid);
-                                        unsafe {
-                                            let _ = SetWindowPos(
-                                                info.hwnd,
-                                                if sw.always_on_top { HWND_TOPMOST } else { HWND_NOTOPMOST },
-                                                info.saved_x, info.saved_y, info.saved_w, info.saved_h,
-                                                SWP_FRAMECHANGED,
-                                            );
+                        for mstate in &session.monitors {
+                            for gs in &mstate.grids {
+                                for sw in &gs.windows {
+                                    if sw.exe == exe {
+                                        session_cell = Some(sw.cell);
+                                        session_floating = sw.floating;
+                                        // Restore window properties
+                                        if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                                            info.floating = sw.floating;
+                                            info.opacity = sw.opacity;
+                                            info.sticky = sw.sticky;
+                                            info.maximized = sw.maximized;
+                                            info.always_on_top = sw.always_on_top;
+                                            info.z_order = sw.z_order;
+                                            if sw.float_x.is_some() { info.float_x = sw.float_x; }
+                                            if sw.float_y.is_some() { info.float_y = sw.float_y; }
+                                            if sw.float_w.is_some() { info.float_w = sw.float_w.map(|v| v as u32); }
+                                            if sw.float_h.is_some() { info.float_h = sw.float_h.map(|v| v as u32); }
                                         }
+                                        break;
                                     }
                                 }
-                                break;
+                            }
+                        }
+                    }
+
+                    grid.place_window(wid);
+
+                    // Apply session cell position if found
+                    if let Some(cell) = session_cell {
+                        grid.window_positions.insert(wid, cell);
+                        grid.cells.insert(cell, wid);
+                    }
+
+                    // If session says floating, remove from grid and position manually
+                    if session_floating {
+                        grid.remove_window(wid);
+                        if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                            unsafe {
+                                let _ = SetWindowPos(
+                                    info.hwnd,
+                                    if info.always_on_top { HWND_TOPMOST } else { HWND_NOTOPMOST },
+                                    info.saved_x, info.saved_y, info.saved_w, info.saved_h,
+                                    SWP_FRAMECHANGED,
+                                );
                             }
                         }
                     }
@@ -1998,6 +2020,7 @@ impl Platform {
                     info!("Unfloating window (id={})", wid);
                 }
                 self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                self.save_session();
             }
         }
     }
@@ -2470,8 +2493,6 @@ impl Platform {
     }
 
     pub fn save_session(&mut self) {
-        let grid = &self.monitor_workspaces[0].grids[self.monitor_workspaces[0].current];
-
         // Build Z-order map: HWND raw ptr -> position (0 = topmost)
         let mut z_order_map: HashMap<usize, usize> = HashMap::new();
         unsafe {
@@ -2489,27 +2510,84 @@ impl Platform {
             }
         }
 
-        let mut windows = Vec::new();
-        for (&hwnd_wrapper, info) in &self.windows {
-            if let Some(cell) = grid.window_positions.get(&info.id) {
-                let z_order = z_order_map.get(&(hwnd_wrapper.0.0 as usize)).copied().unwrap_or(usize::MAX);
-                windows.push(crate::session::SessionWindowState {
-                    exe: info.exe.clone(),
-                    cell: *cell,
-                    floating: info.floating,
-                    workspace: self.monitor_workspaces[0].current,
-                    opacity: info.opacity,
-                    sticky: info.sticky,
-                    maximized: info.maximized,
-                    always_on_top: info.always_on_top,
-                    z_order,
+        let mut monitor_states: Vec<crate::session::MonitorSessionState> = Vec::new();
+
+        for mws in &self.monitor_workspaces {
+            let mut grid_states: Vec<crate::session::GridSessionState> = Vec::new();
+
+            for grid in &mws.grids {
+                let mut ws_windows: Vec<crate::session::SessionWindowState> = Vec::new();
+
+                // Save tiled windows from this grid
+                for (&wid, &cell) in &grid.window_positions {
+                    if let Some(info) = self.windows.values().find(|i| i.id == wid) {
+                        let hwnd_key = HWnd(info.hwnd);
+                        let z_order = z_order_map.get(&(hwnd_key.0 .0 as usize)).copied().unwrap_or(usize::MAX);
+                        ws_windows.push(crate::session::SessionWindowState {
+                            exe: info.exe.clone(),
+                            cell,
+                            floating: info.floating,
+                            workspace: mws.current,
+                            opacity: info.opacity,
+                            sticky: info.sticky,
+                            maximized: info.maximized,
+                            always_on_top: info.always_on_top,
+                            z_order,
+                            float_x: info.float_x,
+                            float_y: info.float_y,
+                            float_w: info.float_w.map(|w| w as i32),
+                            float_h: info.float_h.map(|h| h as i32),
+                        });
+                    }
+                }
+
+                // Save floating windows belonging to this monitor that aren't in any grid
+                for info in self.windows.values() {
+                    if info.floating {
+                        let is_in_grid = self.monitor_workspaces.iter()
+                            .any(|m| m.grids.iter().any(|g| g.window_positions.contains_key(&info.id)));
+                        if !is_in_grid {
+                            if let Some(&mon_idx) = self.window_monitors.get(&info.id) {
+                                if mon_idx == self.monitor_workspaces.iter().position(|m| m.monitor.handle == mws.monitor.handle).unwrap_or(usize::MAX) {
+                                    let hwnd_key = HWnd(info.hwnd);
+                                    let z_order = z_order_map.get(&(hwnd_key.0 .0 as usize)).copied().unwrap_or(usize::MAX);
+                                    ws_windows.push(crate::session::SessionWindowState {
+                                        exe: info.exe.clone(),
+                                        cell: crate::layout::Cell::new(0, 0),
+                                        floating: true,
+                                        workspace: mws.current,
+                                        opacity: info.opacity,
+                                        sticky: info.sticky,
+                                        maximized: info.maximized,
+                                        always_on_top: info.always_on_top,
+                                        z_order,
+                                        float_x: info.float_x,
+                                        float_y: info.float_y,
+                                        float_w: info.float_w.map(|w| w as i32),
+                                        float_h: info.float_h.map(|h| h as i32),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                grid_states.push(crate::session::GridSessionState {
+                    windows: ws_windows,
+                    camera: grid.camera,
+                    focused: grid.focused_window,
                 });
             }
+
+            monitor_states.push(crate::session::MonitorSessionState {
+                grids: grid_states,
+                current: mws.current,
+            });
         }
 
         let state = crate::session::SessionState {
-            windows,
-            camera: grid.camera,
+            version: 2,
+            monitors: monitor_states,
         };
 
         if let Err(e) = state.save() {
@@ -3011,6 +3089,7 @@ unsafe extern "system" fn win_event_proc(
         EVENT_OBJECT_DESTROY => {
             if !hwnd.is_invalid() {
                 platform.remove_window(hwnd);
+                platform.save_session();
             }
         }
         EVENT_OBJECT_SHOW => {
