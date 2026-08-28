@@ -121,8 +121,12 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             return LRESULT(1);
         }
         0x46 => {
-            // F — fullscreen toggle
-            platform.toggle_fullscreen();
+            // F — fullscreen toggle (Win+F), maximize toggle (Win+Shift+F)
+            if shift {
+                platform.toggle_maximize();
+            } else {
+                platform.toggle_fullscreen();
+            }
             return LRESULT(1);
         }
         0x43 => {

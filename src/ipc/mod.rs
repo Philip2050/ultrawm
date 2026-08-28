@@ -235,6 +235,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "sticky" => IpcCommand::Single { command: "sticky".into() },
         "minimize" => IpcCommand::Single { command: "minimize".into() },
         "restore" => IpcCommand::Single { command: "restore".into() },
+        "maximize" => IpcCommand::Single { command: "maximize".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

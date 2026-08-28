@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.3.0] - 2026-08-28 — Window Maximize Toggle
+### Added
+- **`toggle_maximize()`**: maximize focused window to fill monitor work area with `Win+Shift+F`
+- Maximize respects monitor's `rcWork` area (taskbar-aware)
+- `maximize` IPC command (`echo '{"command":"maximize"}' > \\.\pipe\ultrawm-ipc`)
+- Uses `WindowInfo.maximized` field for state tracking
+
+### Changed
+- `Win+F`: fullscreen toggle (topmost, covers taskbar)
+- `Win+Shift+F`: maximize toggle (fills work area, taskbar visible)
+
 ## [2.2.0] - 2026-08-28 — Window Minimize/Restore
 ### Added
 - **Minimize focused window**: `Win+M` minimizes the focused window, hiding it from the tiling layout

@@ -1271,6 +1271,47 @@ impl Platform {
         }
     }
 
+    pub fn toggle_maximize(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                info.maximized = !info.maximized;
+                unsafe {
+                    if info.maximized {
+                        let mon = MonitorFromWindow(info.hwnd, MONITOR_DEFAULTTONULL);
+                        if !mon.is_invalid() {
+                            let mut mi = MONITORINFO {
+                                cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+                                ..Default::default()
+                            };
+                            if GetMonitorInfoW(mon, &mut mi).as_bool() {
+                                let _ = SetWindowPos(
+                                    info.hwnd,
+                                    HWND_NOTOPMOST,
+                                    mi.rcWork.left,
+                                    mi.rcWork.top,
+                                    mi.rcWork.right - mi.rcWork.left,
+                                    mi.rcWork.bottom - mi.rcWork.top,
+                                    SWP_FRAMECHANGED,
+                                );
+                            }
+                        }
+                    } else {
+                        let _ = SetWindowPos(
+                            info.hwnd,
+                            HWND_NOTOPMOST,
+                            info.saved_x,
+                            info.saved_y,
+                            info.saved_w,
+                            info.saved_h,
+                            SWP_FRAMECHANGED,
+                        );
+                    }
+                }
+                info!("Maximize toggled: {} (id={}, maximized={})", info.title, info.id, info.maximized);
+            }
+        }
+    }
+
     pub fn minimize_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -1330,6 +1371,10 @@ impl Platform {
                 }
                 if command == "restore" {
                     self.restore_minimized();
+                    return;
+                }
+                if command == "maximize" {
+                    self.toggle_maximize();
                     return;
                 }
                 match command.as_str() {
