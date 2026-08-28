@@ -203,6 +203,32 @@ impl GridState {
         cell
     }
 
+    /// Rearrange all windows into a flat grid of cols x rows cells
+    pub fn snap_layout(&mut self, windows: &[WindowId], cols: usize, rows: usize) {
+        self.cells.clear();
+        self.window_positions.clear();
+        self.cell_nodes.clear();
+        self.focused_window = None;
+
+        if windows.is_empty() || cols == 0 || rows == 0 {
+            return;
+        }
+
+        let total_cells = cols * rows;
+        for (idx, &wid) in windows.iter().take(total_cells).enumerate() {
+            let r = (idx / cols) as i32;
+            let c = (idx % cols) as i32;
+            let cell = Cell::new(r, c);
+            self.cells.insert(cell, wid);
+            self.window_positions.insert(wid, cell);
+            self.cell_nodes.insert(cell, CellNode::Leaf(wid));
+        }
+
+        if !windows.is_empty() {
+            self.focused_window = Some(windows[0]);
+        }
+    }
+
     /// Split a cell in the given direction, placing the focused window as primary
     pub fn split_cell(&mut self, wid: WindowId, dir: SplitDir) -> bool {
         let cell = match self.window_positions.get(&wid) {

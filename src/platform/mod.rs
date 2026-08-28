@@ -1610,6 +1610,26 @@ impl Platform {
         }
     }
 
+    pub fn snap_layout(&mut self, cols: usize, rows: usize) {
+        // Collect visible window IDs before getting mutable grid access
+        let mut visible_wids: Vec<(u64, usize)> = Vec::new();
+        for (&hwnd_wrapper, info) in &self.windows {
+            if info.floating || !info.visible || info.minimized {
+                continue;
+            }
+            let z = info.z_order;
+            visible_wids.push((info.id, z));
+        }
+
+        visible_wids.sort_by_key(|&(_, z)| z);
+
+        let wids: Vec<u64> = visible_wids.into_iter().map(|(wid, _)| wid).collect();
+
+        let grid = self.current_grid();
+        grid.snap_layout(&wids, cols, rows);
+        info!("Snap layout: {}x{} ({} windows)", cols, rows, wids.len());
+    }
+
     pub fn toggle_shade(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -2116,6 +2136,17 @@ impl Platform {
                 }
                 if command == "clamp-focused" {
                     self.clamp_focused_window();
+                    return;
+                }
+                if command.starts_with("snap-layout ") {
+                    if let Some(args) = command.strip_prefix("snap-layout ") {
+                        let parts: Vec<&str> = args.split('x').collect();
+                        if parts.len() == 2 {
+                            if let (Ok(cols), Ok(rows)) = (parts[0].parse::<usize>(), parts[1].parse::<usize>()) {
+                                self.snap_layout(cols, rows);
+                            }
+                        }
+                    }
                     return;
                 }
                 match command.as_str() {

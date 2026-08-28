@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.5.0] - 2026-08-29 — Snap Layouts
+### Added
+- **snap-layout \<cols>x\<rows>** IPC command: rearranges all tiled windows into a flat grid
+- `GridState::snap_layout()` method in layout engine
+- Creates cols×rows cells and distributes visible windows in Z-order
+- Supports patterns like `2x2` (4 quadrants), `3x1` (3 columns), `1x3` (3 rows), `2x1`, `1x2`
+- Extra windows beyond the grid cell count are placed sequentially (wrapping)
+- `Platform::snap_layout()` collects visible, non-floating windows and calls grid method
+- Floating windows are excluded from snap layout arrangement
+
+### Example IPC usage
+```
+echo {"command":"snap-layout 2x2"} | \\\\.\\pipe\\ultrawm-ipc
+echo {"command":"snap-layout 3x1"} | \\\\.\\pipe\\ultrawm-ipc
+```
+
 ## [5.4.0] - 2026-08-29 — All-Window Title Rendering in Border Overlay
 ### Added
 - Window titles rendered for ALL managed windows, not just focused
