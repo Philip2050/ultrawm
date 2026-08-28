@@ -2,7 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
-## [0.5.0] - 2026-08-28 — Visual Polish
+## [0.5.0] - 2026-08-28 — Visual Polish (DWM Shadows + Bar Transparency)
+
+### Added
+- **DWM drop shadows on tiled windows**: enabled via `DwmSetWindowAttribute` with `DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED`, applied once per window with shadow_set tracking
+- **Bar transparency**: AppBar now uses `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with configurable alpha (default 85% via `bar.transparency`)
+- Rounded corners on tiled windows via `SetWindowRgn` with `CreateRoundRectRgn`
+- Focused window glow: 3-pass border rendering (outer glow 25%, mid glow 50%, solid border)
+- Rounded workspace indicators in the bar with `RoundRect`
+- `color_dim()` helper: color intensity scaling for glow effects
+- `enable_dwm_shadow()`: DWM shadow attribute setup helper
+- `shadow_set` tracking HashMap to enable shadow once per window
 
 ### Added
 - **Rounded corners on tiled windows**: `corner_radius` config option (default: 8px), applied via `SetWindowRgn` with `CreateRoundRectRgn` for hardware-accelerated clipping

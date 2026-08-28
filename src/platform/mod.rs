@@ -128,6 +128,7 @@ pub struct Platform {
     pub swap_flash: HashMap<u64, u32>, // wid -> flash timer (countdown frames)
     last_rounded: HashMap<u64, (i32, i32, i32)>, // wid -> (w, h, radius) last applied
     last_frame_time: std::time::Instant,
+    shadow_set: HashMap<u64, bool>, // wid -> whether DWM shadow is enabled
     pub config: crate::config::Config,
     pub config_reload_counter: u32,
     pub next_id: u64,
@@ -180,6 +181,7 @@ impl Platform {
             swap_flash: HashMap::new(),
             last_rounded: HashMap::new(),
             last_frame_time: std::time::Instant::now(),
+            shadow_set: HashMap::new(),
             config: crate::config::Config::default(),
             config_reload_counter: 0,
             next_id: 1,
@@ -366,7 +368,7 @@ impl Platform {
         let bar_height = 28i32;
         let bar_bg = 0xFF1E1E2E; // catppuccin base
         let bar_fg = 0xFFCDD6F4; // catppuccin text
-        match AppBar::create(bar_width, bar_height, bar_bg, bar_fg) {
+        match AppBar::create(bar_width, bar_height, bar_bg, bar_fg, 0.85) {
             Ok(bar) => {
                 self.bar = Some(bar);
                 info!("AppBar created");
@@ -643,6 +645,12 @@ impl Platform {
                             ah as i32,
                             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
                         );
+                    }
+
+                    // Enable DWM shadow once per window
+                    if !self.shadow_set.get(&wid).copied().unwrap_or(false) {
+                        enable_dwm_shadow(hwnd_wrapper.0);
+                        self.shadow_set.insert(wid, true);
                     }
 
                     // Apply rounded corners when size changes
@@ -1519,6 +1527,26 @@ fn blend_color(flash: u32, base: u32, t: f32) -> u32 {
     let g = (fg * t + bg * (1.0 - t)) as u32;
     let b = (fb * t + bb * (1.0 - t)) as u32;
     (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
+}
+
+fn enable_dwm_shadow(hwnd: HWND) {
+    unsafe {
+        let _ = SetWindowLongPtrW(hwnd, GWL_STYLE, WS_CAPTION.0 as isize);
+        let mut policy = DWMNCRP_ENABLED;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_NCRENDERING_POLICY,
+            &mut policy as *mut _ as *const _,
+            std::mem::size_of::<DWMNCRENDERINGPOLICY>() as u32,
+        );
+        let disabled = 0u32;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_TRANSITIONS_FORCEDISABLED,
+            &disabled as *const _ as *const _,
+            std::mem::size_of::<u32>() as u32,
+        );
+    }
 }
 
 // ============ Win32 Callbacks ============

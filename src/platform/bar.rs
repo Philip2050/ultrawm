@@ -25,7 +25,7 @@ pub struct AppBar {
 }
 
 impl AppBar {
-    pub fn create(width: i32, height: i32, bg_color: u32, fg_color: u32) -> anyhow::Result<Self> {
+    pub fn create(width: i32, height: i32, bg_color: u32, fg_color: u32, transparency: f32) -> anyhow::Result<Self> {
         unsafe {
             let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
             let class = WNDCLASSW {
@@ -38,13 +38,16 @@ impl AppBar {
             RegisterClassW(&class);
 
             let hwnd = CreateWindowExW(
-                WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+                WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
                 w!("UltraWMAppBar"),
                 w!("UltraWM Bar"),
                 WS_POPUP | WS_VISIBLE,
                 0, 0, width, height,
                 None, None, hinstance, None,
             )?;
+
+            let alpha = (transparency * 255.0).clamp(0.0, 255.0) as u8;
+            let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA);
 
             let state = BarState {
                 workspaces: vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
