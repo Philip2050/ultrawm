@@ -27,6 +27,7 @@ struct BarState {
     show_volume: bool,
     show_battery: bool,
     workspace_count: usize,
+    snap_mode: bool,
 }
 
 pub struct AppBar {
@@ -94,6 +95,7 @@ impl AppBar {
                 show_volume,
                 show_battery,
                 workspace_count,
+                snap_mode: false,
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -180,6 +182,16 @@ impl AppBar {
             if !ptr.is_null() {
                 (*ptr).workspace_count = count;
                 (*ptr).workspaces = (1..=count).map(|i| i.to_string()).collect();
+                self.update();
+            }
+        }
+    }
+
+    pub fn set_snap_mode(&self, enabled: bool) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).snap_mode = enabled;
                 self.update();
             }
         }
@@ -298,6 +310,27 @@ unsafe extern "system" fn bar_wnd_proc(
                     x += 40;
                 }
                 x += 10;
+            }
+
+            // Draw snap mode indicator
+            if state.snap_mode {
+                let snap_text = " SNAP ";
+                let snap_w: Vec<u16> = snap_text.encode_utf16().chain(Some(0)).collect();
+                let snap_color = 0xFF00FFFF; // Cyan
+                let _ = SetTextColor(hdc, COLORREF(snap_color));
+                let mut snap_rect = RECT {
+                    left: x + 5,
+                    top: 4,
+                    right: x + 65,
+                    bottom: 26,
+                };
+                let _ = DrawTextW(
+                    hdc,
+                    &mut snap_w.clone(),
+                    &mut snap_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_LEFT,
+                );
+                x += 60;
             }
 
             // Draw clock (right-aligned)

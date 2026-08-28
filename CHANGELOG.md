@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [8.2.0] - 2026-08-29 — Window Snap Mode (Win+G)
+### Added
+- Win+G toggles snap mode — focused window snaps to screen positions with arrow/number keys
+- Arrow keys snap: Left=left half, Right=right half, Up=top half, Down=bottom half
+- Number keys 1-9 snap to quadrants and center: 1=TL, 2=TR, 3=BL, 4=BR, 5=center, 6-9=edges
+- 0 snaps to fullscreen
+- Esc exits snap mode
+- Snap mode shows "SNAP" indicator in bar (cyan text) when active
+- Focused window border flashes cyan during snap mode and on snap action
+- `snap_mode`, `snap_flash` fields on Platform
+- `toggle_snap_mode()`, `exit_snap_mode()`, `snap_window(pos)` methods
+- `edge_tile_window` reuses existing positioning logic with min/max rule constraints
+
+### Changed
+- Keyboard handler in `keyboard.rs` dispatches snap keys when `platform.snap_mode` is true
+
 ## [Unreleased]
 ### Planned
 - Window snapping to screen edges (resize/move windows with Win+Grab)

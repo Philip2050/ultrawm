@@ -241,7 +241,50 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.adjust_gap(1);
             return LRESULT(1);
         }
+        0x47 => {
+            // G — window snap mode (Win+G to enter, arrow/number keys to snap, Esc to exit)
+            platform.toggle_snap_mode();
+            return LRESULT(1);
+        }
         _ => {}
+    }
+
+    // Snap mode: arrow keys and number keys snap the window
+    if platform.snap_mode {
+        match vk {
+            x if x == VK_ESCAPE.0 as u32 => {
+                platform.exit_snap_mode();
+                return LRESULT(1);
+            }
+            x if x == VK_LEFT.0 as u32 => {
+                platform.snap_window(6); // Left half
+                return LRESULT(1);
+            }
+            x if x == VK_RIGHT.0 as u32 => {
+                platform.snap_window(5); // Right half
+                return LRESULT(1);
+            }
+            x if x == VK_UP.0 as u32 => {
+                platform.snap_window(8); // Top half
+                return LRESULT(1);
+            }
+            x if x == VK_DOWN.0 as u32 => {
+                platform.snap_window(0); // Bottom half
+                return LRESULT(1);
+            }
+            x if x >= 0x31 && x <= 0x39 => {
+                // Number keys 1-9 snap to quadrants/center
+                let pos = (x - 0x30) as i32;
+                platform.snap_window(pos);
+                return LRESULT(1);
+            }
+            x if x == 0x30 => {
+                // 0 — fullscreen
+                platform.snap_window(9);
+                return LRESULT(1);
+            }
+            _ => {}
+        }
     }
 
     CallNextHookEx(HHOOK(null_mut()), ncode, wparam, lparam)

@@ -135,6 +135,8 @@ pub struct Platform {
     pub anim: HashMap<u64, WindowAnimState>,
     pub swap_flash: HashMap<u64, u32>, // wid -> flash timer (countdown frames)
     pub opacity_anim: HashMap<u64, crate::anim::SpringValue>, // wid -> opacity spring animation
+    pub snap_mode: bool,       // true when Win+G snap mode is active
+    pub snap_flash: u32,       // snap mode flash timer (frames)
     last_rounded: HashMap<u64, (i32, i32, i32)>, // wid -> (w, h, radius) last applied
     last_frame_time: std::time::Instant,
     shadow_set: HashMap<u64, bool>, // wid -> whether DWM shadow is enabled
@@ -211,6 +213,8 @@ impl Platform {
             anim: HashMap::new(),
             swap_flash: HashMap::new(),
             opacity_anim: HashMap::new(),
+            snap_mode: false,
+            snap_flash: 0,
             last_rounded: HashMap::new(),
             last_frame_time: std::time::Instant::now(),
             shadow_set: HashMap::new(),
@@ -698,6 +702,9 @@ impl Platform {
                 bar.set_title(&title);
                 bar.set_title_color(title_color);
 
+                // Update snap mode indicator
+                bar.set_snap_mode(self.snap_mode);
+
                 // Update clock every second
                 let now = chrono::Local::now();
                 let clock = now.format("%H:%M").to_string();
@@ -724,6 +731,14 @@ impl Platform {
                 *timer = timer.saturating_sub(1);
                 *timer > 0
             });
+
+            // Decay snap flash timer
+            if self.snap_flash > 0 {
+                self.snap_flash = self.snap_flash.saturating_sub(1);
+                if self.snap_flash == 0 && !self.snap_mode {
+                    // clean
+                }
+            }
 
             // Vsync-aligned wait (LeopardWM-proven DwmFlush)
             unsafe {
@@ -927,6 +942,10 @@ impl Platform {
                         // Flash white during swap animation, fading with timer
                         let alpha = flash.min(35) as f32 / 35.0;
                         blend_color(0xFFFFFFFF, base_color, alpha * 0.8 + 0.2)
+                    } else if self.snap_mode && is_focused && self.snap_flash > 0 {
+                        // Cyan flash for snap mode
+                        let alpha = self.snap_flash.min(30) as f32 / 30.0;
+                        blend_color(0xFF00FFFF, base_color, alpha * 0.7 + 0.3)
                     } else {
                         base_color
                     };
@@ -1666,6 +1685,29 @@ impl Platform {
 
         info!("Edge tiled window {} with mode {} to ({},{}) {}x{}",
               win_id, mode_code, x, y, w, h);
+    }
+
+    pub fn toggle_snap_mode(&mut self) {
+        self.snap_mode = !self.snap_mode;
+        if self.snap_mode {
+            self.snap_flash = 60; // Flash for ~1 second
+            info!("Snap mode ON — use arrows/1-9 to snap, Esc to exit");
+        } else {
+            self.snap_flash = 0;
+            info!("Snap mode OFF");
+        }
+    }
+
+    pub fn exit_snap_mode(&mut self) {
+        self.snap_mode = false;
+        self.snap_flash = 0;
+    }
+
+    pub fn snap_window(&mut self, pos: i32) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            self.edge_tile_window(hwnd_wrapper.0, pos);
+            self.snap_flash = 15; // Brief flash on snap
+        }
     }
 
     pub fn close_focused(&mut self) {
