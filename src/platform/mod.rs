@@ -1818,6 +1818,39 @@ impl Platform {
                     }
                     return;
                 }
+                if command.starts_with("set-gap ") {
+                    if let Some(val) = command.strip_prefix("set-gap ") {
+                        if let Ok(gap) = val.parse::<u32>() {
+                            self.config.layout.gaps = gap;
+                            info!("Gap set to {}", gap);
+                        }
+                    }
+                    return;
+                }
+                if command.starts_with("set-corner-radius ") {
+                    if let Some(val) = command.strip_prefix("set-corner-radius ") {
+                        if let Ok(r) = val.parse::<u32>() {
+                            self.config.layout.corner_radius = r;
+                            if let Some(overlay) = self.border_overlay.as_mut() {
+                                overlay.border_radius = r as i32;
+                            }
+                            info!("Corner radius set to {}", r);
+                        }
+                    }
+                    return;
+                }
+                if command.starts_with("set-border-width ") {
+                    if let Some(val) = command.strip_prefix("set-border-width ") {
+                        if let Ok(bw) = val.parse::<u32>() {
+                            self.config.layout.border_width = bw;
+                            if let Some(overlay) = self.border_overlay.as_mut() {
+                                overlay.border_width = bw as i32;
+                            }
+                            info!("Border width set to {}", bw);
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }

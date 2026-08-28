@@ -2,6 +2,14 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.6.0] - 2026-08-29 — IPC Command Expansion: set-gap, set-corner-radius, set-border-width
+### Added
+- **set-gap \<value\>**: dynamically adjust gaps between tiled windows at runtime
+- **set-corner-radius \<value\>**: dynamically adjust window corner radius at runtime
+- **set-border-width \<value\>**: dynamically adjust border width at runtime
+- All three commands update both the config and the live border overlay rendering
+- IPC commands documented and available for external automation
+
 ## [4.5.0] - 2026-08-29 — Mouse Drag-to-Move for Tiled Windows
 ### Added
 - **Drag-to-move tiled windows**: click and drag any tiled window to reposition it within the grid

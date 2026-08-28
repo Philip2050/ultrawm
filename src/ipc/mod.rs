@@ -386,6 +386,9 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "reload-config" => IpcCommand::Single { command: "reload-config".into() },
         "set-wallpaper" => IpcCommand::Single { command: "set-wallpaper".into() },
         "set-wallpaper-image" => IpcCommand::Single { command: "set-wallpaper-image".into() },
+        "set-gap" => IpcCommand::Single { command: "set-gap".into() },
+        "set-corner-radius" => IpcCommand::Single { command: "set-corner-radius".into() },
+        "set-border-width" => IpcCommand::Single { command: "set-border-width".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
