@@ -30,6 +30,8 @@ An **ultimate tiling window manager for Windows 11** that combines:
 - Focus-follows-mouse (optional)
 - Bar with workspace indicators, title, and clock
 - DWM blur on windows
+- Swap flash animation: white flash on windows during collision swap
+- Touchpad gesture support (pan, pinch, two-finger tap)
 - Shell replacement support
 
 ## Keybindings
@@ -37,7 +39,7 @@ An **ultimate tiling window manager for Windows 11** that combines:
 | Keys | Action |
 |---|---|
 | `Win + ←/→/↑/↓` | Focus window (or pan camera) |
-| `Win + Shift + ←/→/↑/↓` | Move window with collision swapping |
+| `Win + Shift + ←/→/↑/↓` | Move window with collision swapping (visual flash) |
 | `Win + Ctrl + ←/→/↑/↓` | Pan camera |
 | `Win + 1/2/3/4` | Switch workspace |
 | `Win + T` | Next theme |
