@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.9.0] - 2026-08-29 — Scratchpad IPC Commands
+### Added
+- **add-scratchpad \<name>** IPC command: adds focused window to scratchpad with given name
+- **remove-scratchpad \<name>** IPC command: removes scratchpad entry by name
+- `ScratchpadManager::find_by_name()` method for name-based lookup
+- `Platform::add_scratchpad()` adds focused window to scratchpad manager
+- `Platform::remove_scratchpad()` removes scratchpad entry by name
+- **scratchpad** IPC command: toggles all scratchpad windows visibility
+
+### Changed
+- Scratchpad toggle uses `SCRATCHPAD_PTR` static pointer for global access
+- Windows in scratchpad are shown/hidden via `ShowWindow(SW_SHOW/SW_HIDE)`
+
 ## [5.8.0] - 2026-08-29 — Named Workspaces
 ### Added
 - **workspace_names** config field: list of custom names for workspaces (falls back to numbers)

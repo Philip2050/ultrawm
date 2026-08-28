@@ -2164,6 +2164,18 @@ impl Platform {
                     }
                     return;
                 }
+                if command.starts_with("add-scratchpad ") {
+                    if let Some(name) = command.strip_prefix("add-scratchpad ") {
+                        self.add_scratchpad(name);
+                    }
+                    return;
+                }
+                if command.starts_with("remove-scratchpad ") {
+                    if let Some(name) = command.strip_prefix("remove-scratchpad ") {
+                        self.remove_scratchpad(name);
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
@@ -2333,6 +2345,30 @@ impl Platform {
         }
         if let Some(ref mut sp) = self.scratchpad {
             sp.toggle();
+        }
+    }
+
+    pub fn add_scratchpad(&mut self, name: &str) {
+        if self.scratchpad.is_none() {
+            if let Ok(()) = ScratchpadManager::create() {
+                ScratchpadManager::create().ok();
+            }
+        }
+        if let Some(ref mut sp) = self.scratchpad {
+            // Find the focused window and add it to scratchpad
+            if let Some(hwnd_wrapper) = self.focused_hwnd {
+                sp.add(hwnd_wrapper.0, name.to_string());
+                info!("Added scratchpad: {} (hwnd={:?})", name, hwnd_wrapper.0);
+            }
+        }
+    }
+
+    pub fn remove_scratchpad(&mut self, name: &str) {
+        if let Some(ref mut sp) = self.scratchpad {
+            if let Some(win) = sp.find_by_name(name) {
+                sp.remove(win.hwnd);
+                info!("Removed scratchpad: {}", name);
+            }
         }
     }
 

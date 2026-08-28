@@ -431,6 +431,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "get-managed-windows" => IpcCommand::Single { command: "get-managed-windows".into() },
         "clamp-focused" => IpcCommand::Single { command: "clamp-focused".into() },
         "snap-layout" => IpcCommand::Single { command: "snap-layout".into() },
+        "add-scratchpad" => IpcCommand::Single { command: "add-scratchpad".into() },
+        "remove-scratchpad" => IpcCommand::Single { command: "remove-scratchpad".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

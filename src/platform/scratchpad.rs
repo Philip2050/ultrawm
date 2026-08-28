@@ -57,4 +57,8 @@ impl ScratchpadManager {
         let key = hwnd.0 as usize;
         self.windows.remove(&key);
     }
+
+    pub fn find_by_name(&self, name: &str) -> Option<&ScratchpadWindow> {
+        self.windows.values().find(|w| w.name == name)
+    }
 }
