@@ -27,6 +27,15 @@ All notable changes to UltraWM will be documented in this file.
 - `WindowInfo.opacity` and `WindowInfo.sticky` fields for per-window state tracking
 - Opacity applied per-window in tile_all_windows after blur
 
+## [0.5.2] - 2026-08-28 — Battery & Volume Indicators
+
+### Added
+- **Battery indicator** in bar: shows percentage with red text when below 20%
+- **Volume indicator** in bar: shows volume percentage
+- `AppBar::set_battery()` and `AppBar::set_volume()` methods
+- `get_battery_level()` using `GetSystemPowerStatus` from `Win32::System::Power`
+- Added `Win32_System_Power` feature to Cargo.toml
+- Battery updates every ~10 seconds in event loop
 ### Fixed
 - Animation timestep: capped at 1/30s to prevent spring instability
 

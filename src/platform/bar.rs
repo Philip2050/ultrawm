@@ -3,7 +3,7 @@ use windows::{
     Win32::{
         Foundation::*,
         Graphics::Gdi::*,
-        System::LibraryLoader::*,
+        System::{LibraryLoader::*, Power::*},
         UI::WindowsAndMessaging::*,
     },
 };
@@ -15,6 +15,8 @@ struct BarState {
     bg_color: u32,
     fg_color: u32,
     clock: String,
+    battery: u32,
+    volume: u32,
     corner_radius: i32,
 }
 
@@ -56,6 +58,8 @@ impl AppBar {
                 bg_color,
                 fg_color,
                 clock: String::new(),
+                battery: 0,
+                volume: 0,
                 corner_radius: 6,
             };
             let boxed = Box::new(state);
@@ -106,6 +110,26 @@ impl AppBar {
             }
         }
     }
+
+    pub fn set_battery(&self, level: u32) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).battery = level.min(100);
+                self.update();
+            }
+        }
+    }
+
+    pub fn set_volume(&self, level: u32) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).volume = level.min(100);
+                self.update();
+            }
+        }
+    }
 }
 
 impl Drop for AppBar {
@@ -116,6 +140,17 @@ impl Drop for AppBar {
                 drop(Box::from_raw(ptr));
             }
             let _ = DestroyWindow(self.hwnd);
+        }
+    }
+}
+
+pub fn get_battery_level() -> u32 {
+    unsafe {
+        let mut status = SYSTEM_POWER_STATUS::default();
+        if GetSystemPowerStatus(&mut status).is_ok() {
+            status.BatteryLifePercent as u32
+        } else {
+            0
         }
     }
 }
@@ -223,6 +258,44 @@ unsafe extern "system" fn bar_wnd_proc(
                     DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
                 );
             }
+
+            // Draw battery indicator
+            let bat_text = format!("{}%", state.battery);
+            let bat_w: Vec<u16> = bat_text.encode_utf16().chain(Some(0)).collect();
+            let bat_x = 9999 - 180;
+            let mut bat_rect = RECT {
+                left: bat_x,
+                top: 0,
+                right: bat_x + 60,
+                bottom: 9999,
+            };
+            let bat_color = if state.battery > 20 { state.fg_color } else { 0xFFFF4444 };
+            let _ = SetTextColor(hdc, COLORREF(bat_color));
+            let _ = DrawTextW(
+                hdc,
+                &mut bat_w.clone(),
+                &mut bat_rect,
+                DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
+            );
+
+            // Draw volume indicator
+            let vol_text = format!("{}%", state.volume);
+            let vol_w: Vec<u16> = vol_text.encode_utf16().chain(Some(0)).collect();
+            let vol_x = 9999 - 90;
+            let mut vol_rect = RECT {
+                left: vol_x,
+                top: 0,
+                right: vol_x + 60,
+                bottom: 9999,
+            };
+            let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+            let _ = DrawTextW(
+                hdc,
+                &mut vol_w.clone(),
+                &mut vol_rect,
+                DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
+            );
+            let _ = SetTextColor(hdc, COLORREF(state.fg_color));
 
             let _ = EndPaint(hwnd, &ps);
             LRESULT(0)

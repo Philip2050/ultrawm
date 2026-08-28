@@ -491,6 +491,12 @@ impl Platform {
                 let now = chrono::Local::now();
                 let clock = now.format("%H:%M").to_string();
                 bar.set_clock(&clock);
+
+                // Update battery every 10 seconds
+                if self.config_reload_counter % 600 == 0 {
+                    let bat = crate::platform::bar::get_battery_level();
+                    bar.set_battery(bat);
+                }
             }
 
             // Focus-follows-mouse check (every frame if enabled)
