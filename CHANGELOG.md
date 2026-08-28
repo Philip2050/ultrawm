@@ -2,27 +2,21 @@
 
 All notable changes to UltraWM will be documented in this file.
 
-## [0.5.0] - 2026-08-28 — Visual Polish (DWM Shadows + Bar Transparency)
+## [0.5.0] - 2026-08-28 — Visual Polish (DWM Shadows + Bar Transparency + Rounded Corners + Blur)
 
 ### Added
-- **DWM drop shadows on tiled windows**: enabled via `DwmSetWindowAttribute` with `DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED`, applied once per window with shadow_set tracking
-- **Bar transparency**: AppBar now uses `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with configurable alpha (default 85% via `bar.transparency`)
-- Rounded corners on tiled windows via `SetWindowRgn` with `CreateRoundRectRgn`
-- Focused window glow: 3-pass border rendering (outer glow 25%, mid glow 50%, solid border)
-- Rounded workspace indicators in the bar with `RoundRect`
-- `color_dim()` helper: color intensity scaling for glow effects
-- `enable_dwm_shadow()`: DWM shadow attribute setup helper
-- `shadow_set` tracking HashMap to enable shadow once per window
-
-### Added
-- **Rounded corners on tiled windows**: `corner_radius` config option (default: 8px), applied via `SetWindowRgn` with `CreateRoundRectRgn` for hardware-accelerated clipping
-- **Focused window glow**: multi-pass border rendering with outer glow (25% intensity, +4px) and mid-glow (50% intensity, +2px) around the focused window border
-- **Rounded workspace indicators**: bar workspace buttons use `RoundRect` with configurable corner radius
-- **`color_dim()` helper**: color intensity scaling for glow effects in border overlay
+- **DWM drop shadows on tiled windows**: `DwmSetWindowAttribute` with `DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED`, tracked per-window via `shadow_set`
+- **Bar transparency**: `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with configurable alpha (default 85% via `bar.transparency`)
+- **Rounded corners on tiled windows**: `corner_radius` config option (default: 8px), applied via `SetWindowRgn` with `CreateRoundRectRgn`, tracked via `last_rounded` HashMap
+- **Focused window glow**: 3-pass border rendering (outer glow 25% +4px, mid-glow 50% +2px, solid border) via `color_dim()` helper
+- **Rounded workspace indicators**: bar buttons use `RoundRect` with configurable corner radius
+- **Acrylic blur with accent color**: `enable_blur` now uses `ACCENT_ENABLE_ACRYLICBLURBEHIND` with theme accent color + 0xCC alpha for visible tinted blur
 
 ### Changed
-- Border overlay rendering: 3-pass rendering for focused windows (glow + mid + border), 1-pass for unfocused
-- Bar workspace indicators: rounded pill-shaped active indicators with inverted text color
+- Border overlay: 3-pass focused rendering vs 1-pass unfocused
+- Bar workspace indicators: rounded pill-shaped active indicators with inverted text
+- Animation timestep: capped at 1/30s for spring stability
+- Blur: acrylic blur with accent color tint instead of generic blur
 
 ### Fixed
 - Animation timestep: capped at 1/30s to prevent spring instability

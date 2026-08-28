@@ -29,10 +29,12 @@ An **ultimate tiling window manager for Windows 11** that combines:
 - Per-app rules (float, workspace assignment)
 - Focus-follows-mouse (optional)
 - Bar with workspace indicators, title, and clock
-- DWM blur on windows
+- DWM acrylic blur on tiled windows with accent color tint
 - Swap flash animation: white flash on windows during collision swap
 - Rounded corners on tiled windows with glow effect on focused window
+- DWM drop shadows on tiled windows
 - Rounded workspace indicators in the bar
+- Bar transparency (configurable via bar.transparency)
 - Touchpad gesture support (pan, pinch, two-finger tap)
 - Shell replacement support
 

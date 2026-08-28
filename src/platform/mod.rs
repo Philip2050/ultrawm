@@ -675,7 +675,7 @@ impl Platform {
                     border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused));
 
                     // Apply DWM blur to windows
-                    let _ = enable_blur(hwnd_wrapper.0);
+                    let _ = enable_blur(hwnd_wrapper.0, accent_rgb);
                 }
             }
         }

@@ -23,18 +23,18 @@ struct WindowCompositionAttributeData {
     size: usize,
 }
 
-const ACCENT_ENABLE_BLURBEHIND: u32 = 3;
+const ACCENT_ENABLE_ACRYLICBLURBEHIND: u32 = 4;
 const WCA_ACCENT_POLICY: u32 = 19;
 
 type SetWindowCompositionAttributeFn = unsafe extern "system" fn(HWND, *mut WindowCompositionAttributeData) -> i32;
 
-pub fn enable_blur(hwnd: HWND) -> anyhow::Result<()> {
+pub fn enable_blur(hwnd: HWND, accent_color: u32) -> anyhow::Result<()> {
     unsafe {
         if let Some(func) = get_set_window_composition_attribute() {
             let mut accent = AccentPolicy {
-                accent_state: ACCENT_ENABLE_BLURBEHIND,
-                accent_flags: 0,
-                gradient_color: 0,
+                accent_state: ACCENT_ENABLE_ACRYLICBLURBEHIND,
+                accent_flags: 2,
+                gradient_color: accent_color | 0xCC000000, // ABGR: alpha=0xCC
                 animation_id: 0,
             };
 
