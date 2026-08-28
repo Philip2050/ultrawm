@@ -18,6 +18,21 @@ All notable changes to UltraWM will be documented in this file.
 ### Changed
 - Keyboard handler in `keyboard.rs` dispatches snap keys when `platform.snap_mode` is true
 
+## [8.3.0] - 2026-08-29 — Floating Window Grid/Edge Snapping
+### Added
+- Floating windows snap to configurable grid (default 10px) when dragged
+- Edge snapping: floating windows snap to other floating windows' edges within 8px distance
+- `snap_grid_size` and `snap_edge_distance` config options in LayoutConfig
+- `snap_to_grid(x, y, w, h)` rounds position/size to nearest grid multiples
+- `snap_floating_window(hwnd)` applies grid + edge snapping to a floating window
+- `EVENT_OBJECT_LOCATIONCHANGE` WinEvent hook triggers snapping on floating window drag
+- Second SetWinEventHook call for location change events (separate from foreground/create hook)
+- Snap positions clamped to monitor bounds
+
+### Changed
+- Floating windows auto-snap during drag without any keybinding required
+- Grid size and edge distance configurable via config.toml
+
 ## [Unreleased]
 ### Planned
 - Window snapping to screen edges (resize/move windows with Win+Grab)

@@ -396,6 +396,19 @@ impl Platform {
             );
         }
 
+        // Install WinEvent hook for floating window movement (snap to grid/edges)
+        unsafe {
+            let _ = SetWinEventHook(
+                EVENT_OBJECT_LOCATIONCHANGE,
+                EVENT_OBJECT_LOCATIONCHANGE,
+                HINSTANCE(null_mut()),
+                Some(win_event_proc),
+                0,
+                0,
+                WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
+            );
+        }
+
         // Install low-level keyboard hook — must pass platform pointer
         unsafe {
             self.keyboard_hook = Some(KeyboardHook::install(self)?);
@@ -1707,6 +1720,97 @@ impl Platform {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             self.edge_tile_window(hwnd_wrapper.0, pos);
             self.snap_flash = 15; // Brief flash on snap
+        }
+    }
+
+    /// Snap a rectangle position/size to the grid
+    fn snap_to_grid(&self, x: i32, y: i32, w: i32, h: i32) -> (i32, i32, i32, i32) {
+        let grid = self.config.layout.snap_grid_size as i32;
+        let sx = (x / grid) * grid;
+        let sy = (y / grid) * grid;
+        let sw = ((w + grid - 1) / grid) * grid;
+        let sh = ((h + grid - 1) / grid) * grid;
+        (sx, sy, sw.max(grid), sh.max(grid))
+    }
+
+    /// Snap a floating window to other windows' edges and the grid
+    pub fn snap_floating_window(&mut self, hwnd: HWND) {
+        let wrapper = HWnd(hwnd);
+        let info = match self.windows.get(&wrapper) {
+            Some(i) if i.floating => i,
+            _ => return,
+        };
+
+        let mon_idx = self.find_monitor_for_window(hwnd).unwrap_or(0);
+        let mon = &self.monitors[mon_idx];
+
+        unsafe {
+            let mut rect = RECT::default();
+            if GetWindowRect(hwnd, &mut rect).is_err() {
+                return;
+            }
+
+            let mut x = rect.left;
+            let mut y = rect.top;
+            let w = rect.right - rect.left;
+            let h = rect.bottom - rect.top;
+
+            // Snap to grid
+            let (gx, gy, gw, gh) = self.snap_to_grid(x, y, w, h);
+
+            // Edge snapping: check proximity to other windows' edges
+            let edge_dist = self.config.layout.snap_edge_distance as i32;
+            let mut snapped_x = gx;
+            let mut snapped_y = gy;
+
+            for (other_hwnd, other_info) in &self.windows {
+                if other_info.floating && *other_hwnd != wrapper {
+                    let mut orect = RECT::default();
+                    if GetWindowRect(other_info.hwnd, &mut orect).is_ok() {
+                        let ox1 = orect.left;
+                        let ox2 = orect.right;
+                        let oy1 = orect.top;
+                        let oy2 = orect.bottom;
+
+                        // Check horizontal edges
+                        if (gx + gw - ox1).abs() <= edge_dist && gx + gw >= ox1 && gx <= ox2 {
+                            snapped_x = ox1 - gw;
+                        }
+                        if (ox2 - gx).abs() <= edge_dist && ox2 >= gx && ox2 <= gx + gw {
+                            snapped_x = ox2;
+                        }
+
+                        // Check vertical edges
+                        if (gy + gh - oy1).abs() <= edge_dist && gy + gh >= oy1 && gy <= oy2 {
+                            snapped_y = oy1 - gh;
+                        }
+                        if (oy2 - gy).abs() <= edge_dist && oy2 >= gy && oy2 <= gy + gh {
+                            snapped_y = oy2;
+                        }
+                    }
+                }
+            }
+
+            // Clamp to monitor bounds
+            snapped_x = snapped_x.clamp(mon.left, mon.right - gw);
+            snapped_y = snapped_y.clamp(mon.top, mon.bottom - gh);
+
+            // Apply if position changed
+            if snapped_x != x || snapped_y != y {
+                let _ = SetWindowPos(
+                    hwnd,
+                    HWND_TOP,
+                    snapped_x, snapped_y, gw, gh,
+                    SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+                // Update stored float position
+                if let Some(info) = self.windows.get_mut(&wrapper) {
+                    info.float_x = Some(snapped_x);
+                    info.float_y = Some(snapped_y);
+                    info.float_w = Some(gw as u32);
+                    info.float_h = Some(gh as u32);
+                }
+            }
         }
     }
 
@@ -3334,6 +3438,11 @@ unsafe extern "system" fn win_event_proc(
         EVENT_OBJECT_SHOW => {
             if !hwnd.is_invalid() && is_window_alive(hwnd) {
                 platform.manage_window(hwnd);
+            }
+        }
+        EVENT_OBJECT_LOCATIONCHANGE => {
+            if !hwnd.is_invalid() && is_window_alive(hwnd) {
+                platform.snap_floating_window(hwnd);
             }
         }
         _ => {}

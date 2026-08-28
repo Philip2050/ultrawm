@@ -57,6 +57,8 @@ pub struct LayoutConfig {
     pub default_split_dir: String,
     pub auto_split: bool,
     pub monitor_layouts: Vec<MonitorLayout>,
+    pub snap_grid_size: u32,
+    pub snap_edge_distance: u32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -148,6 +150,8 @@ impl Default for Config {
                 default_split_dir: "vertical".into(),
                 auto_split: false,
                 monitor_layouts: vec![],
+                snap_grid_size: 10,
+                snap_edge_distance: 8,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),
