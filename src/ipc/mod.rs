@@ -384,6 +384,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "unfloat-all" => IpcCommand::Single { command: "unfloat-all".into() },
         "list-rules" => IpcCommand::Single { command: "list-rules".into() },
         "reload-config" => IpcCommand::Single { command: "reload-config".into() },
+        "set-wallpaper" => IpcCommand::Single { command: "set-wallpaper".into() },
+        "set-wallpaper-image" => IpcCommand::Single { command: "set-wallpaper-image".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

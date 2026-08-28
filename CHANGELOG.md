@@ -2,6 +2,16 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.4.0] - 2026-08-29 — Wallpaper Support: Theme-based Gradient, Image Wallpaper, IPC Commands
+### Added
+- **Theme wallpaper**: diagonal gradient from background to accent color, applied on theme switch
+- **Image wallpaper**: `set-wallpaper-image <path>` IPC command to set any image as wallpaper
+- **Color wallpaper**: `set-wallpaper <hex_color>` IPC command generates gradient wallpaper
+- Wallpaper resolution matches primary monitor dimensions
+- `apply_theme_wallpaper()` generates diagonal gradient from theme colors
+- `apply_wallpaper()` now accepts width/height parameters for resolution matching
+- `generate_accent_wallpaper()` creates smooth background-to-accent gradient BMP
+
 ## [4.3.0] - 2026-08-29 — Status Bar Improvements: Conditional Display, Volume Polling, Rounded Bar
 ### Added
 - **Conditional bar elements**: `show_workspaces`, `show_clock`, `show_volume`, `show_battery` in BarConfig

@@ -1764,6 +1764,23 @@ impl Platform {
                     }
                     return;
                 }
+                if command.starts_with("set-wallpaper ") {
+                    if let Some(color) = command.strip_prefix("set-wallpaper ") {
+                        let primary = self.primary_monitor().map(|m| (m.width(), m.height())).unwrap_or((1920, 1080));
+                        if let Err(e) = crate::platform::wallpaper::apply_wallpaper(color, primary.0, primary.1) {
+                            warn!("Wallpaper error: {}", e);
+                        }
+                    }
+                    return;
+                }
+                if command.starts_with("set-wallpaper-image ") {
+                    if let Some(path) = command.strip_prefix("set-wallpaper-image ") {
+                        if let Err(e) = crate::platform::wallpaper::apply_wallpaper_image(path) {
+                            warn!("Wallpaper image error: {}", e);
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
@@ -1944,8 +1961,10 @@ impl Platform {
             } else {
                 let _ = m.prev_theme();
             }
+            let primary = self.primary_monitor().map(|m| (m.width(), m.height())).unwrap_or((1920, 1080));
             let bg = m.current_theme().background.clone();
-            let _ = crate::platform::wallpaper::apply_wallpaper(&bg);
+            let accent = m.current_theme().accent.clone();
+            let _ = crate::platform::wallpaper::apply_theme_wallpaper(&bg, &accent, primary.0, primary.1);
         }
     }
 
@@ -1969,8 +1988,10 @@ impl Platform {
         if let Some(ref mgr) = self.theme_mgr {
             let mut m = mgr.borrow_mut();
             let _ = m.apply_idx(idx);
+            let primary = self.primary_monitor().map(|m| (m.width(), m.height())).unwrap_or((1920, 1080));
             let bg = m.current_theme().background.clone();
-            let _ = wallpaper::apply_wallpaper(&bg);
+            let accent = m.current_theme().accent.clone();
+            let _ = wallpaper::apply_theme_wallpaper(&bg, &accent, primary.0, primary.1);
         }
     }
 
@@ -1978,8 +1999,10 @@ impl Platform {
         if let Some(ref mgr) = self.theme_mgr {
             let mut m = mgr.borrow_mut();
             let _ = m.next_theme();
+            let primary = self.primary_monitor().map(|m| (m.width(), m.height())).unwrap_or((1920, 1080));
             let bg = m.current_theme().background.clone();
-            let _ = wallpaper::apply_wallpaper(&bg);
+            let accent = m.current_theme().accent.clone();
+            let _ = wallpaper::apply_theme_wallpaper(&bg, &accent, primary.0, primary.1);
         }
     }
 
