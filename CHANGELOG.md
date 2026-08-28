@@ -75,13 +75,13 @@ All notable changes to UltraWM will be documented in this file.
 
 ## [Unreleased]
 ### Planned
-- Window snapping to screen edges (resize/move windows with Win+Grab)
-- Floating window snapping with grid-based alignment
-- Dynamic workspace creation/deletion
-- Scratchpad windows (hidden terminals, launchers)
-- Window tabs in grid cells
-- Per-monitor DPI scaling
-- IPC-based screenshot/capture commands
+- Window rule import/export via IPC (JSON config backup)
+- Config hot-reload notification in bar
+- Window minimize-to-tray support
+- Multi-step window resize with visual guides
+- Configurable snap positions (custom grid layouts)
+- GPU-accelerated screenshot via Windows.Graphics.Capture
+- Session auto-save interval config
 
 ## [8.1.0] - 2026-08-29 — Per-Window Opacity Animation on Focus Change
 ### Added
