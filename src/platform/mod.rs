@@ -633,7 +633,7 @@ impl Platform {
     }
 
     pub fn tile_all_windows(&mut self, accent_rgb: u32, inactive_rgb: u32) {
-        let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool, Option<String>)> = Vec::new();
+        let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>)> = Vec::new();
 
         // Overview mode: compact grid of all windows
         if self.overview {
@@ -775,7 +775,7 @@ impl Platform {
                     } else {
                         None
                     };
-                    border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, title));
+                    border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, info.floating, title));
 
                     // Apply DWM blur to windows
                     let _ = enable_blur(hwnd_wrapper.0, accent_rgb);
@@ -800,7 +800,7 @@ impl Platform {
         &mut self,
         accent_rgb: u32,
         inactive_rgb: u32,
-        border_rects: &mut Vec<(i32, i32, i32, i32, u32, bool, Option<String>)>,
+        border_rects: &mut Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>)>,
     ) {
         let (wl, wt, wr, wb) = self.current_work_area();
         let vw = wr - wl;
@@ -853,7 +853,9 @@ impl Platform {
             let is_focused = self.focused_hwnd == Some(HWnd(*hwnd));
             let color = if is_focused { accent_rgb } else { inactive_rgb };
             let title = if is_focused { get_window_title(*hwnd) } else { None };
-            border_rects.push((x, y, cell_w, cell_h, color, is_focused, title));
+            let hwnd_wrapper = HWnd(*hwnd);
+            let floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
+            border_rects.push((x, y, cell_w, cell_h, color, is_focused, floating, title));
         }
     }
 

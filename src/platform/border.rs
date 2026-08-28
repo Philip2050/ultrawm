@@ -102,15 +102,16 @@ impl BorderOverlay {
         }
     }
 
-    pub fn update(&mut self, rects: &[(i32, i32, i32, i32, u32, bool, Option<String>)]) {
+    pub fn update(&mut self, rects: &[(i32, i32, i32, i32, u32, bool, bool, Option<String>)]) {
         unsafe {
             std::ptr::write_bytes(self.bits, 0, (self.width * self.height * 4) as usize);
 
-            for &(x, y, w, h, color_rgb, focused, ref title) in rects {
+            for &(x, y, w, h, color_rgb, focused, floating, ref title) in rects {
                 let bw = self.border_width;
                 let half = bw / 2;
+                let pen_color = if floating { 0xFF4488FF } else { color_rgb };
 
-                if focused {
+                if focused && !floating {
                     // Outer glow: wider, dimmed stroke
                     let glow_pen = CreatePen(PS_SOLID, bw + 4, COLORREF(color_dim(color_rgb, 0.25)));
                     let old_pen = SelectObject(self.mem_dc, glow_pen);
@@ -181,8 +182,33 @@ impl BorderOverlay {
                         TextOutW(self.mem_dc, text_x + 6, text_y + 1, &wide);
                         SelectObject(self.mem_dc, old_font);
                     }
+                } else if floating {
+                    // Floating window: dashed blue border
+                    let pen = CreatePen(PS_DASH, bw, COLORREF(0xFF4488FF));
+                    let old_pen = SelectObject(self.mem_dc, pen);
+                    let rr = self.border_radius;
+                    RoundRect(
+                        self.mem_dc,
+                        x + half,
+                        y + half,
+                        x + w - half,
+                        y + h - half,
+                        rr, rr,
+                    );
+                    SelectObject(self.mem_dc, old_pen);
+                    let _ = DeleteObject(pen);
+
+                    // "FLOATING" label
+                    let label: Vec<u16> = "FLOATING".encode_utf16().chain(Some(0)).collect();
+                    let old_font = SelectObject(self.mem_dc, self.title_font);
+                    SetBkMode(self.mem_dc, TRANSPARENT);
+                    SetTextColor(self.mem_dc, COLORREF(0xFF4488FF));
+                    let text_y = y + half + 2;
+                    let text_x = x + half + 6;
+                    TextOutW(self.mem_dc, text_x, text_y, &label);
+                    SelectObject(self.mem_dc, old_font);
                 } else {
-                    let pen = CreatePen(PS_SOLID, bw, COLORREF(color_rgb));
+                    let pen = CreatePen(PS_SOLID, bw, COLORREF(pen_color));
                     let old_pen = SelectObject(self.mem_dc, pen);
                     let rr = self.border_radius;
                     RoundRect(
