@@ -202,19 +202,37 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
             });
         }
         "get-state" => {
-            let monitor_count = unsafe {
+            let (monitor_count, workspace_info, managed_count, theme_name) = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
                 if !ptr.is_null() {
                     let platform = &*ptr;
-                    platform.monitors.len()
+                    let mc = platform.monitors.len();
+                    let mut ws_info = Vec::new();
+                    for (i, mws) in platform.monitor_workspaces.iter().enumerate() {
+                        if i >= mc { break; }
+                        ws_info.push(serde_json::json!({
+                            "monitor": i,
+                            "current": mws.current,
+                            "count": mws.grids.len(),
+                        }));
+                    }
+                    let mc2 = platform.windows.len();
+                    let tn = platform.theme_mgr
+                        .as_ref()
+                        .map(|m| m.borrow().current_theme().name.clone())
+                        .unwrap_or_default();
+                    (mc, ws_info, mc2, tn)
                 } else {
-                    0usize
+                    (0usize, Vec::new(), 0usize, String::new())
                 }
             };
             let state = serde_json::json!({
                 "status": "running",
                 "version": env!("CARGO_PKG_VERSION"),
                 "monitors": monitor_count,
+                "managed_windows": managed_count,
+                "theme": theme_name,
+                "workspaces": workspace_info,
             });
             return serde_json::json!({
                 "success": true,

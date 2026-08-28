@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [6.3.0] - 2026-08-29 — IPC Query Enhancements
+### Added
+- `get-state` now returns: managed_windows count, current theme name, per-monitor workspace info
+- Per-monitor workspace data: monitor index, current workspace, total count
+- `managed_windows` field in get-state response
+- `theme` field in get-state response with current theme name
+
+### Changed
+- `get-state` response enriched with 4 new fields (managed_windows, theme, workspaces array)
+- Workspace info includes monitor index, current workspace number, total workspace count
+
 ## [6.2.0] - 2026-08-29 — Focus Flash Animation
 ### Added
 - **Focus flash**: border overlay briefly pulses when focus changes to a window
