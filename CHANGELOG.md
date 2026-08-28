@@ -2,6 +2,14 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.9.0] - 2026-08-29 — Idle Inhibit: Prevent Screen Lock and Sleep
+### Added
+- **idle-inhibit IPC command**: prevents screen lock/sleep via SetThreadExecutionState
+- **idle-noinhibit IPC command**: re-enables screen lock/sleep
+- Auto-inhibit when entering fullscreen mode, auto-release when exiting
+- Uses ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED flags
+- Uses Win32::System::Power for execution state management
+
 ## [4.8.0] - 2026-08-29 — Per-Monitor DPI Scaling with Independent Scale Factors
 ### Added
 - **scale_factor** field on MonitorInfo calculated from effective DPI (dpi/96.0)

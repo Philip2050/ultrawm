@@ -12,6 +12,7 @@ use windows::{
     Win32::{
         Foundation::*,
         Graphics::{Dwm::*, Gdi::*},
+        System::Power::*,
         UI::{Accessibility::*, HiDpi::*, Shell::*, WindowsAndMessaging::*},
     },
 };
@@ -145,6 +146,7 @@ pub struct Platform {
     pub theme_picker: Option<ThemePicker>,
     pub session: Option<crate::session::SessionState>,
     pub scratchpad: Option<ScratchpadManager>,
+    idle_inhibit: bool,
     pub theme_mgr: Option<RefCell<ThemeManager>>,
     ws_fade: f32,           // workspace switch fade (1.0=visible, 0.0=invisible)
     ws_fade_out: bool,      // true=fading out, false=fading in
@@ -203,6 +205,7 @@ impl Platform {
             theme_picker: None,
             session: crate::session::SessionState::load().ok().flatten(),
             scratchpad: None,
+            idle_inhibit: false,
             theme_mgr: None,
             ws_fade: 1.0,
             ws_fade_out: false,
@@ -1376,9 +1379,11 @@ impl Platform {
     }
 
     pub fn toggle_fullscreen(&mut self) {
+        let mut became_fullscreen = false;
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
                 info.fullscreen = !info.fullscreen;
+                became_fullscreen = info.fullscreen;
                 unsafe {
                     if info.fullscreen {
                         let mut rect = RECT::default();
@@ -1420,6 +1425,11 @@ impl Platform {
                 }
                 info!("Fullscreen toggled: {} (id={})", info.title, info.id);
             }
+        }
+        if became_fullscreen {
+            self.enable_idle_inhibit();
+        } else if self.focused_hwnd.is_some() {
+            self.disable_idle_inhibit();
         }
     }
 
@@ -1507,6 +1517,39 @@ impl Platform {
                 let alpha = (opacity.clamp(0.0, 1.0) * 255.0) as u8;
                 let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA);
             }
+        }
+    }
+
+    /// Enable idle inhibit — prevent screen lock/sleep
+    pub fn enable_idle_inhibit(&mut self) {
+        if !self.idle_inhibit {
+            self.idle_inhibit = true;
+            unsafe {
+                let _ = SetThreadExecutionState(
+                    ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED,
+                );
+            }
+            info!("Idle inhibit enabled");
+        }
+    }
+
+    /// Disable idle inhibit — allow screen lock/sleep
+    pub fn disable_idle_inhibit(&mut self) {
+        if self.idle_inhibit {
+            self.idle_inhibit = false;
+            unsafe {
+                let _ = SetThreadExecutionState(ES_CONTINUOUS);
+            }
+            info!("Idle inhibit disabled");
+        }
+    }
+
+    /// Toggle idle inhibit
+    pub fn toggle_idle_inhibit(&mut self) {
+        if self.idle_inhibit {
+            self.disable_idle_inhibit();
+        } else {
+            self.enable_idle_inhibit();
         }
     }
 
@@ -1866,6 +1909,14 @@ impl Platform {
                             info!("Border width set to {}", bw);
                         }
                     }
+                    return;
+                }
+                if command == "idle-inhibit" {
+                    self.enable_idle_inhibit();
+                    return;
+                }
+                if command == "idle-noinhibit" {
+                    self.disable_idle_inhibit();
                     return;
                 }
                 match command.as_str() {
