@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.3.0] - 2026-08-29 — Geometry Constraint Enforcement
+### Added
+- **clamp-focused** IPC command: clamps focused floating window to its min/max size constraints
+- Geometry constraints enforced in `edge_tile_window()` — max_width, max_height, min_width, min_height
+- Geometry constraints enforced during border overlay mouse resize — respects per-window rules
+- `clamp_focused_window()` method in Platform for runtime constraint enforcement
+- Min/max checks in `edge_tile_window()`: `w = w.max(min_w).min(max_w)` pattern
+- Min/max checks in border.rs resize handler via PLATFORM_PTR lookup
+
+### Changed
+- Rules-based min_width/min_height/max_width/max_height now enforced during all resize operations
+
 ## [5.2.0] - 2026-08-29 — Edge Tiling
 ### Added
 - Edge tiling: drag windows to screen edges for maximize and half-screen snap

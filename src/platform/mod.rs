@@ -1483,6 +1483,12 @@ impl Platform {
             _ => return,
         }
 
+        // Enforce min/max constraints from rules
+        if let Some(min_w) = info.min_width { if w < min_w as i32 { w = min_w as i32; } }
+        if let Some(min_h) = info.min_height { if h < min_h as i32 { h = min_h as i32; } }
+        if let Some(max_w) = info.max_width { if w > max_w as i32 { w = max_w as i32; } }
+        if let Some(max_h) = info.max_height { if h > max_h as i32 { h = max_h as i32; } }
+
         // Switch to floating mode with the tiled position
         info.floating = true;
         info.float_x = Some(x);
@@ -1583,6 +1589,29 @@ impl Platform {
             }
         }
         Some(0)
+    }
+
+    pub fn clamp_focused_window(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                let (mut x, mut y, mut w, mut h) = match info.float_x.zip(info.float_y).zip(info.float_w).zip(info.float_h) {
+                    Some((((x, y), w), h)) => (x as i32, y as i32, w as i32, h as i32),
+                    None => return,
+                };
+
+                if let Some(min_w) = info.min_width { w = w.max(min_w as i32); }
+                if let Some(min_h) = info.min_height { h = h.max(min_h as i32); }
+                if let Some(max_w) = info.max_width { w = w.min(max_w as i32); }
+                if let Some(max_h) = info.max_height { h = h.min(max_h as i32); }
+
+                info.float_w = Some(w.max(0) as u32);
+                info.float_h = Some(h.max(0) as u32);
+
+                unsafe {
+                    let _ = SetWindowPos(hwnd_wrapper.0, HWND(null_mut()), x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                }
+            }
+        }
     }
 
     pub fn toggle_shade(&mut self) {
@@ -2087,6 +2116,10 @@ impl Platform {
                     if let Some(msg) = command.strip_prefix("notify ") {
                         self.notify(msg);
                     }
+                    return;
+                }
+                if command == "clamp-focused" {
+                    self.clamp_focused_window();
                     return;
                 }
                 match command.as_str() {

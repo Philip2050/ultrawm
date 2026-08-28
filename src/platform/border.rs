@@ -400,6 +400,21 @@ unsafe extern "system" fn border_wnd_proc(
                     if edge & 4 != 0 { nx = sx + dx; nw = (sw - dx).max(100); }
                     if edge & 8 != 0 { ny = sy + dy; nh = (sh - dy).max(100); }
 
+                    // Enforce min/max constraints from rules
+                    let tgt_wrapper = crate::platform::HWnd(target_hwnd);
+                    unsafe {
+                        let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                        if !ptr.is_null() {
+                            let platform = &*ptr;
+                            if let Some(info) = platform.windows.get(&tgt_wrapper) {
+                                if let Some(min_w) = info.min_width { if nw < min_w as i32 { nw = min_w as i32; } }
+                                if let Some(min_h) = info.min_height { if nh < min_h as i32 { nh = min_h as i32; } }
+                                if let Some(max_w) = info.max_width { if nw > max_w as i32 { nw = max_w as i32; } }
+                                if let Some(max_h) = info.max_height { if nh > max_h as i32 { nh = max_h as i32; } }
+                            }
+                        }
+                    }
+
                     let _ = SetWindowPos(target_hwnd, HWND(null_mut()), nx, ny, nw, nh, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
                     return LRESULT(0);
                 }
