@@ -2001,6 +2001,61 @@ impl Platform {
         }
     }
 
+    /// Add a new empty workspace to all monitors
+    pub fn add_workspace(&mut self) {
+        let new_count = self.config.layout.workspace_count + 1;
+        if new_count > 10 {
+            self.notify("Max 10 workspaces");
+            return;
+        }
+        self.set_workspace_count(new_count);
+
+        // Switch to the new workspace on the current monitor
+        let mon_idx = self.focused_hwnd
+            .and_then(|hwnd| self.window_for_hwnd(hwnd.0))
+            .and_then(|info| self.window_monitors.get(&info.id))
+            .copied()
+            .unwrap_or(0);
+        let new_ws = new_count - 1;
+        self.monitor_workspaces[mon_idx].current = new_ws;
+        self.switch_workspace(new_ws);
+        self.notify(&format!("Workspace {} added", new_count));
+        info!("Workspace count increased to {}", new_count);
+    }
+
+    /// Remove the current workspace if it's empty, or merge windows to adjacent workspace
+    pub fn remove_workspace(&mut self) {
+        let count = self.config.layout.workspace_count;
+        if count <= 1 {
+            self.notify("Cannot remove last workspace");
+            return;
+        }
+
+        let mon_idx = self.focused_hwnd
+            .and_then(|hwnd| self.window_for_hwnd(hwnd.0))
+            .and_then(|info| self.window_monitors.get(&info.id))
+            .copied()
+            .unwrap_or(0);
+        let current = self.monitor_workspaces[mon_idx].current;
+
+        // Check if current workspace has windows
+        let grid = &self.monitor_workspaces[mon_idx].grids[current];
+        if !grid.cells.is_empty() {
+            self.notify("Close all windows first");
+            return;
+        }
+
+        // Remove the workspace from all monitors
+        self.set_workspace_count(count - 1);
+
+        // Switch to the closest available workspace
+        let new_current = current.min(count - 2);
+        self.monitor_workspaces[mon_idx].current = new_current;
+        self.switch_workspace(new_current);
+        self.notify(&format!("Workspace removed, now {} workspaces", count - 1));
+        info!("Workspace count decreased to {}", count - 1);
+    }
+
     pub fn snap_layout(&mut self, cols: usize, rows: usize) {
         // Collect visible window IDs before getting mutable grid access
         let mut visible_wids: Vec<(u64, usize)> = Vec::new();

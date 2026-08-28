@@ -246,6 +246,20 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.toggle_snap_mode();
             return LRESULT(1);
         }
+        0x4E => {
+            // N — create new workspace (Win+Shift+N)
+            if shift {
+                platform.add_workspace();
+                return LRESULT(1);
+            }
+        }
+        0x57 => {
+            // W — overview toggle (Win+W), delete workspace (Win+Shift+W)
+            if shift {
+                platform.remove_workspace();
+                return LRESULT(1);
+            }
+        }
         _ => {}
     }
 

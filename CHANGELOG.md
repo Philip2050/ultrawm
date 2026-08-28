@@ -33,6 +33,18 @@ All notable changes to UltraWM will be documented in this file.
 - Floating windows auto-snap during drag without any keybinding required
 - Grid size and edge distance configurable via config.toml
 
+## [8.4.0] - 2026-08-29 — Dynamic Workspace Creation and Deletion
+### Added
+- `add_workspace()` — adds a new empty workspace to all monitors, switches to it
+- `remove_workspace()` — removes current workspace if empty, switches to adjacent
+- Win+Shift+N creates a new workspace (max 10)
+- Win+Shift+W removes current workspace (min 1)
+- Workspace count limited to 1-10, notification on attempt to exceed limits
+- Empty workspace check prevents accidental removal of workspaces with windows
+
+### Changed
+- `set_workspace_count` reused internally for add/remove (handles grid allocation/migration)
+
 ## [Unreleased]
 ### Planned
 - Window snapping to screen edges (resize/move windows with Win+Grab)
