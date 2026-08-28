@@ -49,10 +49,10 @@ struct WindowAnimState {
 }
 
 impl WindowAnimState {
-    fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+    fn new(x: f32, y: f32, w: f32, h: f32, stiffness: f32, damping: f32) -> Self {
         let spring = Spring {
-            stiffness: 220.0,
-            damping: 24.0,
+            stiffness,
+            damping,
             mass: 1.0,
         };
         Self {
@@ -714,7 +714,11 @@ impl Platform {
                     let target_h = h as f32;
 
                     let anim = self.anim.entry(wid).or_insert_with(|| {
-                        WindowAnimState::new(target_x, target_y, target_w, target_h)
+                        WindowAnimState::new(
+                            target_x, target_y, target_w, target_h,
+                            self.config.layout.spring_stiffness,
+                            self.config.layout.spring_damping,
+                        )
                     });
                     anim.set_target(target_x, target_y, target_w, target_h);
                     let dt: f32 = (1.0f32 / 60.0).min(1.0f32 / 30.0);

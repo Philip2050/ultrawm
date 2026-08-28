@@ -39,6 +39,8 @@ pub struct LayoutConfig {
     pub center_focused: bool,
     pub focus_follows_mouse: bool,
     pub corner_radius: u32,
+    pub spring_stiffness: f32,
+    pub spring_damping: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -108,6 +110,8 @@ impl Default for Config {
                 center_focused: false,
                 focus_follows_mouse: false,
                 corner_radius: 8,
+                spring_stiffness: 180.0,
+                spring_damping: 20.0,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),
