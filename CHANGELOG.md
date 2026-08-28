@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.6.0] - 2026-08-29 — Dynamic Opacity Control via IPC
+### Added
+- **`set-opacity` IPC command**: dynamically set focused window opacity at runtime
+- Opacity value 0.0 (transparent) to 1.0 (opaque), clamped automatically
+- Example: `echo '{"command":"set-opacity","value":0.7}' > \\.\pipe\ultrawm-ipc`
+- Plain text: `echo 'set-opacity 0.7' > \\.\pipe\ultrawm-ipc`
+
 ## [3.5.0] - 2026-08-29 — Min Width/Height Window Constraints
 ### Added
 - **`min_width` and `min_height` rule fields**: enforce minimum tiled window dimensions per-rule

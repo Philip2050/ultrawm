@@ -1305,6 +1305,18 @@ impl Platform {
         }
     }
 
+    pub fn set_opacity(&mut self, opacity: f32) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                info.opacity = Some(opacity.clamp(0.0, 1.0));
+                unsafe {
+                    let _ = SetLayeredWindowAttributes(info.hwnd, COLORREF(0), (opacity.clamp(0.0, 1.0) * 255.0) as u8, LWA_ALPHA);
+                }
+                info!("Opacity set: {} (id={})", opacity, info.id);
+            }
+        }
+    }
+
     pub fn toggle_floating(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             let was_floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
@@ -1585,6 +1597,14 @@ impl Platform {
                         }
                         Err(e) => {
                             warn!("Config reload failed: {}", e);
+                        }
+                    }
+                    return;
+                }
+                if command.starts_with("set-opacity ") {
+                    if let Some(val) = command.strip_prefix("set-opacity ") {
+                        if let Ok(op) = val.parse::<f32>() {
+                            self.set_opacity(op);
                         }
                     }
                     return;
