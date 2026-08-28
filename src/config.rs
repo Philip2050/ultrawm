@@ -56,6 +56,16 @@ pub struct LayoutConfig {
     pub default_float_height: u32,
     pub default_split_dir: String,
     pub auto_split: bool,
+    pub monitor_layouts: Vec<MonitorLayout>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct MonitorLayout {
+    pub gaps: Option<u32>,
+    pub inner_padding: Option<u32>,
+    pub outer_padding: Option<u32>,
+    pub border_width: Option<u32>,
+    pub corner_radius: Option<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -137,6 +147,7 @@ impl Default for Config {
                 default_float_height: 600,
                 default_split_dir: "vertical".into(),
                 auto_split: false,
+                monitor_layouts: vec![],
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

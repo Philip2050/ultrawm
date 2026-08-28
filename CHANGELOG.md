@@ -2,6 +2,26 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [6.1.0] - 2026-08-29 — Per-Monitor Layout Settings
+### Added
+- **monitor_layouts** config: per-monitor layout overrides (gaps, padding, border, corner_radius)
+- `MonitorLayout` struct with optional fields: gaps, inner_padding, outer_padding, border_width, corner_radius
+- `Platform::monitor_layout()` returns per-monitor layout config
+- `Platform::effective_gap()` resolves gap with per-monitor override
+- `Platform::effective_border_width()` resolves border width with per-monitor override
+- `Platform::effective_corner_radius()` resolves corner radius with per-monitor override
+
+### Example config
+```toml
+[[layout.monitor_layouts]]
+gaps = 10
+border_width = 2
+
+[[layout.monitor_layouts]]
+gaps = 5
+border_width = 1
+```
+
 ## [6.0.0] - 2026-08-29 — Dynamic Workspace Count
 ### Added
 - **set-workspace-count \<N>** IPC command: changes number of workspaces at runtime (1-10)

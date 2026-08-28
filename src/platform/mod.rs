@@ -1640,6 +1640,29 @@ impl Platform {
         }
     }
 
+    pub fn monitor_layout(&self, mon_idx: usize) -> crate::config::MonitorLayout {
+        let layouts = &self.config.layout.monitor_layouts;
+        layouts.get(mon_idx).cloned().unwrap_or(crate::config::MonitorLayout {
+            gaps: None,
+            inner_padding: None,
+            outer_padding: None,
+            border_width: None,
+            corner_radius: None,
+        })
+    }
+
+    pub fn effective_gap(&self, mon_idx: usize) -> u32 {
+        self.monitor_layout(mon_idx).gaps.unwrap_or(self.config.layout.gaps)
+    }
+
+    pub fn effective_border_width(&self, mon_idx: usize) -> u32 {
+        self.monitor_layout(mon_idx).border_width.unwrap_or(self.config.layout.border_width)
+    }
+
+    pub fn effective_corner_radius(&self, mon_idx: usize) -> u32 {
+        self.monitor_layout(mon_idx).corner_radius.unwrap_or(self.config.layout.corner_radius)
+    }
+
     pub fn set_workspace_count(&mut self, count: usize) {
         if count < 1 || count > 10 { return; }
 
