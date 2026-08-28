@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.9.0] - 2026-08-28 — unfloat-all Command
+### Added
+- **`unfloat-all` IPC command**: unfloat all floating windows at once
+- Returns all windows to tiling layout
+- Restores saved positions from before floating
+- IPC: `echo '{"command":"unfloat-all"}' > \\.\pipe\ultrawm-ipc`
+
 ## [2.8.0] - 2026-08-28 — IPC add-rule Command
 ### Added
 - **`add-rule` IPC command**: add window rules at runtime without editing config.toml

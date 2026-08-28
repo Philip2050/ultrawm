@@ -1389,6 +1389,27 @@ impl Platform {
         info!("Added rule: match='{}', float={:?}, workspace={:?}", match_str, float, workspace);
     }
 
+    pub fn unfloat_all(&mut self) {
+        let count = self.windows.values().filter(|i| i.floating).count();
+        for info in self.windows.values_mut() {
+            if info.floating {
+                info.floating = false;
+                unsafe {
+                    let _ = SetWindowPos(
+                        info.hwnd,
+                        HWND_NOTOPMOST,
+                        info.saved_x,
+                        info.saved_y,
+                        info.saved_w,
+                        info.saved_h,
+                        SWP_FRAMECHANGED,
+                    );
+                }
+            }
+        }
+        info!("Unfloated {} windows", count);
+    }
+
     pub fn minimize_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -1472,6 +1493,10 @@ impl Platform {
                     self.adjust_gap(-2);
                     return;
                 }
+                if command == "unfloat-all" {
+                    self.unfloat_all();
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
@@ -1503,6 +1528,7 @@ impl Platform {
                     "untab" => { self.untab_focused(); }
                     "quit" => {
                         log::info!("IPC: quit requested");
+                        self.save_session();
                         unsafe { let _ = PostQuitMessage(0); }
                     }
                     _ => {}

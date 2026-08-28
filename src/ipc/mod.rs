@@ -317,6 +317,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "always-on-top" => IpcCommand::Single { command: "always-on-top".into() },
         "grow-gap" => IpcCommand::Single { command: "grow-gap".into() },
         "shrink-gap" => IpcCommand::Single { command: "shrink-gap".into() },
+        "unfloat-all" => IpcCommand::Single { command: "unfloat-all".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
