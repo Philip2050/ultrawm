@@ -1308,37 +1308,97 @@ impl Platform {
 
     pub fn diagnose(&self) -> anyhow::Result<()> {
         println!("=== UltraWM Diagnostics ===");
+
+        // DWM status
+        println!("DWM:");
+        unsafe {
+            if let Ok(enabled) = DwmIsCompositionEnabled() {
+                println!("  Composition: {}", if enabled.as_bool() { "enabled" } else { "disabled" });
+            } else {
+                println!("  Composition: unknown");
+            }
+        }
+
+        // DPI awareness
+        println!("DPI:");
+        if let Some(m) = self.monitors.first() {
+            println!("  Primary monitor DPI: {}", m.dpi);
+        }
+
+        // Shell replacement
+        println!("Shell:");
+        if let Ok(key) = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER)
+            .open_subkey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon")
+        {
+            let shell: String = key.get_value("Shell").unwrap_or_default();
+            println!("  Current shell: {}", shell);
+            let is_ultrawm = shell.contains("ultrawm");
+            println!("  UltraWM as shell: {}", if is_ultrawm { "yes" } else { "no" });
+        }
+
+        // Config
+        println!("Config:");
+        let config_path = dirs::home_dir()
+            .unwrap_or_default()
+            .join(".config/ultrawm/config.toml");
+        println!("  Path: {}", config_path.display());
+        println!("  Exists: {}", config_path.exists());
+        if let Some(modified) = &self.config.last_modified {
+            println!("  Last modified: {:?}", modified);
+        }
+        println!("  Corner radius: {}", self.config.layout.corner_radius);
+        println!("  Gaps: {}", self.config.layout.gaps);
+
+        // Themes
+        println!("Themes:");
+        let themes = ThemeManager::list_themes().unwrap_or_default();
+        println!("  Available: {} themes", themes.len());
+        for t in &themes {
+            println!("    - {}", t);
+        }
+
+        // Monitors
         println!("Monitors: {}", self.monitors.len());
         for (i, m) in self.monitors.iter().enumerate() {
             println!(
-                "  Monitor {}: {}x{} at ({},{}) work={}x{}",
-                i,
-                m.width(),
-                m.height(),
-                m.left,
-                m.top,
-                m.work_width(),
-                m.work_height()
+                "  Monitor {}: {}x{} at ({},{}) work={}x{} DPI={}",
+                i, m.width(), m.height(), m.left, m.top, m.work_width(), m.work_height(), m.dpi
             );
         }
+
+        // Workspaces
+        println!("Workspaces:");
+        for (mi, mws) in self.monitor_workspaces.iter().enumerate() {
+            println!("  Monitor {}: workspace {} ({} grids)", mi, mws.current + 1, mws.grids.len());
+            let grid = &mws.grids[mws.current];
+            println!("    Windows: {}", grid.window_positions.len());
+            println!("    Camera: ({}, {})", grid.camera.row, grid.camera.col);
+            for (&wid, &cell) in &grid.window_positions {
+                println!("    window {}: cell ({}, {})", wid, cell.row, cell.col);
+            }
+        }
+
+        // Windows
         println!("Managed windows: {}", self.windows.len());
         for (hwnd_wrapper, info) in &self.windows {
             println!(
-                "  {:?}: {} (class={}, exe={}, id={})",
-                hwnd_wrapper.0, info.title, info.class, info.exe, info.id
+                "  {:?}: {} (class={}, exe={}, id={}, float={})",
+                hwnd_wrapper.0, info.title, info.class, info.exe, info.id, info.floating
             );
         }
-        for (mi, mws) in self.monitor_workspaces.iter().enumerate() {
-            let grid = &mws.grids[mws.current];
-            println!("Monitor {} workspace {}: {} windows", mi, mws.current + 1, grid.window_positions.len());
-            for (&wid, &cell) in &grid.window_positions {
-                println!("  window {}: cell ({}, {})", wid, cell.row, cell.col);
-            }
-            println!(
-                "Camera: ({}, {})",
-                grid.camera.row, grid.camera.col
-            );
-        }
+
+        // Bar
+        println!("Bar: {}", if self.bar.is_some() { "enabled" } else { "disabled" });
+
+        // Border overlay
+        println!("Border overlay: {}", if self.border_overlay.is_some() { "enabled" } else { "disabled" });
+
+        // Keyboard hook
+        println!("Keyboard hook: {}", if self.keyboard_hook.is_some() { "enabled" } else { "disabled" });
+
+        // Session
+        println!("Session: {}", if self.session.is_some() { "saved" } else { "none" });
+
         Ok(())
     }
 }

@@ -92,8 +92,8 @@ fn main() -> Result<()> {
         return run_daemon();
     }
 
-    println!("UltraWM v0.1.0");
-    println!("Usage: ultrawm --start | --doctor | --theme | --list-themes | --show-theme");
+    println!("UltraWM v{}", env!("CARGO_PKG_VERSION"));
+    println!("Usage: ultrawm --start | --doctor | --theme | --list-themes | --show-theme | --install | --uninstall");
     Ok(())
 }
 

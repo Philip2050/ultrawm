@@ -60,7 +60,16 @@ All notable changes to UltraWM will be documented in this file.
 ### Changed
 - App launcher now uses `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with 240/255 alpha (94% opacity)
 - Launcher window has subtle transparency matching the bar aesthetic
-## [0.4.2] - 2026-08-28 — Swap Flash Animation
+
+## [0.5.6] - 2026-08-28 — Doctor Diagnostics Overhaul
+
+### Added
+- **Expanded doctor output**: DWM composition status, DPI awareness, shell replacement status, config file info, theme list, bar/overlay/hook/session status
+- `DwmIsCompositionEnabled()` call to check DWM status
+- Shell replacement check via `HKCU\...\Winlogon\Shell` registry value
+- Config path existence and last-modified check
+- Theme availability listing with all built-in theme names
+- Dynamic version output using `CARGO_PKG_VERSION` instead of hardcoded string## [0.4.2] - 2026-08-28 — Swap Flash Animation
 
 ### Added
 - **Swap flash animation**: when windows swap positions via `Win+Shift+arrows`, both windows flash white for ~20 frames (~333ms) with smooth fade-out, giving clear visual feedback of the swap
