@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.9.0] - 2026-08-29 — Hand Cursor on Tiled Windows
+### Added
+- **Hand cursor on tiled windows**: hovering over a tiled window shows a hand cursor (move indicator)
+- Resize cursors (sizeWE, sizeNS, sizeAll) take priority near edges
+- Arrow cursor on empty space
+- Clear visual feedback for clickable/movable windows
+
 ## [3.8.0] - 2026-08-29 — Window Shade/Roll-up
 ### Added
 - **Shade/roll-up toggle**: `Win+Shift+S` rolls the focused window to just its title bar (~30px)

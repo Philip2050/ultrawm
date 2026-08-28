@@ -386,6 +386,7 @@ unsafe extern "system" fn border_wnd_proc(
                 // Check proximity to tiled window edges for cursor
                 let edge_size = 6;
                 let mut cursor = IDC_ARROW;
+                let mut on_window = false;
                 for &(rx, ry, rw, rh, _) in &overlay.tile_rects {
                     let near_left = x >= rx && x < rx + edge_size && y >= ry && y < ry + rh;
                     let near_right = x >= rx + rw - edge_size && x < rx + rw && y >= ry && y < ry + rh;
@@ -395,6 +396,13 @@ unsafe extern "system" fn border_wnd_proc(
                     if (near_left || near_right) && (near_top || near_bottom) { cursor = IDC_SIZEALL; break; }
                     if near_left || near_right { cursor = IDC_SIZEWE; }
                     if near_top || near_bottom { cursor = IDC_SIZENS; }
+
+                    if x >= rx && x < rx + rw && y >= ry && y < ry + rh {
+                        on_window = true;
+                    }
+                }
+                if cursor == IDC_ARROW && on_window {
+                    cursor = IDC_HAND;
                 }
                 let hcursor = LoadCursorW(HINSTANCE(null_mut()), cursor);
                 if let Ok(c) = hcursor {
