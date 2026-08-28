@@ -113,7 +113,25 @@ All notable changes to UltraWM will be documented in this file.
 - Config save creates parent directory if it doesn't exist
 - Failed saves are logged as warnings but don't crash the WM
 
-## [9.2.0] - 2026-08-28 — Live Config Reload Indicator in Bar
+## [9.3.0] - 2026-08-29 — Window Rule Import/Export via IPC
+### Added
+- **`export-rules` IPC command**: exports all window rules as JSON array
+- **`import-rules` IPC command**: imports rules from JSON array, validates, and saves to config
+- Full rule fields exported: match, float, workspace, width, height, max/min sizes, float position, opacity, sticky
+- Import skips rules with empty `match` fields and persists to config.toml
+- `Platform::import_rules_from_json()` method for batch rule import with validation
+- `Platform::apply_rule_from_json()` made public for IPC use
+
+### Example IPC usage
+```
+# Export rules
+echo {"command":"export-rules"} | \\.\pipe\ultrawm-ipc
+
+# Import rules from JSON array
+echo '{"command":"import-rules","rules":[{"match":"class:Notepad","float":true,"opacity":0.8}]}' | \\.\pipe\ultrawm-ipc
+```
+
+## [9.2.0] - 2026-08-29 — Live Config Reload Indicator in Bar
 ### Added
 - Config reload triggers a brief green flash animation in the bar (~0.5s)
 - `BarState::reload_flash` field tracks flash animation frames

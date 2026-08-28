@@ -2514,7 +2514,7 @@ impl Platform {
         let _ = self.config.save();
     }
 
-    fn apply_rule_from_json(&mut self, json: serde_json::Value) {
+    pub fn apply_rule_from_json(&mut self, json: serde_json::Value) {
         let match_str = json.get("match").and_then(|v| v.as_str()).unwrap_or("");
         if match_str.is_empty() {
             warn!("add-rule: missing 'match' field");
@@ -2553,6 +2553,23 @@ impl Platform {
 
         self.config.rules.push(rule);
         info!("Added rule: match='{}', float={:?}, float_pos={:?}x{:?}, float_size={:?}x{:?}", match_str, float, float_x, float_y, float_w, float_h);
+    }
+
+    pub fn import_rules_from_json(&mut self, rules: serde_json::Value) -> anyhow::Result<()> {
+        let array = rules.as_array().ok_or_else(|| anyhow::anyhow!("expected JSON array of rules"))?;
+        let mut count = 0;
+        for rule_json in array {
+            let match_str = rule_json.get("match").and_then(|v| v.as_str()).unwrap_or("");
+            if match_str.is_empty() {
+                warn!("import-rules: skipping rule with empty 'match' field");
+                continue;
+            }
+            self.apply_rule_from_json(rule_json.clone());
+            count += 1;
+        }
+        let _ = self.config.save();
+        info!("Imported {} rules from JSON", count);
+        Ok(())
     }
 
     pub fn unfloat_all(&mut self) {

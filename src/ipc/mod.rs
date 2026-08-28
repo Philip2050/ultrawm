@@ -184,6 +184,20 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("missing 'match' field".into()), data: None };
     }
 
+    // Handle import-rules: batch import rules from JSON array
+    if cmd_str == "import-rules" {
+        if let Some(rules_array) = json.get("rules").and_then(|v| v.as_array()) {
+            let import_json = serde_json::json!({
+                "command": "import-rules",
+                "rules": rules_array,
+            });
+            let import_str = serde_json::to_string(&import_json).unwrap_or_default();
+            let _ = tx.send(crate::ipc::IpcCommand::Single { command: import_str });
+            return IpcResponse { success: true, message: Some(format!("importing {} rules", rules_array.len())), data: None };
+        }
+        return IpcResponse { success: false, message: Some("missing 'rules' array field".into()), data: None };
+    }
+
     let result = process_single_command(cmd_str, tx);
     if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         IpcResponse { success: true, message: Some("ok".into()), data: None }
@@ -435,6 +449,45 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                             "workspace": r.workspace,
                             "width": r.width,
                             "height": r.height,
+                            "max_width": r.max_width,
+                            "max_height": r.max_height,
+                            "min_width": r.min_width,
+                            "min_height": r.min_height,
+                            "opacity": r.opacity,
+                            "sticky": r.sticky,
+                        })
+                    }).collect();
+                    rules
+                } else {
+                    Vec::new()
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": serde_json::Value::Array(rules),
+            });
+        }
+        "export-rules" => {
+            let rules = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let rules: Vec<serde_json::Value> = platform.config.rules.iter().map(|r| {
+                        serde_json::json!({
+                            "match": r.match_,
+                            "float": r.float,
+                            "workspace": r.workspace,
+                            "width": r.width,
+                            "height": r.height,
+                            "max_width": r.max_width,
+                            "max_height": r.max_height,
+                            "min_width": r.min_width,
+                            "min_height": r.min_height,
+                            "float_x": r.float_x,
+                            "float_y": r.float_y,
+                            "float_w": r.float_w,
+                            "float_h": r.float_h,
                             "opacity": r.opacity,
                             "sticky": r.sticky,
                         })
@@ -491,6 +544,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "shrink-gap" => IpcCommand::Single { command: "shrink-gap".into() },
         "unfloat-all" => IpcCommand::Single { command: "unfloat-all".into() },
         "list-rules" => IpcCommand::Single { command: "list-rules".into() },
+        "export-rules" => IpcCommand::Single { command: "export-rules".into() },
+        "import-rules" => IpcCommand::Single { command: "import-rules".into() },
         "reload-config" => IpcCommand::Single { command: "reload-config".into() },
         "set-wallpaper" => IpcCommand::Single { command: "set-wallpaper".into() },
         "set-wallpaper-image" => IpcCommand::Single { command: "set-wallpaper-image".into() },
