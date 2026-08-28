@@ -2,6 +2,12 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.12.0] - 2026-08-28 — IPC reload-config Command
+### Added
+- **`reload-config` IPC command**: reload config.toml at runtime
+- Applies new settings immediately (gaps, padding, borders, themes, rules)
+- IPC: `echo '{"command":"reload-config"}' > \\.\pipe\ultrawm-ipc`
+
 ## [2.11.0] - 2026-08-28 — IPC list-rules Command
 ### Added
 - **`list-rules` IPC command**: list all active window rules as JSON array

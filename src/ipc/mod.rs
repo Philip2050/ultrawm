@@ -354,6 +354,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "shrink-gap" => IpcCommand::Single { command: "shrink-gap".into() },
         "unfloat-all" => IpcCommand::Single { command: "unfloat-all".into() },
         "list-rules" => IpcCommand::Single { command: "list-rules".into() },
+        "reload-config" => IpcCommand::Single { command: "reload-config".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

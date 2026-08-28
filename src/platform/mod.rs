@@ -1497,6 +1497,18 @@ impl Platform {
                     self.unfloat_all();
                     return;
                 }
+                if command == "reload-config" {
+                    match crate::config::Config::load() {
+                        Ok(new_config) => {
+                            self.config = new_config;
+                            info!("Config reloaded via IPC");
+                        }
+                        Err(e) => {
+                            warn!("Config reload failed: {}", e);
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
