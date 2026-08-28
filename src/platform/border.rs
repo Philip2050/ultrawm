@@ -231,6 +231,34 @@ impl BorderOverlay {
             );
         }
     }
+
+    pub fn set_alpha(&self, alpha: u8) {
+        unsafe {
+            let mut size = SIZE {
+                cx: self.width,
+                cy: self.height,
+            };
+            let mut src_pt = POINT { x: 0, y: 0 };
+            let mut dst_pt = POINT { x: 0, y: 0 };
+            let blend = BLENDFUNCTION {
+                BlendOp: AC_SRC_OVER as u8,
+                BlendFlags: 0,
+                SourceConstantAlpha: alpha,
+                AlphaFormat: AC_SRC_ALPHA as u8,
+            };
+            UpdateLayeredWindow(
+                self.hwnd,
+                self.mem_dc,
+                Some(&mut dst_pt),
+                Some(&mut size),
+                self.mem_dc,
+                Some(&mut src_pt),
+                COLORREF(0),
+                Some(&blend),
+                ULW_ALPHA,
+            );
+        }
+    }
 }
 
 impl Drop for BorderOverlay {

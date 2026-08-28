@@ -142,6 +142,10 @@ pub struct Platform {
     pub session: Option<crate::session::SessionState>,
     pub scratchpad: Option<ScratchpadManager>,
     pub theme_mgr: Option<RefCell<ThemeManager>>,
+    ws_fade: f32,           // workspace switch fade (1.0=visible, 0.0=invisible)
+    ws_fade_out: bool,      // true=fading out, false=fading in
+    ws_pending_ws: Option<usize>,
+    ws_pending_monitor: Option<usize>,
 }
 
 pub struct MonitorWorkspaces {
@@ -195,6 +199,10 @@ impl Platform {
             session: crate::session::SessionState::load().ok().flatten(),
             scratchpad: None,
             theme_mgr: None,
+            ws_fade: 1.0,
+            ws_fade_out: false,
+            ws_pending_ws: None,
+            ws_pending_monitor: None,
         })
     }
 
@@ -247,49 +255,13 @@ impl Platform {
             return;
         }
 
-        let old_ws = self.monitor_workspaces[monitor_idx].current;
+        // Start workspace fade animation
+        self.ws_fade = 1.0;
+        self.ws_fade_out = true;
+        self.ws_pending_ws = Some(ws);
+        self.ws_pending_monitor = Some(monitor_idx);
 
-        // Hide windows on old workspace for this monitor
-        for (_, info) in &self.windows {
-            if let Some(wm) = self.window_monitors.get(&info.id) {
-                if *wm == monitor_idx {
-                    if let Some(ws_id) = self.window_workspaces.get(&info.id) {
-                        if *ws_id == old_ws {
-                            unsafe {
-                                let _ = ShowWindow(info.hwnd, SW_HIDE);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        self.monitor_workspaces[monitor_idx].current = ws;
-
-        // Update bar to show active workspace
-        if let Some(ref bar) = self.bar {
-            bar.set_workspaces(
-                (0..self.monitor_workspaces[monitor_idx].grids.len()).map(|i| (i + 1).to_string()).collect(),
-                ws,
-            );
-        }
-
-        // Show windows on new workspace for this monitor
-        for (_, info) in &self.windows {
-            if let Some(wm) = self.window_monitors.get(&info.id) {
-                if *wm == monitor_idx {
-                    if let Some(ws_id) = self.window_workspaces.get(&info.id) {
-                        if *ws_id == ws {
-                            unsafe {
-                                let _ = ShowWindow(info.hwnd, SW_SHOW);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        info!("Monitor {}: switched to workspace {}", monitor_idx + 1, ws + 1);
+        info!("Monitor {}: switching to workspace {} (fade)", monitor_idx + 1, ws + 1);
     }
 
     pub fn primary_monitor(&self) -> Option<&MonitorInfo> {
@@ -444,6 +416,68 @@ impl Platform {
             let accent = hex_to_rgb(&theme.accent);
             let inactive = hex_to_rgb(&theme.inactive);
             self.tile_all_windows(accent, inactive);
+
+            // Workspace switch fade animation
+            if self.ws_fade < 1.0 {
+                if self.ws_fade_out {
+                    self.ws_fade -= 0.15;
+                    if self.ws_fade <= 0.0 {
+                        self.ws_fade = 0.0;
+                        self.ws_fade_out = false;
+                        // Execute pending workspace switch
+                        if let (Some(ws), Some(mon)) = (self.ws_pending_ws, self.ws_pending_monitor) {
+                            if ws < self.monitor_workspaces[mon].grids.len() {
+                                let old_ws = self.monitor_workspaces[mon].current;
+                                // Hide windows on old workspace
+                                for (_, info) in &self.windows {
+                                    if let Some(wm) = self.window_monitors.get(&info.id) {
+                                        if *wm == mon {
+                                            if let Some(ws_id) = self.window_workspaces.get(&info.id) {
+                                                if *ws_id == old_ws {
+                                                    unsafe { let _ = ShowWindow(info.hwnd, SW_HIDE); }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                self.monitor_workspaces[mon].current = ws;
+                                // Update bar
+                                if let Some(ref bar) = self.bar {
+                                    bar.set_workspaces(
+                                        (0..self.monitor_workspaces[mon].grids.len()).map(|i| (i + 1).to_string()).collect(),
+                                        ws,
+                                    );
+                                }
+                                // Show windows on new workspace
+                                for (_, info) in &self.windows {
+                                    if let Some(wm) = self.window_monitors.get(&info.id) {
+                                        if *wm == mon {
+                                            if let Some(ws_id) = self.window_workspaces.get(&info.id) {
+                                                if *ws_id == ws {
+                                                    unsafe { let _ = ShowWindow(info.hwnd, SW_SHOW); }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                info!("Monitor {}: switched to workspace {}", mon + 1, ws + 1);
+                            }
+                            self.ws_pending_ws = None;
+                            self.ws_pending_monitor = None;
+                        }
+                    }
+                } else {
+                    self.ws_fade += 0.15;
+                    if self.ws_fade >= 1.0 {
+                        self.ws_fade = 1.0;
+                    }
+                }
+                // Apply fade alpha to overlay
+                if let Some(ref overlay) = self.border_overlay {
+                    let alpha = (self.ws_fade * 255.0) as u8;
+                    overlay.set_alpha(alpha);
+                }
+            }
 
             // Hot-reload config every ~1 second
             self.config_reload_counter += 1;
