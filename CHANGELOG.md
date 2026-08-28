@@ -61,6 +61,51 @@ All notable changes to UltraWM will be documented in this file.
 - App launcher now uses `WS_EX_LAYERED` + `SetLayeredWindowAttributes` with 240/255 alpha (94% opacity)
 - Launcher window has subtle transparency matching the bar aesthetic
 
+## [2.0.0] - 2026-08-28 — Sticky Windows + Configurable Spring Animation
+### Added
+- **Sticky windows**: remain visible across all workspace switches
+- `Win+Y` keyboard shortcut to toggle sticky on focused window
+- Sticky windows excluded from hide/show during workspace transition
+- **Configurable spring animation**: `spring_stiffness` and `spring_damping` in LayoutConfig
+- Default values (180.0, 20.0) maintain existing animation feel
+
+## [1.9.0] - 2026-08-28 — Configurable Spring Animation Parameters
+### Added
+- `spring_stiffness` and `spring_damping` config options
+- WindowAnimState::new takes stiffness/damping from config
+- Users can tune animation feel: lower=softer, higher=snappier
+
+## [1.8.0] - 2026-08-28 — Floating Window Visual Indicator
+### Added
+- **Floating windows render with dashed blue border** (PS_DASH style)
+- "FLOATING" label displayed at top of floating windows
+- Floating windows excluded from 3-pass focused glow rendering
+- Easily distinguish floating from tiled windows
+
+## [1.7.0] - 2026-08-28 — Theme-prev + Workspace Move Shortcuts
+### Added
+- `Win+Shift+T`: cycle to previous theme
+- `Win+1/2/3/4`: switch to workspace 1/2/3/4
+- `Win+Shift+1/2/3/4`: move focused window to workspace 1/2/3/4
+- `theme_prev` keybinding config option
+
+## [1.6.0] - 2026-08-28 — Theme Cycle IPC Commands
+### Added
+- `theme-next` and `theme-prev` IPC commands for cycling themes
+- `cycle_theme(forward)` method on Platform
+- `next-theme`/`prev-theme` IPC commands retained for backward compat
+
+## [1.5.0] - 2026-08-28 — IPC Get-Workspaces Command
+### Added
+- `get-workspaces` IPC command returns workspace count and names
+- Useful for external status bars and workspace indicators
+
+## [1.4.0] - 2026-08-28 — IPC Get-Windows Command
+### Added
+- `get-windows` enumerates all visible top-level windows via EnumWindows
+- Returns JSON array with hwnd and title for each window
+- Useful for external tools that need managed window info
+
 ## [1.3.0] - 2026-08-28 — Title Background in Border Overlay
 ### Changed
 - Window title now has a filled background rect (accent color) for better readability
