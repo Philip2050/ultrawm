@@ -1837,6 +1837,70 @@ impl Platform {
         info!("Snap layout: {}x{} ({} windows)", cols, rows, wids.len());
     }
 
+    fn collect_visible_wids(&self) -> Vec<u64> {
+        let mut visible_wids: Vec<(u64, usize)> = Vec::new();
+        for info in self.windows.values() {
+            if info.floating || !info.visible || info.minimized {
+                continue;
+            }
+            visible_wids.push((info.id, info.z_order));
+        }
+        visible_wids.sort_by_key(|&(_, z)| z);
+        visible_wids.into_iter().map(|(wid, _)| wid).collect()
+    }
+
+    pub fn layout_preset_columns(&mut self, n: usize) {
+        if n == 0 { return; }
+        let wids = self.collect_visible_wids();
+        if wids.is_empty() { return; }
+        let grid = self.current_grid();
+        grid.snap_layout(&wids, n, 1);
+        self.save_session();
+        info!("Layout preset: columns ({})", n);
+    }
+
+    pub fn layout_preset_rows(&mut self, n: usize) {
+        if n == 0 { return; }
+        let wids = self.collect_visible_wids();
+        if wids.is_empty() { return; }
+        let grid = self.current_grid();
+        grid.snap_layout(&wids, 1, n);
+        self.save_session();
+        info!("Layout preset: rows ({})", n);
+    }
+
+    pub fn layout_preset_master(&mut self) {
+        let wids = self.collect_visible_wids();
+        if wids.is_empty() { return; }
+        let grid = self.current_grid();
+        if wids.len() == 1 {
+            grid.snap_layout(&wids, 1, 1);
+        } else {
+            let rows = ((wids.len() - 1) + 1) / 1;
+            grid.snap_layout(&wids, 2, rows.max(1));
+        }
+        self.save_session();
+        info!("Layout preset: master");
+    }
+
+    pub fn layout_preset_fibonacci(&mut self) {
+        let wids = self.collect_visible_wids();
+        if wids.is_empty() { return; }
+        let n = wids.len();
+        let grid = self.current_grid();
+        // Fibonacci: 1, 1, 2, 3, 5, 8, ... columns
+        let fib: Vec<usize> = (0..10).scan((0u64, 1u64), |state, _| {
+            let next = state.0 + state.1;
+            state.0 = state.1;
+            state.1 = next;
+            Some(next as usize)
+        }).collect();
+        let cols = fib.iter().take_while(|&&f| f < n).last().copied().unwrap_or(1).max(1).min(n);
+        grid.snap_layout(&wids, cols, 1);
+        self.save_session();
+        info!("Layout preset: fibonacci ({} cols)", cols);
+    }
+
     pub fn toggle_shade(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -2363,6 +2427,30 @@ impl Platform {
                             }
                         }
                     }
+                    return;
+                }
+                if command.starts_with("layout-columns ") {
+                    if let Some(n_str) = command.strip_prefix("layout-columns ") {
+                        if let Ok(n) = n_str.parse::<usize>() {
+                            self.layout_preset_columns(n.max(1));
+                        }
+                    }
+                    return;
+                }
+                if command.starts_with("layout-rows ") {
+                    if let Some(n_str) = command.strip_prefix("layout-rows ") {
+                        if let Ok(n) = n_str.parse::<usize>() {
+                            self.layout_preset_rows(n.max(1));
+                        }
+                    }
+                    return;
+                }
+                if command == "layout-master" {
+                    self.layout_preset_master();
+                    return;
+                }
+                if command == "layout-fibonacci" {
+                    self.layout_preset_fibonacci();
                     return;
                 }
                 if command.starts_with("add-scratchpad ") {

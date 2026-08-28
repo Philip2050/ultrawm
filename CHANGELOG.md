@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.6.0] - 2026-08-29 — Layout Presets
+### Added
+- `layout-columns N` — arrange windows into N equal-width columns
+- `layout-rows N` — arrange windows into N equal-height rows
+- `layout-master` — first window in left column, rest stacked in right column
+- `layout-fibonacci` — columns based on Fibonacci sequence (1,1,2,3,5,8...)
+- `collect_visible_wids()` helper for layout preset methods
+- Layout presets save session after rearrangement
+
+### Changed
+- IPC commands for layout presets use prefix matching: `layout-columns 3`
+- Layout methods sort windows by Z-order before placement
+
 ## [7.5.0] - 2026-08-29 — Per-Window Border Colors
 ### Added
 - Each window gets a unique border color based on its exe name hash
