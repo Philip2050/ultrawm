@@ -31,6 +31,8 @@ An **ultimate tiling window manager for Windows 11** that combines:
 - Bar with workspace indicators, title, and clock
 - DWM blur on windows
 - Swap flash animation: white flash on windows during collision swap
+- Rounded corners on tiled windows with glow effect on focused window
+- Rounded workspace indicators in the bar
 - Touchpad gesture support (pan, pinch, two-finger tap)
 - Shell replacement support
 
@@ -94,6 +96,7 @@ peek_x = 80
 peek_y = 40
 center_focused = false
 focus_follows_mouse = false
+corner_radius = 8
 
 [keybinds]
 mod_key = "win"

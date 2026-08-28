@@ -15,6 +15,7 @@ struct BarState {
     bg_color: u32,
     fg_color: u32,
     clock: String,
+    corner_radius: i32,
 }
 
 pub struct AppBar {
@@ -52,6 +53,7 @@ impl AppBar {
                 bg_color,
                 fg_color,
                 clock: String::new(),
+                corner_radius: 6,
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -150,30 +152,38 @@ unsafe extern "system" fn bar_wnd_proc(
             for (i, ws) in state.workspaces.iter().enumerate() {
                 let ws_text = format!(" {} ", ws);
                 let ws_w: Vec<u16> = ws_text.encode_utf16().chain(Some(0)).collect();
+
+                if i == state.active_workspace {
+                    let _ = SetTextColor(hdc, COLORREF(state.bg_color));
+                    RoundRect(
+                        hdc,
+                        x, 4, x + 36, 26,
+                        state.corner_radius, state.corner_radius,
+                    );
+                    let active_brush = CreateSolidBrush(COLORREF(state.fg_color));
+                    let _ = FillRect(hdc, &RECT { left: x + 1, top: 5, right: x + 35, bottom: 25 }, active_brush);
+                    let _ = DeleteObject(active_brush);
+                } else {
+                    let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+                    RoundRect(
+                        hdc,
+                        x, 4, x + 36, 26,
+                        state.corner_radius, state.corner_radius,
+                    );
+                }
+
                 let mut ws_rect = RECT {
                     left: x,
                     top: 2,
                     right: x + 40,
                     bottom: 28,
                 };
-
-                if i == state.active_workspace {
-                    let active_brush = CreateSolidBrush(COLORREF(state.fg_color));
-                    let _ = FillRect(hdc, &RECT { left: x, top: 2, right: x + 36, bottom: 26 }, active_brush);
-                    let _ = DeleteObject(active_brush);
-                    let _ = SetTextColor(hdc, COLORREF(state.bg_color));
-                }
-
                 let _ = DrawTextW(
                     hdc,
                     &mut ws_w.clone(),
                     &mut ws_rect,
                     DT_VCENTER | DT_SINGLELINE | DT_CENTER,
                 );
-
-                if i == state.active_workspace {
-                    let _ = SetTextColor(hdc, COLORREF(state.fg_color));
-                }
 
                 x += 40;
             }

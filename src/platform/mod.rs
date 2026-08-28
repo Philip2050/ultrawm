@@ -126,6 +126,8 @@ pub struct Platform {
     pub window_monitors: HashMap<u64, usize>,   // wid -> monitor index
     pub anim: HashMap<u64, WindowAnimState>,
     pub swap_flash: HashMap<u64, u32>, // wid -> flash timer (countdown frames)
+    last_rounded: HashMap<u64, (i32, i32, i32)>, // wid -> (w, h, radius) last applied
+    last_frame_time: std::time::Instant,
     pub config: crate::config::Config,
     pub config_reload_counter: u32,
     pub next_id: u64,
@@ -176,6 +178,8 @@ impl Platform {
             window_monitors: HashMap::new(),
             anim: HashMap::new(),
             swap_flash: HashMap::new(),
+            last_rounded: HashMap::new(),
+            last_frame_time: std::time::Instant::now(),
             config: crate::config::Config::default(),
             config_reload_counter: 0,
             next_id: 1,
@@ -626,7 +630,8 @@ impl Platform {
                         WindowAnimState::new(target_x, target_y, target_w, target_h)
                     });
                     anim.set_target(target_x, target_y, target_w, target_h);
-                    let (ax, ay, aw, ah) = anim.step(1.0 / 60.0);
+                    let dt: f32 = (1.0f32 / 60.0).min(1.0f32 / 30.0);
+                    let (ax, ay, aw, ah) = anim.step(dt);
 
                     unsafe {
                         let _ = SetWindowPos(
@@ -638,6 +643,14 @@ impl Platform {
                             ah as i32,
                             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
                         );
+                    }
+
+                    // Apply rounded corners when size changes
+                    let radius = self.config.layout.corner_radius as i32;
+                    let prev = self.last_rounded.get(&wid);
+                    if prev.map_or(true, |&(pw, ph, pr)| pw != aw as i32 || ph != ah as i32 || pr != radius) {
+                        apply_rounded_corners(hwnd_wrapper.0, ax as i32, ay as i32, aw as i32, ah as i32, radius);
+                        self.last_rounded.insert(wid, (aw as i32, ah as i32, radius));
                     }
 
                     let is_focused = focused_hwnd == Some(hwnd_wrapper);
@@ -1477,6 +1490,21 @@ fn hex_to_rgb(hex: &str) -> u32 {
         (b << 16) | (g << 8) | r
     } else {
         0
+    }
+}
+
+fn apply_rounded_corners(hwnd: HWND, x: i32, y: i32, w: i32, h: i32, radius: i32) {
+    if w <= radius * 2 || h <= radius * 2 {
+        return;
+    }
+    unsafe {
+        let region = CreateRoundRectRgn(
+            x, y, x + w, y + h,
+            radius * 2, radius * 2,
+        );
+        if !region.is_invalid() {
+            let _ = SetWindowRgn(hwnd, region, FALSE);
+        }
     }
 }
 

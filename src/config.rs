@@ -31,6 +31,7 @@ pub struct LayoutConfig {
     pub peek_y: i32,
     pub center_focused: bool,
     pub focus_follows_mouse: bool,
+    pub corner_radius: u32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -95,6 +96,7 @@ impl Default for Config {
                 peek_y: 40,
                 center_focused: false,
                 focus_follows_mouse: false,
+                corner_radius: 8,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

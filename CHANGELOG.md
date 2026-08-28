@@ -2,6 +2,21 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [0.5.0] - 2026-08-28 — Visual Polish
+
+### Added
+- **Rounded corners on tiled windows**: `corner_radius` config option (default: 8px), applied via `SetWindowRgn` with `CreateRoundRectRgn` for hardware-accelerated clipping
+- **Focused window glow**: multi-pass border rendering with outer glow (25% intensity, +4px) and mid-glow (50% intensity, +2px) around the focused window border
+- **Rounded workspace indicators**: bar workspace buttons use `RoundRect` with configurable corner radius
+- **`color_dim()` helper**: color intensity scaling for glow effects in border overlay
+
+### Changed
+- Border overlay rendering: 3-pass rendering for focused windows (glow + mid + border), 1-pass for unfocused
+- Bar workspace indicators: rounded pill-shaped active indicators with inverted text color
+
+### Fixed
+- Animation timestep: capped at 1/30s to prevent spring instability
+
 ## [0.4.2] - 2026-08-28 — Swap Flash Animation
 
 ### Added

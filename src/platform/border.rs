@@ -21,6 +21,13 @@ pub struct BorderOverlay {
     bits: *mut u8,
 }
 
+fn color_dim(c: u32, factor: f32) -> u32 {
+    let r = ((c & 0xFF) as f32 * factor) as u32;
+    let g = (((c >> 8) & 0xFF) as f32 * factor) as u32;
+    let b = (((c >> 16) & 0xFF) as f32 * factor) as u32;
+    (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
+}
+
 impl BorderOverlay {
     pub fn create(width: i32, height: i32) -> anyhow::Result<Self> {
         unsafe {
@@ -87,29 +94,67 @@ impl BorderOverlay {
             std::ptr::write_bytes(self.bits, 0, (self.width * self.height * 4) as usize);
 
             for &(x, y, w, h, color_rgb, focused) in rects {
-                let bw = if focused {
-                    self.border_width + 1
-                } else {
-                    self.border_width
-                };
-
-                let pen = CreatePen(PS_SOLID, bw, COLORREF(color_rgb));
-                let old_pen = SelectObject(self.mem_dc, pen);
-
+                let bw = self.border_width;
                 let half = bw / 2;
-                let rr = self.border_radius;
-                RoundRect(
-                    self.mem_dc,
-                    x + half,
-                    y + half,
-                    x + w - half,
-                    y + h - half,
-                    rr,
-                    rr,
-                );
 
-                SelectObject(self.mem_dc, old_pen);
-                DeleteObject(pen);
+                if focused {
+                    // Outer glow: wider, dimmed stroke
+                    let glow_pen = CreatePen(PS_SOLID, bw + 4, COLORREF(color_dim(color_rgb, 0.25)));
+                    let old_pen = SelectObject(self.mem_dc, glow_pen);
+                    let rr = self.border_radius;
+                    RoundRect(
+                        self.mem_dc,
+                        x + half - 1,
+                        y + half - 1,
+                        x + w - half + 1,
+                        y + h - half + 1,
+                        rr, rr,
+                    );
+                    SelectObject(self.mem_dc, old_pen);
+                    let _ = DeleteObject(glow_pen);
+
+                    // Mid glow
+                    let mid_pen = CreatePen(PS_SOLID, bw + 2, COLORREF(color_dim(color_rgb, 0.5)));
+                    let old_pen = SelectObject(self.mem_dc, mid_pen);
+                    RoundRect(
+                        self.mem_dc,
+                        x + half,
+                        y + half,
+                        x + w - half,
+                        y + h - half,
+                        rr, rr,
+                    );
+                    SelectObject(self.mem_dc, old_pen);
+                    let _ = DeleteObject(mid_pen);
+
+                    // Inner border
+                    let pen = CreatePen(PS_SOLID, bw, COLORREF(color_rgb));
+                    let old_pen = SelectObject(self.mem_dc, pen);
+                    RoundRect(
+                        self.mem_dc,
+                        x + half,
+                        y + half,
+                        x + w - half,
+                        y + h - half,
+                        rr, rr,
+                    );
+                    SelectObject(self.mem_dc, old_pen);
+                    let _ = DeleteObject(pen);
+                } else {
+                    let pen = CreatePen(PS_SOLID, bw, COLORREF(color_rgb));
+                    let old_pen = SelectObject(self.mem_dc, pen);
+                    let rr = self.border_radius;
+                    RoundRect(
+                        self.mem_dc,
+                        x + half,
+                        y + half,
+                        x + w - half,
+                        y + h - half,
+                        rr, rr,
+                    );
+                    SelectObject(self.mem_dc, old_pen);
+                    let _ = DeleteObject(pen);
+                }
             }
 
             let mut ptr = self.bits as *mut u32;
