@@ -1106,6 +1106,43 @@ impl Platform {
                         }
                     }
 
+                    // Enforce rule-based floating: position window and remove from grid
+                    if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                        if info.floating && grid.window_positions.contains_key(&wid) {
+                            grid.remove_window(wid);
+                            unsafe {
+                                let mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+                                if !mon.is_invalid() {
+                                    let mut mi = MONITORINFO {
+                                        cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+                                        ..Default::default()
+                                    };
+                                    if GetMonitorInfoW(mon, &mut mi).as_bool() {
+                                        let fw = info.float_w.unwrap_or(self.config.layout.default_float_width).min((mi.rcWork.right - mi.rcWork.left) as u32);
+                                        let fh = info.float_h.unwrap_or(self.config.layout.default_float_height).min((mi.rcWork.bottom - mi.rcWork.top) as u32);
+                                        let fx = info.float_x.unwrap_or_else(|| mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - fw as i32) / 2);
+                                        let fy = info.float_y.unwrap_or_else(|| mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) - fh as i32) / 2);
+
+                                        if let Some(mut_info) = self.windows.get_mut(&hwnd_wrapper) {
+                                            mut_info.saved_x = fx;
+                                            mut_info.saved_y = fy;
+                                            mut_info.saved_w = fw as i32;
+                                            mut_info.saved_h = fh as i32;
+                                        }
+
+                                        let _ = SetWindowPos(
+                                            hwnd,
+                                            HWND_TOPMOST,
+                                            fx, fy, fw as i32, fh as i32,
+                                            SWP_FRAMECHANGED,
+                                        );
+                                    }
+                                }
+                            }
+                            info!("Window {} floated by rule", wid);
+                        }
+                    }
+
                     grid.focus_window(wid);
                 }
 
@@ -2365,7 +2402,7 @@ impl Platform {
                 win_info.floating = float;
             }
             if let Some(ws) = rule.workspace {
-                if ws < 4 {
+                if ws < self.config.layout.workspace_count {
                     self.window_workspaces.insert(win_info.id, ws);
                 }
             }
@@ -2395,6 +2432,16 @@ impl Platform {
             if let Some(mh) = rule.min_height {
                 if mh > 0 {
                     win_info.min_height = Some(mh);
+                }
+            }
+            if let Some(w) = rule.width {
+                if w > 0 {
+                    win_info.float_w = Some(w);
+                }
+            }
+            if let Some(h) = rule.height {
+                if h > 0 {
+                    win_info.float_h = Some(h);
                 }
             }
             if let Some(fx) = rule.float_x {

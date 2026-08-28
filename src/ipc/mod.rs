@@ -159,6 +159,12 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
             if let Some(min_height_val) = json.get("min_height") {
                 rule_json["min_height"] = min_height_val.clone();
             }
+            if let Some(width_val) = json.get("width") {
+                rule_json["width"] = width_val.clone();
+            }
+            if let Some(height_val) = json.get("height") {
+                rule_json["height"] = height_val.clone();
+            }
             if let Some(float_x_val) = json.get("float_x") {
                 rule_json["float_x"] = float_x_val.clone();
             }
@@ -381,6 +387,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                             "match": r.match_,
                             "float": r.float,
                             "workspace": r.workspace,
+                            "width": r.width,
+                            "height": r.height,
                             "opacity": r.opacity,
                             "sticky": r.sticky,
                         })

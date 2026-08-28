@@ -2,6 +2,24 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.1.0] - 2026-08-29 — Window Rules Engine
+### Added
+- Window rules are now fully applied at window creation time
+- Rule-based floating: windows matching rules are auto-floated and positioned
+- Rule-based workspace assignment with correct workspace count validation
+- Rule-based size constraints: `width`, `height`, `max_width`, `max_height`, `min_width`, `min_height`
+- Rule-based float position: `float_x`, `float_y`, `float_w`, `float_h` are enforced
+- Rule-based opacity and sticky flags applied on window creation
+- `apply_rules()` now checks `workspace_count` instead of hardcoded 4
+- `width`/`height` rules now set `float_w`/`float_h` for floating windows
+- Rule-floated windows are removed from grid and positioned via `SetWindowPos`
+- IPC `add-rule` accepts `width` and `height` fields
+- IPC `list-rules` includes `width` and `height` in response
+
+### Fixed
+- Workspace assignment in rules now respects configurable workspace_count (was hardcoded to 4)
+- Floating windows from rules were placed on grid but never positioned — now correctly floated
+
 ## [7.0.0] - 2026-08-29 — Multi-Monitor Workspace Awareness
 ### Added
 - Bar workspace indicators update when focus moves to a different monitor
