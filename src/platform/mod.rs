@@ -723,6 +723,11 @@ impl Platform {
                     // Re-parse keybinds from updated config
                     self.keybinds = keybinds::parse_keybinds(&self.config.keybinds);
 
+                    // Flash bar to indicate config reloaded
+                    if let Some(ref bar) = self.bar {
+                        bar.trigger_reload_flash();
+                    }
+
                     // Apply layout changes to grid if they changed
                     if self.config.layout.gaps != old_gaps
                         || self.config.layout.peek_x != old_peek_x

@@ -113,9 +113,21 @@ All notable changes to UltraWM will be documented in this file.
 - Config save creates parent directory if it doesn't exist
 - Failed saves are logged as warnings but don't crash the WM
 
+## [9.2.0] - 2026-08-28 — Live Config Reload Indicator in Bar
+### Added
+- Config reload triggers a brief green flash animation in the bar (~0.5s)
+- `BarState::reload_flash` field tracks flash animation frames
+- `AppBar::trigger_reload_flash()` method to start flash from platform
+- Green tint overlay drawn in `WM_PAINT` with alpha decay over 30 frames
+- Config hot-reload (`reload_if_changed`) calls `bar.trigger_reload_flash()` after loading new config
+
+### Changed
+- `Config::reload_if_changed` triggers visual reload notification
+- Bar WM_PAINT handler decays `reload_flash` counter each frame
+- Reload flash uses green color (RGB 0,128,0) for positive feedback
+
 ## [Unreleased]
 ### Planned
-- Config hot-reload notification in bar
 - Window rule import/export via IPC (JSON config backup)
 - Window minimize-to-tray support
 - Multi-step window resize with visual guides
@@ -123,7 +135,7 @@ All notable changes to UltraWM will be documented in this file.
 - GPU-accelerated screenshot via Windows.Graphics.Capture
 - Session auto-save interval config
 
-## [8.1.0] - 2026-08-29 — Per-Window Opacity Animation on Focus Change
+## [9.1.0] - 2026-08-29 — IPC Config Write Commands Persist to Disk
 ### Added
 - `opacity_anim: HashMap<u64, SpringValue>` on Platform for per-window opacity springs
 - `on_focus_changed` creates spring animation for old focused window (target: 70% opacity) and new focused window (target: 100% opacity)

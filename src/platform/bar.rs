@@ -28,6 +28,7 @@ struct BarState {
     show_battery: bool,
     workspace_count: usize,
     snap_mode: bool,
+    reload_flash: u32, // frames remaining for green reload flash
 }
 
 pub struct AppBar {
@@ -96,6 +97,7 @@ impl AppBar {
                 show_battery,
                 workspace_count,
                 snap_mode: false,
+                reload_flash: 0,
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -196,6 +198,16 @@ impl AppBar {
             }
         }
     }
+
+    pub fn trigger_reload_flash(&self) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).reload_flash = 30; // ~0.5 second flash at 60fps
+                self.update();
+            }
+        }
+    }
 }
 
 impl Drop for AppBar {
@@ -249,7 +261,12 @@ unsafe extern "system" fn bar_wnd_proc(
             if ptr.is_null() {
                 return LRESULT(0);
             }
-            let state = &*ptr;
+            let state = &mut *ptr;
+
+            // Decay reload flash
+            if state.reload_flash > 0 {
+                state.reload_flash -= 1;
+            }
 
             let mut ps = PAINTSTRUCT::default();
             let hdc = BeginPaint(hwnd, &mut ps);
@@ -417,6 +434,16 @@ unsafe extern "system" fn bar_wnd_proc(
                 );
             }
             let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+
+            // Draw reload flash overlay (green tint)
+            if state.reload_flash > 0 {
+                let alpha = state.reload_flash.min(30) as f32 / 30.0;
+                let flash_green = (alpha * 80.0) as u8;
+                let flash_color = (flash_green as u32) | ((flash_green as u32) << 8);
+                let flash_brush = CreateSolidBrush(COLORREF(flash_color));
+                let _ = FillRect(hdc, &RECT { left: 0, top: 0, right: 9999, bottom: 9999 }, flash_brush);
+                let _ = DeleteObject(flash_brush);
+            }
 
             let _ = EndPaint(hwnd, &ps);
             LRESULT(0)
