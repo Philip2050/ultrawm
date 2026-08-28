@@ -1,5 +1,5 @@
 use crate::anim::{Spring, SpringValue};
-use crate::layout::GridState;
+use crate::layout::{Cell, GridState};
 use crate::theme::ThemeManager;
 use log::{debug, info, warn};
 use std::cell::RefCell;
@@ -262,6 +262,40 @@ impl Platform {
         self.ws_pending_monitor = Some(monitor_idx);
 
         info!("Monitor {}: switching to workspace {} (fade)", monitor_idx + 1, ws + 1);
+    }
+
+    pub fn move_focused_window_to_workspace(&mut self, ws: usize) {
+        let Some(hwnd) = self.focused_hwnd else { return };
+        let Some(info) = self.windows.get(&hwnd) else { return };
+        let wid = info.id;
+
+        if ws >= 4 { return; }
+
+        let mon_idx = self.window_monitors.get(&wid).copied().unwrap_or(0);
+        let current_ws = self.monitor_workspaces[mon_idx].current;
+
+        // Remove from current workspace grid
+        for grid in &mut self.monitor_workspaces[mon_idx].grids {
+            grid.cells.retain(|_, v| *v != wid);
+            grid.window_positions.remove(&wid);
+        }
+
+        // Add to new workspace grid at (0, 0)
+        let new_grid = &mut self.monitor_workspaces[mon_idx].grids[ws];
+        new_grid.cells.insert(Cell::new(0, 0), wid);
+        new_grid.window_positions.insert(wid, Cell::new(0, 0));
+
+        // Update workspace assignment
+        self.window_workspaces.insert(wid, ws);
+
+        // If we're currently on that workspace, show the window
+        if current_ws == ws {
+            unsafe { let _ = ShowWindow(info.hwnd, SW_SHOW); }
+        } else {
+            unsafe { let _ = ShowWindow(info.hwnd, SW_HIDE); }
+        }
+
+        info!("Moved window to workspace {} on monitor {}", ws + 1, mon_idx + 1);
     }
 
     pub fn primary_monitor(&self) -> Option<&MonitorInfo> {
@@ -1218,6 +1252,20 @@ impl Platform {
     pub fn handle_ipc_command(&mut self, cmd: crate::ipc::IpcCommand, theme_mgr: &mut crate::theme::ThemeManager) {
         match cmd {
             crate::ipc::IpcCommand::Single { command } => {
+                if command.starts_with("workspace-") {
+                    if let Some(num) = command.strip_prefix("workspace-").and_then(|s| s.parse::<usize>().ok()) {
+                        if num > 0 && num <= 4 {
+                            self.switch_workspace(num - 1);
+                        }
+                    }
+                    return;
+                }
+                if command.starts_with("move-window-to-workspace ") {
+                    if let Some(num) = command.strip_prefix("move-window-to-workspace ").and_then(|s| s.parse::<usize>().ok()) {
+                        self.move_focused_window_to_workspace(num);
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
