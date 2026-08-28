@@ -32,8 +32,60 @@ pub enum SplitDir {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TabGroup {
+    pub windows: Vec<WindowId>,
+    pub active: usize,
+    pub title: Option<String>,
+}
+
+impl TabGroup {
+    pub fn new(first: WindowId) -> Self {
+        Self {
+            windows: vec![first],
+            active: 0,
+            title: None,
+        }
+    }
+
+    pub fn add(&mut self, wid: WindowId) {
+        if !self.windows.contains(&wid) {
+            self.windows.push(wid);
+        }
+    }
+
+    pub fn remove(&mut self, wid: WindowId) -> bool {
+        if let Some(pos) = self.windows.iter().position(|&w| w == wid) {
+            self.windows.remove(pos);
+            if self.windows.is_empty() {
+                return true; // group is empty
+            }
+            if self.active >= self.windows.len() {
+                self.active = self.windows.len() - 1;
+            }
+            false
+        } else {
+            false
+        }
+    }
+
+    pub fn active(&self) -> WindowId {
+        self.windows.get(self.active).copied().unwrap_or(self.windows[0])
+    }
+
+    pub fn switch(&mut self, idx: usize) {
+        if idx < self.windows.len() {
+            self.active = idx;
+        }
+    }
+
+    pub fn len(&self) -> usize { self.windows.len() }
+    pub fn is_empty(&self) -> bool { self.windows.is_empty() }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CellNode {
     Leaf(WindowId),
+    Tab(TabGroup),
     Split {
         dir: SplitDir,
         ratio: f32,
@@ -160,6 +212,7 @@ impl GridState {
 
         let existing = match self.cell_nodes.get(&cell) {
             Some(CellNode::Leaf(w)) => *w,
+            Some(CellNode::Tab(_)) => return false, // can't split a tab group
             Some(CellNode::Split { .. }) => return false,
             None => wid,
         };
@@ -192,6 +245,75 @@ impl GridState {
         false
     }
 
+    /// Tab windows together in the same cell (stack them)
+    pub fn tab_cell(&mut self, wid: WindowId, with_wid: WindowId) -> bool {
+        let cell = match self.window_positions.get(&wid) {
+            Some(&c) => c,
+            None => return false,
+        };
+
+        let other_cell = match self.window_positions.get(&with_wid) {
+            Some(&c) => c,
+            None => return false,
+        };
+
+        if cell != other_cell {
+            return false; // windows must be in same cell
+        }
+
+        match self.cell_nodes.get_mut(&cell) {
+            Some(CellNode::Leaf(_)) => {
+                let mut group = TabGroup::new(wid);
+                group.add(with_wid);
+                self.cell_nodes.insert(cell, CellNode::Tab(group));
+                true
+            }
+            Some(CellNode::Tab(ref mut group)) => {
+                group.add(with_wid);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Untab a cell back to a single leaf (keeps focused window)
+    pub fn untab_cell(&mut self, wid: WindowId) -> bool {
+        let cell = match self.window_positions.get(&wid) {
+            Some(&c) => c,
+            None => return false,
+        };
+
+        if let Some(CellNode::Tab(ref group)) = self.cell_nodes.get(&cell) {
+            let active = group.active();
+            self.cell_nodes.insert(cell, CellNode::Leaf(active));
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Switch to next/prev tab in focused cell
+    pub fn cycle_tab(&mut self, wid: WindowId, forward: bool) -> bool {
+        let cell = match self.window_positions.get(&wid) {
+            Some(&c) => c,
+            None => return false,
+        };
+
+        if let Some(CellNode::Tab(ref mut group)) = self.cell_nodes.get_mut(&cell) {
+            if group.len() <= 1 {
+                return false;
+            }
+            if forward {
+                group.active = (group.active + 1) % group.len();
+            } else {
+                group.active = if group.active == 0 { group.len() - 1 } else { group.active - 1 };
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     /// Adjust the split ratio for a cell (0.1 steps, clamped 0.1–0.9)
     pub fn adjust_split_ratio(&mut self, wid: WindowId, grow_primary: bool) {
         let cell = match self.window_positions.get(&wid) {
@@ -220,6 +342,11 @@ impl GridState {
     fn collect_leaves(&self, node: &CellNode, out: &mut Vec<WindowId>) {
         match node {
             CellNode::Leaf(wid) => out.push(*wid),
+            CellNode::Tab(group) => {
+                for &wid in &group.windows {
+                    out.push(wid);
+                }
+            }
             CellNode::Split { primary, secondary, .. } => {
                 self.collect_leaves(primary, out);
                 self.collect_leaves(secondary, out);
@@ -246,6 +373,13 @@ impl GridState {
                 Some((x.max(0), y.max(0), w as u32, h as u32))
             }
             CellNode::Leaf(_) => None,
+            CellNode::Tab(group) => {
+                if group.active() == target {
+                    Some((x.max(0), y.max(0), w as u32, h as u32))
+                } else {
+                    None
+                }
+            }
             CellNode::Split { dir, ratio, primary, secondary } => {
                 match dir {
                     SplitDir::Horizontal => {
@@ -394,6 +528,10 @@ impl GridState {
             CellNode::Leaf(wid) => {
                 out.push((*wid, base_x - cw / 2, base_y - ch / 2, cw as u32, ch as u32));
             }
+            CellNode::Tab(group) => {
+                let active = group.active();
+                out.push((active, base_x - cw / 2, base_y - ch / 2, cw as u32, ch as u32));
+            }
             CellNode::Split { dir, ratio, primary, secondary } => {
                 match dir {
                     SplitDir::Horizontal => {
@@ -422,29 +560,28 @@ impl GridState {
             CellNode::Leaf(wid) => {
                 out.push((*wid, x, y, w as u32, h as u32));
             }
-            CellNode::Split { primary, secondary, .. } => {
-                match node {
-                    CellNode::Split { dir, ratio, .. } => {
-                        match dir {
-                            SplitDir::Horizontal => {
-                                let pw = (w as f32 * ratio) as i32;
-                                let sw = w - pw;
-                                let px = x;
-                                let sx = x + pw + self.gap_x;
-                                self.add_rects_for(primary, px, y, pw, h, out);
-                                self.add_rects_for(secondary, sx, y, sw, h, out);
-                            }
-                            SplitDir::Vertical => {
-                                let ph = (h as f32 * ratio) as i32;
-                                let sh = h - ph;
-                                let py = y;
-                                let sy = y + ph + self.gap_y;
-                                self.add_rects_for(primary, x, py, w, ph, out);
-                                self.add_rects_for(secondary, x, sy, w, sh, out);
-                            }
-                        }
+            CellNode::Tab(group) => {
+                let active = group.active();
+                out.push((active, x, y, w as u32, h as u32));
+            }
+            CellNode::Split { dir, ratio, primary, secondary } => {
+                match dir {
+                    SplitDir::Horizontal => {
+                        let pw = (w as f32 * ratio) as i32;
+                        let sw = w - pw;
+                        let px = x;
+                        let sx = x + pw + self.gap_x;
+                        self.add_rects_for(primary, px, y, pw, h, out);
+                        self.add_rects_for(secondary, sx, y, sw, h, out);
                     }
-                    _ => {}
+                    SplitDir::Vertical => {
+                        let ph = (h as f32 * ratio) as i32;
+                        let sh = h - ph;
+                        let py = y;
+                        let sy = y + ph + self.gap_y;
+                        self.add_rects_for(primary, x, py, w, ph, out);
+                        self.add_rects_for(secondary, x, sy, w, sh, out);
+                    }
                 }
             }
         }

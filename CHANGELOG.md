@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [0.4.0] - 2026-08-28 — Window Tab Stacking
+
+### Added
+- **Window tab stacking**: group windows in the same cell with tab switching
+- `TabGroup` struct: holds list of WindowIds + active index
+- `CellNode::Tab` variant: cells can now be Leaf, Tab, or Split
+- `GridState::tab_cell()`: tab two windows together
+- `GridState::untab_cell()`: untab back to single leaf
+- `GridState::cycle_tab()`: switch between tabs
+- `Platform::tab_focused()`, `untab_focused()`, `cycle_tab()` methods
+- Keyboard shortcuts: `Win+Alt+T` (tab), `Win+Alt+Shift+T` (untab)
+- Only active tab window is positioned; inactive tabs are hidden
+- All rect/layout methods updated to handle Tab nodes
+
 ## [0.3.0] - 2026-08-28 — Bidirectional Tiling & JSON IPC
 
 ### Added

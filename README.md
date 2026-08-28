@@ -11,6 +11,7 @@ An **ultimate tiling window manager for Windows 11** that combines:
 ## Status
 
 **Phase 1 MVP** — compiling and running. Core features implemented:
+- **Window tab stacking**: group windows in a cell with tab switching
 - 2D lattice layout engine with camera panning and collision-swapping focus
 - **Bidirectional tiling**: split cells horizontally or vertically with adjustable ratios
 - Multi-monitor workspaces (each monitor has independent workspace set)
@@ -55,6 +56,8 @@ An **ultimate tiling window manager for Windows 11** that combines:
 | `Win + Alt + H` | Split focused cell horizontally |
 | `Win + Alt + V` | Split focused cell vertically |
 | `Win + Alt + U` | Unsplit focused cell |
+| `Win + Alt + T` | Tab focused window with neighbor |
+| `Win + Alt + Shift + T` | Untab focused cell |
 
 ## Build
 

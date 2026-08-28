@@ -791,6 +791,57 @@ impl Platform {
         }
     }
 
+    /// Tab the focused window with another window in the same cell
+    pub fn tab_focused(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                if info.id > 0 {
+                    let grid = self.current_grid();
+                    // Find another window in the same cell
+                    if let Some(&cell) = grid.window_positions.get(&info.id) {
+                        if let Some(&other_wid) = grid.cells.get(&cell) {
+                            if other_wid != info.id {
+                                if grid.tab_cell(info.id, other_wid) {
+                                    info!("Tabbed {} with {}", info.id, other_wid);
+                                    self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Untab the focused window's cell
+    pub fn untab_focused(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                if info.id > 0 {
+                    let grid = self.current_grid();
+                    if grid.untab_cell(info.id) {
+                        info!("Untabbed cell for window {}", info.id);
+                        self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Cycle through tabs in the focused cell
+    pub fn cycle_tab(&mut self, forward: bool) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                if info.id > 0 {
+                    let grid = self.current_grid();
+                    if grid.cycle_tab(info.id, forward) {
+                        self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                    }
+                }
+            }
+        }
+    }
+
     pub fn on_focus_changed(&mut self, hwnd: HWND) {
         self.focused_hwnd = Some(HWnd(hwnd));
 
@@ -1114,6 +1165,13 @@ impl Platform {
         if let Some(ref mgr) = self.theme_mgr {
             let mut m = mgr.borrow_mut();
             let _ = m.apply_idx(idx);
+        }
+    }
+
+    pub fn next_theme(&mut self) {
+        if let Some(ref mgr) = self.theme_mgr {
+            let mut m = mgr.borrow_mut();
+            let _ = m.next_theme();
         }
     }
 

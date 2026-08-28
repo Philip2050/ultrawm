@@ -135,8 +135,16 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             return LRESULT(1);
         }
         0x54 => {
-            // T — next theme
-            log::debug!("Next theme");
+            // T — next theme (Win+T) or tab (Win+Alt+T)
+            if alt {
+                if shift {
+                    platform.untab_focused();
+                } else {
+                    platform.tab_focused();
+                }
+            } else {
+                platform.next_theme();
+            }
             return LRESULT(1);
         }
         0x47 => {
