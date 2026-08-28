@@ -701,8 +701,8 @@ impl Platform {
                     continue;
                 }
 
-                // Skip cloaked/hidden windows
-                if !info.visible {
+                // Skip floating, cloaked, hidden, or minimized windows
+                if !info.visible || info.minimized {
                     continue;
                 }
 
@@ -1271,6 +1271,30 @@ impl Platform {
         }
     }
 
+    pub fn minimize_focused(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                if !info.minimized {
+                    unsafe { let _ = ShowWindow(info.hwnd, SW_MINIMIZE); }
+                    info.minimized = true;
+                    info!("Minimized: {} (id={})", info.title, info.id);
+                }
+            }
+        }
+    }
+
+    pub fn restore_minimized(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                if info.minimized {
+                    unsafe { let _ = ShowWindow(info.hwnd, SW_RESTORE); }
+                    info.minimized = false;
+                    info!("Restored: {} (id={})", info.title, info.id);
+                }
+            }
+        }
+    }
+
     pub fn handle_ipc_command(&mut self, cmd: crate::ipc::IpcCommand, theme_mgr: &mut crate::theme::ThemeManager) {
         match cmd {
             crate::ipc::IpcCommand::Single { command } => {
@@ -1298,6 +1322,14 @@ impl Platform {
                 }
                 if command == "sticky" {
                     self.toggle_sticky();
+                    return;
+                }
+                if command == "minimize" {
+                    self.minimize_focused();
+                    return;
+                }
+                if command == "restore" {
+                    self.restore_minimized();
                     return;
                 }
                 match command.as_str() {

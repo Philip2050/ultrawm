@@ -233,6 +233,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "tab" => IpcCommand::Single { command: "tab".into() },
         "untab" => IpcCommand::Single { command: "untab".into() },
         "sticky" => IpcCommand::Single { command: "sticky".into() },
+        "minimize" => IpcCommand::Single { command: "minimize".into() },
+        "restore" => IpcCommand::Single { command: "restore".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

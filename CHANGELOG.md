@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.2.0] - 2026-08-28 — Window Minimize/Restore
+### Added
+- **Minimize focused window**: `Win+M` minimizes the focused window, hiding it from the tiling layout
+- **Restore focused window**: `Win+Shift+M` restores the previously minimized window
+- **Minimized tracking**: `WindowInfo.minimized` field tracks per-window minimize state
+- **IPC commands**: `minimize` and `restore` via JSON IPC (`echo '{"command":"minimize"}' > \\.\pipe\ultrawm-ipc`)
+- Minimized windows excluded from tiling layout automatically
+
+### Changed
+- `tile_all_windows` skips minimized windows alongside floating and hidden windows
+
 ## [2.1.1] - 2026-08-28 — Configurable Workspace Count
 ### Added
 - **`workspace_count` config option**: set 2-10 workspaces per monitor (default: 4) in `layout.workspace_count`

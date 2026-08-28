@@ -209,6 +209,15 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
                 return LRESULT(1);
             }
         }
+        0x4D => {
+            // M — minimize (Win+M) / restore (Win+Shift+M)
+            if shift {
+                platform.restore_minimized();
+            } else {
+                platform.minimize_focused();
+            }
+            return LRESULT(1);
+        }
         _ => {}
     }
 
