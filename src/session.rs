@@ -12,6 +12,7 @@ pub struct SessionWindowState {
     pub sticky: bool,
     pub maximized: bool,
     pub always_on_top: bool,
+    pub z_order: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

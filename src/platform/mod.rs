@@ -341,6 +341,11 @@ impl Platform {
         // Enumerate existing top-level windows
         self.enumerate_windows()?;
 
+        // Restore Z-order from session
+        if self.session.is_some() {
+            self.apply_z_order();
+        }
+
         // Focus the first window if any
         if let Some(first) = self.windows.keys().next().copied() {
             self.on_focus_changed(first.0);
@@ -979,6 +984,7 @@ impl Platform {
                                     info.sticky = sw.sticky;
                                     info.maximized = sw.maximized;
                                     info.always_on_top = sw.always_on_top;
+                                    info.z_order = sw.z_order;
                                     if sw.floating {
                                         // Float: remove from grid, position manually
                                         grid.remove_window(wid);
@@ -1792,11 +1798,40 @@ impl Platform {
         }
     }
 
+    pub fn apply_z_order(&mut self) {
+        let mut sorted: Vec<_> = self.windows.iter().collect();
+        sorted.sort_by_key(|(_, info)| info.z_order);
+        for (hwnd_wrapper, _) in sorted {
+            unsafe {
+                let _ = SetWindowPos(hwnd_wrapper.0, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            }
+        }
+    }
+
     pub fn save_session(&mut self) {
         let grid = &self.monitor_workspaces[0].grids[self.monitor_workspaces[0].current];
+
+        // Build Z-order map: HWND raw ptr -> position (0 = topmost)
+        let mut z_order_map: HashMap<usize, usize> = HashMap::new();
+        unsafe {
+            if let Ok(mut hwnd) = GetTopWindow(HWND(null_mut())) {
+                let mut z = 0usize;
+                while !hwnd.is_invalid() {
+                    z_order_map.insert(hwnd.0 as usize, z);
+                    z += 1;
+                    if let Ok(next) = GetWindow(hwnd, GW_HWNDNEXT) {
+                        hwnd = next;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
         let mut windows = Vec::new();
         for (&hwnd_wrapper, info) in &self.windows {
             if let Some(cell) = grid.window_positions.get(&info.id) {
+                let z_order = z_order_map.get(&(hwnd_wrapper.0.0 as usize)).copied().unwrap_or(usize::MAX);
                 windows.push(crate::session::SessionWindowState {
                     exe: info.exe.clone(),
                     cell: *cell,
@@ -1806,6 +1841,7 @@ impl Platform {
                     sticky: info.sticky,
                     maximized: info.maximized,
                     always_on_top: info.always_on_top,
+                    z_order,
                 });
             }
         }
