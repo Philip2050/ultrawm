@@ -1273,21 +1273,52 @@ impl Platform {
     pub fn toggle_floating(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             let was_floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
+            let wid = self.windows.get(&hwnd_wrapper).map(|i| i.id);
+            let hwnd = self.windows.get(&hwnd_wrapper).map(|i| i.hwnd);
 
-            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
-                info.floating = !info.floating;
-                let wid = info.id;
-                let title = info.title.clone();
+            if let (Some(wid), Some(hwnd)) = (wid, hwnd) {
+                // Flip floating flag
+                if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                    info.floating = !was_floating;
+                }
 
-                if info.floating {
+                if !was_floating {
+                    // Center window on monitor at 50% monitor size
+                    unsafe {
+                        let mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+                        if !mon.is_invalid() {
+                            let mut mi = MONITORINFO {
+                                cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+                                ..Default::default()
+                            };
+                            if GetMonitorInfoW(mon, &mut mi).as_bool() {
+                                let mw = (mi.rcWork.right - mi.rcWork.left) / 2;
+                                let mh = (mi.rcWork.bottom - mi.rcWork.top) / 2;
+                                let mx = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - mw) / 2;
+                                let my = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - mh) / 2;
+                                if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                                    info.saved_x = mx;
+                                    info.saved_y = my;
+                                    info.saved_w = mw;
+                                    info.saved_h = mh;
+                                }
+                                let _ = SetWindowPos(
+                                    hwnd,
+                                    HWND_TOPMOST,
+                                    mx, my, mw, mh,
+                                    SWP_FRAMECHANGED,
+                                );
+                            }
+                        }
+                    }
                     let grid = self.current_grid();
                     grid.remove_window(wid);
-                    info!("Floating window: {} (id={})", title, wid);
+                    info!("Floating window (id={})", wid);
                 } else {
                     let grid = self.current_grid();
                     grid.place_window(wid);
                     grid.focus_window(wid);
-                    info!("Unfloating window: {} (id={})", title, wid);
+                    info!("Unfloating window (id={})", wid);
                 }
                 self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
             }

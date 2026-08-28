@@ -2,6 +2,12 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.1.0] - 2026-08-29 — Float Window Center on Monitor
+### Added
+- **Floating windows center on monitor**: toggling float centers the window at 50% of monitor work area
+- Window positioned at monitor center with half-width/half-height dimensions
+- Unfloat restores window to tiling layout with saved position
+
 ## [3.0.0] - 2026-08-29 — Window Size Constraints
 ### Added
 - **`max_width` and `max_height` rule fields**: constrain tiled window dimensions per-rule
