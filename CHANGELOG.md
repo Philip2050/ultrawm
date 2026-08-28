@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [6.2.0] - 2026-08-29 — Focus Flash Animation
+### Added
+- **Focus flash**: border overlay briefly pulses when focus changes to a window
+- `trigger_focus_flash(wid)` method triggers 15-frame flash animation
+- Flash rendered in `tile_all_windows()` using existing `swap_flash` mechanism
+- Flash blends white into accent color for focused, inactive color for unfocused
+- Focus flash integrated into `on_focus_changed()` callback
+
+### Changed
+- Flash timer: 15 frames (~250ms at 60fps)
+- White-to-accent blend during flash creates smooth visual transition
+
 ## [6.1.0] - 2026-08-29 — Per-Monitor Layout Settings
 ### Added
 - **monitor_layouts** config: per-monitor layout overrides (gaps, padding, border, corner_radius)

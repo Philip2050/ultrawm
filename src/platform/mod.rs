@@ -1216,8 +1216,9 @@ impl Platform {
         self.focused_hwnd = Some(HWnd(hwnd));
 
         let wid = self.windows.get(&HWnd(hwnd)).map(|i| i.id).unwrap_or(0);
-        let grid = self.current_grid();
         if wid > 0 {
+            self.trigger_focus_flash(wid);
+            let grid = self.current_grid();
             grid.focus_window(wid);
         }
     }
@@ -1358,6 +1359,10 @@ impl Platform {
             grid.move_window(wid, dr, dc);
             self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
         }
+    }
+
+    pub fn trigger_focus_flash(&mut self, wid: u64) {
+        self.swap_flash.insert(wid, 15);
     }
 
     pub fn swap_windows(&mut self, src_hwnd: HWND, tgt_hwnd: HWND) {
