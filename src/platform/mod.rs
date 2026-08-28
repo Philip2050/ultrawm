@@ -1337,6 +1337,38 @@ impl Platform {
         }
     }
 
+    pub fn toggle_shade(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                info.shaded = !info.shaded;
+                unsafe {
+                    if info.shaded {
+                        let mut rect = RECT::default();
+                        let _ = GetWindowRect(info.hwnd, &mut rect);
+                        info.saved_w = rect.right - rect.left;
+                        info.saved_h = rect.bottom - rect.top;
+                        let _ = SetWindowPos(
+                            info.hwnd,
+                            HWND(null_mut()),
+                            rect.left, rect.top,
+                            info.saved_w, 30,
+                            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                        );
+                    } else {
+                        let _ = SetWindowPos(
+                            info.hwnd,
+                            HWND(null_mut()),
+                            info.saved_x, info.saved_y,
+                            info.saved_w, info.saved_h,
+                            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                        );
+                    }
+                }
+                info!("Shade toggled: {} (id={}, shaded={})", info.title, info.id, info.shaded);
+            }
+        }
+    }
+
     pub fn set_opacity(&mut self, opacity: f32) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {

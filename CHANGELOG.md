@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.8.0] - 2026-08-29 — Window Shade/Roll-up
+### Added
+- **Shade/roll-up toggle**: `Win+Shift+S` rolls the focused window to just its title bar (~30px)
+- Toggle again restores the original window size
+- `shaded` field tracks per-window shade state
+- Shaded windows excluded from tiling layout automatically
+
 ## [3.7.0] - 2026-08-29 — Click-to-Swap Window Move
 ### Added
 - **Click-to-swap window move**: click a tiled window to select it, click another to swap positions

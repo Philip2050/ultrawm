@@ -188,8 +188,12 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             return LRESULT(1);
         }
         0x53 => {
-            // S — scratchpad toggle
-            platform.toggle_scratchpad();
+            // S — scratchpad toggle (Win+S), shade toggle (Win+Shift+S)
+            if shift {
+                platform.toggle_shade();
+            } else {
+                platform.toggle_scratchpad();
+            }
             return LRESULT(1);
         }
         0x48 => {
