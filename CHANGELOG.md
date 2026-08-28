@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.3.0] - 2026-08-29 — Bar Click-to-Switch Workspace
+### Added
+- Clicking on a workspace indicator in the bar switches to that workspace
+- Bar WM_LBUTTONDOWN handler detects which workspace pill was clicked
+- Custom message `WM_BAR_WORKSPACE_CLICK` posted to platform message loop
+- Platform message loop handles bar click and calls `switch_workspace(idx)`
+
+### Changed
+- Workspace indicators are now interactive — click to navigate between workspaces
+- Bar uses `PostMessageW` to communicate clicks to the platform
+
 ## [7.2.0] - 2026-08-29 — Session Save/Restore (Multi-Monitor)
 ### Added
 - Session now saves all monitors, all workspaces, and floating windows

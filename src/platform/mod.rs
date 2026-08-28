@@ -552,6 +552,13 @@ impl Platform {
                         self.edge_tile_window(src_hwnd, mode_code);
                     }
 
+                    // Handle bar workspace indicator click
+                    const WM_BAR_WORKSPACE_CLICK: u32 = WM_APP + 0x100;
+                    if msg.message == WM_BAR_WORKSPACE_CLICK {
+                        let ws_idx = msg.wParam.0 as usize;
+                        self.switch_workspace(ws_idx);
+                    }
+
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 } else {

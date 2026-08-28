@@ -9,6 +9,8 @@ use windows::{
     },
 };
 
+pub const WM_BAR_WORKSPACE_CLICK: u32 = WM_APP + 0x100;
+
 struct BarState {
     workspaces: Vec<String>,
     active_workspace: usize,
@@ -384,6 +386,27 @@ unsafe extern "system" fn bar_wnd_proc(
             let _ = SetTextColor(hdc, COLORREF(state.fg_color));
 
             let _ = EndPaint(hwnd, &ps);
+            LRESULT(0)
+        }
+        WM_LBUTTONDOWN => {
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                let state = &*ptr;
+                let x_pos = (lparam.0 & 0xFFFF) as i32;
+                if state.show_workspaces {
+                    for (i, _ws) in state.workspaces.iter().enumerate() {
+                        if i >= state.workspace_count { break; }
+                        let ws_left = 10i32 + (i * 40) as i32;
+                        let ws_right = ws_left + 36;
+                        if x_pos >= ws_left && x_pos < ws_right {
+                            // Post workspace switch to platform message loop
+                            let msg = WM_BAR_WORKSPACE_CLICK;
+                            let _ = PostMessageW(HWND(std::ptr::null_mut()), msg, WPARAM(i), LPARAM(0));
+                            break;
+                        }
+                    }
+                }
+            }
             LRESULT(0)
         }
         WM_ERASEBKGND => LRESULT(1),
