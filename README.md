@@ -126,6 +126,12 @@ float = false
 [[rules]]
 match = "calculator"
 workspace = 2
+
+[[rules]]
+match = "notepad"
+opacity = 0.9
+sticky = true
+max_width = 1200
 ```
 
 ## Themes

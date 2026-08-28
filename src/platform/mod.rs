@@ -676,6 +676,13 @@ impl Platform {
 
                     // Apply DWM blur to windows
                     let _ = enable_blur(hwnd_wrapper.0, accent_rgb);
+
+                    // Apply per-window opacity
+                    if let Some(op) = info.opacity {
+                        unsafe {
+                            let _ = SetLayeredWindowAttributes(hwnd_wrapper.0, COLORREF(0), (op * 255.0) as u8, LWA_ALPHA);
+                        }
+                    }
                 }
             }
         }
@@ -1249,6 +1256,14 @@ impl Platform {
                 if ws < 4 {
                     self.window_workspaces.insert(win_info.id, ws);
                 }
+            }
+            if let Some(op) = rule.opacity {
+                if op >= 0.0 && op <= 1.0 {
+                    win_info.opacity = Some(op);
+                }
+            }
+            if let Some(sticky) = rule.sticky {
+                win_info.sticky = sticky;
             }
         }
     }

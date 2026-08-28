@@ -22,6 +22,10 @@ pub struct WindowRule {
     pub workspace: Option<usize>,
     pub width: Option<u32>,
     pub height: Option<u32>,
+    pub max_width: Option<u32>,
+    pub max_height: Option<u32>,
+    pub opacity: Option<f32>,
+    pub sticky: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

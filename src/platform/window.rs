@@ -23,6 +23,8 @@ pub struct WindowInfo {
     pub saved_y: i32,
     pub saved_w: i32,
     pub saved_h: i32,
+    pub opacity: Option<f32>,
+    pub sticky: bool,
 }
 
 impl WindowInfo {
@@ -83,6 +85,8 @@ impl WindowInfo {
                 saved_y: rect.top,
                 saved_w: rect.right - rect.left,
                 saved_h: rect.bottom - rect.top,
+                opacity: None,
+                sticky: false,
             })
         }
     }

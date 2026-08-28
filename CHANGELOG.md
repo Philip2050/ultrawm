@@ -18,6 +18,15 @@ All notable changes to UltraWM will be documented in this file.
 - Animation timestep: capped at 1/30s for spring stability
 - Blur: acrylic blur with accent color tint instead of generic blur
 
+## [0.5.1] - 2026-08-28 — Window Rules Enhancements
+
+### Added
+- **Window opacity rule**: `opacity` field in rules (0.0-1.0), applied via `SetLayeredWindowAttributes` with `LWA_ALPHA`
+- **Sticky window rule**: `sticky` field in rules, windows stay visible across all workspaces
+- **Max size constraints**: `max_width` and `max_height` fields in rules for size limits
+- `WindowInfo.opacity` and `WindowInfo.sticky` fields for per-window state tracking
+- Opacity applied per-window in tile_all_windows after blur
+
 ### Fixed
 - Animation timestep: capped at 1/30s to prevent spring instability
 
