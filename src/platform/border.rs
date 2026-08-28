@@ -35,6 +35,7 @@ pub struct BorderOverlay {
 pub const WM_OVERVIEW_CLICK: u32 = WM_USER + 0x100;
 pub const WM_SWAP_WINDOWS: u32 = WM_USER + 0x101;
 pub const WM_DRAG_MOVE: u32 = WM_USER + 0x102;
+pub const WM_EDGE_TILE: u32 = WM_USER + 0x103;
 
 fn color_dim(c: u32, factor: f32) -> u32 {
     let r = ((c & 0xFF) as f32 * factor) as u32;
@@ -509,7 +510,38 @@ unsafe extern "system" fn border_wnd_proc(
                 // Handle drag move
                 if overlay.drag_active {
                     if let Some((_sx, _sy, src_hwnd)) = overlay.drag_start {
-                        if let Some((tx, ty, tw, th)) = overlay.drag_ghost {
+                        let cx = ((lparam.0 & 0xFFFF) as i32);
+                        let cy = (((lparam.0 >> 16) & 0xFFFF) as i32);
+                        let w = overlay.width;
+                        let h = overlay.height;
+                        let edge = 20;
+
+                        // Check edge tiling zones (mode codes: 0=maximize, 1=top-left, 2=top-right, 3=bottom-left, 4=bottom-right, 5=left, 6=right, 7=bottom)
+                        let mode_code = if cx < edge && cy < edge {
+                            Some(1)
+                        } else if cx > w - edge && cy < edge {
+                            Some(2)
+                        } else if cx < edge && cy > h - edge {
+                            Some(3)
+                        } else if cx > w - edge && cy > h - edge {
+                            Some(4)
+                        } else if cy < edge {
+                            Some(0)
+                        } else if cx < edge {
+                            Some(5)
+                        } else if cx > w - edge {
+                            Some(6)
+                        } else if cy > h - edge {
+                            Some(7)
+                        } else {
+                            None
+                        };
+
+                        if let Some(code) = mode_code {
+                            let _ = PostMessageW(hwnd, WM_EDGE_TILE,
+                                WPARAM(src_hwnd.0 as usize),
+                                LPARAM(code as isize));
+                        } else if let Some((tx, ty, tw, th)) = overlay.drag_ghost {
                             for &(rx, ry, rw, rh, tgt_hwnd) in &overlay.tile_rects {
                                 if rx == tx && ry == ty && rw == tw && rh == th {
                                     let _ = PostMessageW(hwnd, WM_DRAG_MOVE,

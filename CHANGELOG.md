@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.2.0] - 2026-08-29 — Edge Tiling
+### Added
+- Edge tiling: drag windows to screen edges for maximize and half-screen snap
+- Corner zones (20px) for quarter-screen snap (top-left, top-right, bottom-left, bottom-right)
+- Edge modes: maximize (top edge), left half, right half, bottom half
+- 8 mode codes sent via `WM_EDGE_TILE` custom message from border overlay
+- `edge_tile_window()` method in Platform with monitor-aware positioning
+- `find_monitor_for_window()` helper to detect which monitor a window is on
+- WM_EDGE_TILE handler in message loop dispatches edge tile actions
+
+### Fixed
+- `find_monitor_for_window()` uses MonitorInfo.left/top/right/bottom fields (not x/y/width/height)
+
 ## [5.1.0] - 2026-08-29 — Managed Windows IPC Query with Full State
 ### Added
 - **get-managed-windows** IPC command: returns full state for all UltraWM-managed windows

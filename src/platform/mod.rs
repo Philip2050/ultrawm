@@ -513,6 +513,13 @@ impl Platform {
                         self.drag_move_window(src_hwnd, tgt_hwnd);
                     }
 
+                    // Handle edge tiling from border overlay drag
+                    if msg.message == border::WM_EDGE_TILE {
+                        let src_hwnd = HWND(msg.wParam.0 as *mut _);
+                        let mode_code = msg.lParam.0 as i32;
+                        self.edge_tile_window(src_hwnd, mode_code);
+                    }
+
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 } else {
@@ -1392,6 +1399,110 @@ impl Platform {
         }
     }
 
+    pub fn edge_tile_window(&mut self, src_hwnd: HWND, mode_code: i32) {
+        let src_wrapper = HWnd(src_hwnd);
+        let win_id = match self.windows.get(&src_wrapper) {
+            Some(i) => i.id,
+            None => return,
+        };
+
+        // Find the monitor this window is on
+        let mon_idx = self.find_monitor_for_window(src_hwnd).unwrap_or(0);
+        let mon = &self.monitors[mon_idx];
+
+        let info = match self.windows.get_mut(&src_wrapper) {
+            Some(i) => i,
+            None => return,
+        };
+
+        let (mut x, mut y, mut w, mut h);
+
+        match mode_code {
+            0 => {
+                // Maximize
+                x = mon.left;
+                y = mon.top;
+                w = mon.width();
+                h = mon.height();
+                info.maximized = true;
+                info.floating = false;
+                info.float_x = None;
+                info.float_y = None;
+                info.float_w = None;
+                info.float_h = None;
+            }
+            5 => {
+                // Left half
+                x = mon.left;
+                y = mon.top;
+                w = mon.width() / 2;
+                h = mon.height();
+            }
+            6 => {
+                // Right half
+                x = mon.left + mon.width() / 2;
+                y = mon.top;
+                w = mon.width() / 2;
+                h = mon.height();
+            }
+            1 => {
+                // Top-left quarter
+                x = mon.left;
+                y = mon.top;
+                w = mon.width() / 2;
+                h = mon.height() / 2;
+            }
+            2 => {
+                // Top-right quarter
+                x = mon.left + mon.width() / 2;
+                y = mon.top;
+                w = mon.width() / 2;
+                h = mon.height() / 2;
+            }
+            3 => {
+                // Bottom-left quarter
+                x = mon.left;
+                y = mon.top + mon.height() / 2;
+                w = mon.width() / 2;
+                h = mon.height() / 2;
+            }
+            4 => {
+                // Bottom-right quarter
+                x = mon.left + mon.width() / 2;
+                y = mon.top + mon.height() / 2;
+                w = mon.width() / 2;
+                h = mon.height() / 2;
+            }
+            7 => {
+                // Bottom half
+                x = mon.left;
+                y = mon.top + mon.height() / 2;
+                w = mon.width();
+                h = mon.height() / 2;
+            }
+            _ => return,
+        }
+
+        // Switch to floating mode with the tiled position
+        info.floating = true;
+        info.float_x = Some(x);
+        info.float_y = Some(y);
+        info.float_w = Some(w.max(0) as u32);
+        info.float_h = Some(h.max(0) as u32);
+
+        unsafe {
+            let _ = SetWindowPos(
+                src_hwnd,
+                HWND_TOP,
+                x, y, w, h,
+                SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+        }
+
+        info!("Edge tiled window {} with mode {} to ({},{}) {}x{}",
+              win_id, mode_code, x, y, w, h);
+    }
+
     pub fn close_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             unsafe {
@@ -1454,6 +1565,24 @@ impl Platform {
         } else if self.focused_hwnd.is_some() {
             self.disable_idle_inhibit();
         }
+    }
+
+    fn find_monitor_for_window(&self, hwnd: HWND) -> Option<usize> {
+        unsafe {
+            let mut rect = RECT::default();
+            if GetWindowRect(hwnd, &mut rect).is_ok() {
+                let wx = (rect.left + rect.right) / 2;
+                let wy = (rect.top + rect.bottom) / 2;
+                for (i, mon) in self.monitors.iter().enumerate() {
+                    if wx >= mon.left && wx < mon.right
+                        && wy >= mon.top && wy < mon.bottom
+                    {
+                        return Some(i);
+                    }
+                }
+            }
+        }
+        Some(0)
     }
 
     pub fn toggle_shade(&mut self) {
