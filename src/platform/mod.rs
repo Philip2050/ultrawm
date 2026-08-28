@@ -1945,6 +1945,20 @@ impl Platform {
         }
     }
 
+    pub fn adjust_opacity(&mut self, delta: f32) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                let current = info.opacity.unwrap_or(1.0);
+                let new_opacity = (current + delta).clamp(0.0, 1.0);
+                info.opacity = Some(new_opacity);
+                unsafe {
+                    let _ = SetLayeredWindowAttributes(info.hwnd, COLORREF(0), (new_opacity * 255.0) as u8, LWA_ALPHA);
+                }
+                info!("Opacity adjusted: {} -> {} (id={})", current, new_opacity, info.id);
+            }
+        }
+    }
+
     /// Apply rounded corners to a window using hardware-accelerated window region
     pub fn apply_rounded_corners(&self, hwnd: HWND, radius: u32) {
         if radius == 0 {
@@ -2451,6 +2465,22 @@ impl Platform {
                 }
                 if command == "layout-fibonacci" {
                     self.layout_preset_fibonacci();
+                    return;
+                }
+                if command.starts_with("set-window-opacity ") {
+                    if let Some(val_str) = command.strip_prefix("set-window-opacity ") {
+                        if let Ok(val) = val_str.parse::<f32>() {
+                            self.set_opacity(val.clamp(0.0, 1.0));
+                        }
+                    }
+                    return;
+                }
+                if command == "increase-opacity" {
+                    self.adjust_opacity(0.05);
+                    return;
+                }
+                if command == "decrease-opacity" {
+                    self.adjust_opacity(-0.05);
                     return;
                 }
                 if command.starts_with("add-scratchpad ") {

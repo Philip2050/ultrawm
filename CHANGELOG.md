@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [7.7.0] - 2026-08-29 — Runtime Window Opacity Control
+### Added
+- `set-window-opacity <value>` — set focused window opacity (0.0-1.0)
+- `increase-opacity` — increase focused window opacity by 0.05
+- `decrease-opacity` — decrease focused window opacity by 0.05
+- `adjust_opacity(delta)` method for incremental opacity changes
+- Per-window opacity persists in WindowInfo and session save/restore
+
+### Changed
+- `set-window-opacity` delegates to existing `set_opacity` method
+- Opacity changes apply immediately via `SetLayeredWindowAttributes` with LWA_ALPHA
+
 ## [7.6.0] - 2026-08-29 — Layout Presets
 ### Added
 - `layout-columns N` — arrange windows into N equal-width columns
