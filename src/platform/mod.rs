@@ -27,7 +27,7 @@ pub use blur::enable_blur;
 pub use scratchpad::ScratchpadManager;
 
 mod window;
-mod keyboard;
+pub mod keyboard;
 mod border;
 mod bar;
 mod launcher;
@@ -269,9 +269,9 @@ impl Platform {
         let Some(info) = self.windows.get(&hwnd) else { return };
         let wid = info.id;
 
-        if ws >= 4 { return; }
-
         let mon_idx = self.window_monitors.get(&wid).copied().unwrap_or(0);
+        if ws >= self.monitor_workspaces[mon_idx].grids.len() { return; }
+
         let current_ws = self.monitor_workspaces[mon_idx].current;
 
         // Remove from current workspace grid

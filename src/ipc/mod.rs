@@ -180,12 +180,23 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
             });
         }
         "get-workspaces" => {
+            let (count, names) = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let ws_count = platform.monitor_workspaces[0].grids.len();
+                    let names: Vec<String> = (1..=ws_count).map(|i| i.to_string()).collect();
+                    (ws_count, names)
+                } else {
+                    (4, vec!["1".into(), "2".into(), "3".into(), "4".into()])
+                }
+            };
             return serde_json::json!({
                 "success": true,
                 "command": cmd_str,
                 "data": serde_json::json!({
-                    "count": 4,
-                    "names": ["1", "2", "3", "4"],
+                    "count": count,
+                    "names": names,
                 }),
             });
         }

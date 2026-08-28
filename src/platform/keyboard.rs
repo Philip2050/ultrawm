@@ -154,13 +154,17 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
-        x if x >= 0x31 && x <= 0x34 => {
-            // 1-4 — switch workspace (Win+1/2/3/4) or move window (Win+Shift+1/2/3/4)
-            let ws = (x - 0x31) as usize;
-            if shift {
-                platform.move_focused_window_to_workspace(ws);
-            } else {
-                platform.switch_workspace(ws);
+        x if x >= 0x30 && x <= 0x39 => {
+            // 0-9 — switch workspace (Win+0/1/2/3/4/5/6/7/8/9) or move window (Win+Shift+0..9)
+            let ws_num = x - 0x30;
+            let ws_count = platform.config.layout.workspace_count.max(1);
+            let ws = if ws_num == 0 { ws_count - 1 } else { (ws_num - 1) as usize };
+            if ws < ws_count {
+                if shift {
+                    platform.move_focused_window_to_workspace(ws);
+                } else {
+                    platform.switch_workspace(ws);
+                }
             }
             return LRESULT(1);
         }
@@ -204,12 +208,6 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
                 platform.unsplit_focused();
                 return LRESULT(1);
             }
-        }
-        0x31..=0x34 => {
-            // 1-4 — switch workspace
-            let ws = (vk - 0x31) as usize;
-            platform.switch_workspace(ws);
-            return LRESULT(1);
         }
         _ => {}
     }

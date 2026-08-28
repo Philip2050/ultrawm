@@ -41,6 +41,7 @@ pub struct LayoutConfig {
     pub corner_radius: u32,
     pub spring_stiffness: f32,
     pub spring_damping: f32,
+    pub workspace_count: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -113,6 +114,7 @@ impl Default for Config {
                 corner_radius: 8,
                 spring_stiffness: 180.0,
                 spring_damping: 20.0,
+                workspace_count: 4,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

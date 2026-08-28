@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.1.1] - 2026-08-28 — Configurable Workspace Count
+### Added
+- **`workspace_count` config option**: set 2-10 workspaces per monitor (default: 4) in `layout.workspace_count`
+- **Dynamic workspace keybindings**: `Win+0-9` switches to workspaces 1-10, `Win+Shift+0-9` moves windows
+- `0` key maps to the last workspace (e.g., 10 if workspace_count=10)
+- Workspace switching and move commands respect the configured count
+- `get-workspaces` IPC command returns actual workspace count and names from config
+
+### Changed
+- Removed hardcoded workspace limit of 4 in `move_focused_window_to_workspace`
+- Bar workspace indicators generated dynamically based on actual grid count
+
 ## [0.5.0] - 2026-08-28 — Visual Polish (DWM Shadows + Bar Transparency + Rounded Corners + Blur)
 
 ### Added
