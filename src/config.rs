@@ -26,6 +26,10 @@ pub struct WindowRule {
     pub max_height: Option<u32>,
     pub min_width: Option<u32>,
     pub min_height: Option<u32>,
+    pub float_x: Option<i32>,
+    pub float_y: Option<i32>,
+    pub float_w: Option<u32>,
+    pub float_h: Option<u32>,
     pub opacity: Option<f32>,
     pub sticky: Option<bool>,
 }

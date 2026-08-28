@@ -1394,7 +1394,7 @@ impl Platform {
                 }
 
                 if !was_floating {
-                    // Center window on monitor at configurable default size
+                    // Center window on monitor at rule-specified or default size
                     unsafe {
                         let mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
                         if !mon.is_invalid() {
@@ -1403,20 +1403,28 @@ impl Platform {
                                 ..Default::default()
                             };
                             if GetMonitorInfoW(mon, &mut mi).as_bool() {
-                                let fw = self.config.layout.default_float_width.min((mi.rcWork.right - mi.rcWork.left) as u32);
-                                let fh = self.config.layout.default_float_height.min((mi.rcWork.bottom - mi.rcWork.top) as u32);
-                                let mx = mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - fw as i32) / 2;
-                                let my = mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) - fh as i32) / 2;
+                                let (fx, fy, fw, fh);
+                                if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                                    fw = info.float_w.unwrap_or(self.config.layout.default_float_width).min((mi.rcWork.right - mi.rcWork.left) as u32);
+                                    fh = info.float_h.unwrap_or(self.config.layout.default_float_height).min((mi.rcWork.bottom - mi.rcWork.top) as u32);
+                                    fx = info.float_x.unwrap_or_else(|| mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - fw as i32) / 2);
+                                    fy = info.float_y.unwrap_or_else(|| mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) - fh as i32) / 2);
+                                } else {
+                                    fw = self.config.layout.default_float_width.min((mi.rcWork.right - mi.rcWork.left) as u32);
+                                    fh = self.config.layout.default_float_height.min((mi.rcWork.bottom - mi.rcWork.top) as u32);
+                                    fx = mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - fw as i32) / 2;
+                                    fy = mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) - fh as i32) / 2;
+                                }
                                 if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
-                                    info.saved_x = mx;
-                                    info.saved_y = my;
+                                    info.saved_x = fx;
+                                    info.saved_y = fy;
                                     info.saved_w = fw as i32;
                                     info.saved_h = fh as i32;
                                 }
                                 let _ = SetWindowPos(
                                     hwnd,
                                     HWND_TOPMOST,
-                                    mx, my, fw as i32, fh as i32,
+                                    fx, fy, fw as i32, fh as i32,
                                     SWP_FRAMECHANGED,
                                 );
                             }
@@ -1526,6 +1534,10 @@ impl Platform {
         let max_height = json.get("max_height").and_then(|v| v.as_u64()).map(|v| v as u32);
         let min_width = json.get("min_width").and_then(|v| v.as_u64()).map(|v| v as u32);
         let min_height = json.get("min_height").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let float_x = json.get("float_x").and_then(|v| v.as_i64()).map(|v| v as i32);
+        let float_y = json.get("float_y").and_then(|v| v.as_i64()).map(|v| v as i32);
+        let float_w = json.get("float_w").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let float_h = json.get("float_h").and_then(|v| v.as_u64()).map(|v| v as u32);
 
         let rule = crate::config::WindowRule {
             match_: match_str.to_string(),
@@ -1537,12 +1549,16 @@ impl Platform {
             max_height,
             min_width,
             min_height,
+            float_x,
+            float_y,
+            float_w,
+            float_h,
             opacity,
             sticky,
         };
 
         self.config.rules.push(rule);
-        info!("Added rule: match='{}', float={:?}, workspace={:?}, min={:?}x{:?}, max={:?}x{:?}", match_str, float, workspace, min_width, min_height, max_width, max_height);
+        info!("Added rule: match='{}', float={:?}, float_pos={:?}x{:?}, float_size={:?}x{:?}", match_str, float, float_x, float_y, float_w, float_h);
     }
 
     pub fn unfloat_all(&mut self) {
@@ -1760,6 +1776,18 @@ impl Platform {
                 if mh > 0 {
                     win_info.min_height = Some(mh);
                 }
+            }
+            if let Some(fx) = rule.float_x {
+                win_info.float_x = Some(fx);
+            }
+            if let Some(fy) = rule.float_y {
+                win_info.float_y = Some(fy);
+            }
+            if let Some(fw) = rule.float_w {
+                win_info.float_w = Some(fw);
+            }
+            if let Some(fh) = rule.float_h {
+                win_info.float_h = Some(fh);
             }
         }
     }

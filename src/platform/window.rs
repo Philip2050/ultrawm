@@ -32,6 +32,10 @@ pub struct WindowInfo {
     pub max_height: Option<u32>,
     pub min_width: Option<u32>,
     pub min_height: Option<u32>,
+    pub float_x: Option<i32>,
+    pub float_y: Option<i32>,
+    pub float_w: Option<u32>,
+    pub float_h: Option<u32>,
 }
 
 impl WindowInfo {
@@ -101,6 +105,10 @@ impl WindowInfo {
                 max_height: None,
                 min_width: None,
                 min_height: None,
+                float_x: None,
+                float_y: None,
+                float_w: None,
+                float_h: None,
             })
         }
     }

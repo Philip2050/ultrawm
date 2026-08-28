@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [4.0.0] - 2026-08-29 — Rule-based Float Position and Size
+### Added
+- **Float position and size in rules**: `float_x`, `float_y`, `float_w`, `float_h` fields
+- Windows floated by rules now appear at the specified position and size
+- Falls back to config `default_float_width`/`default_float_height` when not specified
+- IPC `add-rule` accepts `float_x`, `float_y`, `float_w`, `float_h` parameters
+
 ## [3.9.0] - 2026-08-29 — Hand Cursor on Tiled Windows
 ### Added
 - **Hand cursor on tiled windows**: hovering over a tiled window shows a hand cursor (move indicator)
