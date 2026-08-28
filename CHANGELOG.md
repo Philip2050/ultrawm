@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [6.0.0] - 2026-08-29 — Dynamic Workspace Count
+### Added
+- **set-workspace-count \<N>** IPC command: changes number of workspaces at runtime (1-10)
+- `Platform::set_workspace_count()` adds or removes workspaces dynamically
+- `Platform::find_empty_cell()` finds next available grid cell for window placement
+- When reducing workspaces: windows moved to current workspace, grids truncated
+- When increasing workspaces: new empty GridState created per monitor
+- Bar updated with new workspace names after count change
+- Config `workspace_count` updated to reflect new count
+
+### Example IPC usage
+```
+echo {"command":"set-workspace-count 6"} | \\\\.\\pipe\\ultrawm-ipc
+echo {"command":"set-workspace-count 2"} | \\\\.\\pipe\\ultrawm-ipc
+```
+
 ## [5.9.0] - 2026-08-29 — Scratchpad IPC Commands
 ### Added
 - **add-scratchpad \<name>** IPC command: adds focused window to scratchpad with given name

@@ -163,6 +163,21 @@ pub struct MonitorWorkspaces {
     pub current: usize,
 }
 
+fn find_empty_cell(grid: &GridState) -> Option<Cell> {
+    for dist in 0..100 {
+        for dc in (-dist..=dist).rev() {
+            for dr in (-dist..=dist).rev() {
+                if dr == 0 && dc == 0 { continue; }
+                let cell = Cell::new(dr, dc);
+                if !grid.cells.contains_key(&cell) && !grid.cell_nodes.contains_key(&cell) {
+                    return Some(cell);
+                }
+            }
+        }
+    }
+    None
+}
+
 impl Platform {
     pub fn new() -> anyhow::Result<Self> {
         // Set per-monitor DPI awareness v2 for correct scaling on mixed-DPI setups
@@ -1625,6 +1640,55 @@ impl Platform {
         }
     }
 
+    pub fn set_workspace_count(&mut self, count: usize) {
+        if count < 1 || count > 10 { return; }
+
+        for mws in &mut self.monitor_workspaces {
+            let old_count = mws.grids.len();
+            if count > old_count {
+                // Add new workspaces
+                for _ in old_count..count {
+                    mws.grids.push(GridState::new());
+                }
+            } else if count < old_count {
+                // Remove extra workspaces — move windows to current workspace
+                let current = mws.current;
+                let mut to_move: Vec<(Cell, u64)> = Vec::new();
+                for wid in count..old_count {
+                    let grid = &mws.grids[wid];
+                    for (&cell, &win_id) in &grid.cells {
+                        to_move.push((cell, win_id));
+                    }
+                }
+                for (cell, win_id) in to_move {
+                    if let Some(new_cell) = find_empty_cell(&mws.grids[current]) {
+                        mws.grids[current].cells.insert(new_cell, win_id);
+                        mws.grids[current].window_positions.insert(win_id, new_cell);
+                        self.window_workspaces.insert(win_id, current);
+                    }
+                }
+                mws.grids.truncate(count);
+                if mws.current >= count {
+                    mws.current = count - 1;
+                }
+            }
+        }
+
+        self.config.layout.workspace_count = count;
+        info!("Workspace count set to {}", count);
+
+        // Update bar
+        if let Some(ref bar) = self.bar {
+            let mon_idx = self.focused_hwnd
+                .and_then(|hwnd| self.window_for_hwnd(hwnd.0))
+                .and_then(|info| self.window_monitors.get(&info.id))
+                .copied()
+                .unwrap_or(0);
+            let names = self.workspace_names(mon_idx);
+            bar.set_workspaces(names, self.monitor_workspaces[mon_idx].current);
+        }
+    }
+
     pub fn snap_layout(&mut self, cols: usize, rows: usize) {
         // Collect visible window IDs before getting mutable grid access
         let mut visible_wids: Vec<(u64, usize)> = Vec::new();
@@ -2151,6 +2215,14 @@ impl Platform {
                 }
                 if command == "clamp-focused" {
                     self.clamp_focused_window();
+                    return;
+                }
+                if command.starts_with("set-workspace-count ") {
+                    if let Some(val) = command.strip_prefix("set-workspace-count ") {
+                        if let Ok(count) = val.parse::<usize>() {
+                            self.set_workspace_count(count);
+                        }
+                    }
                     return;
                 }
                 if command.starts_with("snap-layout ") {
