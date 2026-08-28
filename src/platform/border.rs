@@ -9,10 +9,13 @@ use windows::{
     },
 };
 
+pub static mut BORDER_PTR: *mut BorderOverlay = null_mut();
+
 pub struct BorderOverlay {
     pub hwnd: HWND,
     pub border_width: i32,
     pub border_radius: i32,
+    pub overview_positions: Vec<(i32, i32, i32, i32, HWND)>,
     width: i32,
     height: i32,
     mem_dc: HDC,
@@ -21,6 +24,8 @@ pub struct BorderOverlay {
     bits: *mut u8,
     title_font: HFONT,
 }
+
+pub const WM_OVERVIEW_CLICK: u32 = WM_USER + 0x100;
 
 fn color_dim(c: u32, factor: f32) -> u32 {
     let r = ((c & 0xFF) as f32 * factor) as u32;
@@ -91,6 +96,7 @@ impl BorderOverlay {
                 hwnd,
                 border_width: 2,
                 border_radius: 8,
+                overview_positions: Vec::new(),
                 width,
                 height,
                 mem_dc,
@@ -99,6 +105,18 @@ impl BorderOverlay {
                 bits: bits as *mut u8,
                 title_font,
             })
+        }
+    }
+
+    pub fn set_transparent(&self, transparent: bool) {
+        unsafe {
+            let mut ex_style = GetWindowLongW(self.hwnd, GWL_EXSTYLE) as u32;
+            if transparent {
+                ex_style |= WS_EX_TRANSPARENT.0;
+            } else {
+                ex_style &= !WS_EX_TRANSPARENT.0;
+            }
+            let _ = SetWindowLongW(self.hwnd, GWL_EXSTYLE, ex_style as i32);
         }
     }
 
@@ -319,13 +337,28 @@ unsafe extern "system" fn border_wnd_proc(
     hwnd: HWND,
     msg: u32,
     _wparam: WPARAM,
-    _lparam: LPARAM,
+    lparam: LPARAM,
 ) -> LRESULT {
     match msg {
         WM_DESTROY => {
             PostQuitMessage(0);
             LRESULT(0)
         }
-        _ => DefWindowProcW(hwnd, msg, _wparam, _lparam),
+        WM_LBUTTONDOWN => {
+            let ptr = BORDER_PTR;
+            if !ptr.is_null() {
+                let overlay = &*ptr;
+                let x = (lparam.0 & 0xFFFF) as i32;
+                let y = ((lparam.0 >> 16) & 0xFFFF) as i32;
+                for &(rx, ry, rw, rh, hwnd_val) in &overlay.overview_positions {
+                    if x >= rx && x < rx + rw && y >= ry && y < ry + rh {
+                        let _ = PostMessageW(hwnd, WM_OVERVIEW_CLICK, WPARAM(hwnd_val.0 as usize), LPARAM(0));
+                        return LRESULT(0);
+                    }
+                }
+            }
+            LRESULT(0)
+        }
+        _ => DefWindowProcW(hwnd, msg, _wparam, lparam),
     }
 }

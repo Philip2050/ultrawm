@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.4.0] - 2026-08-28 — Overview Mode Click-to-Focus
+### Added
+- **Click-to-focus in overview mode**: clicking any window in overview focuses it and exits overview
+- `WS_EX_TRANSPARENT` automatically toggled when entering/exiting overview mode
+- `BorderOverlay.overview_positions` stores window rects for hit-testing
+- `WM_OVERVIEW_CLICK` custom message for wndproc-to-main-thread communication
+- `BorderOverlay.set_transparent()` to toggle click-through behavior
+
+### Changed
+- Overview mode overlay captures mouse input (clicks no longer pass through)
+- Clicking empty space in overview does nothing (doesn't exit)
+
 ## [2.3.0] - 2026-08-28 — Window Maximize Toggle
 ### Added
 - **`toggle_maximize()`**: maximize focused window to fill monitor work area with `Win+Shift+F`

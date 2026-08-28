@@ -28,7 +28,7 @@ pub use scratchpad::ScratchpadManager;
 
 mod window;
 pub mod keyboard;
-mod border;
+pub mod border;
 mod bar;
 mod launcher;
 mod gesture;
@@ -135,6 +135,7 @@ pub struct Platform {
     pub next_id: u64,
     pub win_event_hook: HWINEVENTHOOK,
     pub overview: bool,
+    pub overview_positions: Vec<(i32, i32, i32, i32, HWnd)>,
     pub gesture_receiver: Option<GestureReceiver>,
     pub gesture_pan_start: Option<(i32, i32)>,
     pub gesture_pan_last: Option<(i32, i32)>,
@@ -192,6 +193,7 @@ impl Platform {
             next_id: 1,
             win_event_hook: HWINEVENTHOOK(std::ptr::null_mut()),
             overview: false,
+            overview_positions: Vec::new(),
             gesture_receiver: None,
             gesture_pan_start: None,
             gesture_pan_last: None,
@@ -366,6 +368,11 @@ impl Platform {
                 overlay.border_width = self.config.layout.border_width as i32;
                 overlay.border_radius = self.config.layout.corner_radius as i32;
                 self.border_overlay = Some(overlay);
+                unsafe {
+                    if let Some(ref mut o) = self.border_overlay {
+                        border::BORDER_PTR = o as *mut _;
+                    }
+                }
                 info!("Border overlay created (border_width={}, radius={})", self.config.layout.border_width, self.config.layout.corner_radius);
             }
             Err(e) => {
@@ -438,6 +445,16 @@ impl Platform {
                     if msg.message == WM_CREATE {
                         let hwnd = msg.hwnd;
                         self.manage_window(hwnd);
+                    }
+
+                    // Handle overview click-to-focus
+                    if msg.message == border::WM_OVERVIEW_CLICK {
+                        let clicked_hwnd = HWND(msg.wParam.0 as *mut _);
+                        unsafe {
+                            let _ = SetForegroundWindow(clicked_hwnd);
+                        }
+                        self.overview = false;
+                        self.overview_positions.clear();
                     }
 
                     let _ = TranslateMessage(&msg);
@@ -820,6 +837,7 @@ impl Platform {
         }
 
         if windows.is_empty() {
+            self.overview_positions.clear();
             return;
         }
 
@@ -830,6 +848,7 @@ impl Platform {
         let cell_h = (vh / rows).min(200);
         let gap = 8;
 
+        self.overview_positions.clear();
         for (i, (wid, hwnd, _info)) in windows.iter().enumerate() {
             let row = (i / cols as usize) as i32;
             let col = (i % cols as usize) as i32;
@@ -860,6 +879,7 @@ impl Platform {
             let hwnd_wrapper = HWnd(*hwnd);
             let floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
             border_rects.push((x, y, cell_w, cell_h, color, is_focused, floating, title));
+            self.overview_positions.push((x, y, cell_w, cell_h, hwnd_wrapper));
         }
     }
 
@@ -1527,8 +1547,15 @@ impl Platform {
     pub fn toggle_overview(&mut self) {
         self.overview = !self.overview;
         if self.overview {
+            if let Some(ref overlay) = self.border_overlay {
+                overlay.set_transparent(false);
+            }
             log::info!("Overview mode ON — {} windows visible", self.windows.len());
         } else {
+            if let Some(ref overlay) = self.border_overlay {
+                overlay.set_transparent(true);
+            }
+            self.overview_positions.clear();
             log::info!("Overview mode OFF");
         }
     }
