@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 use std::thread;
-use std::io::{Read, Write};
+use std::io::Read;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use windows::{
@@ -12,46 +12,23 @@ use windows::{
     },
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "command", rename_all = "kebab-case")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum IpcCommand {
-    // Theme
-    NextTheme,
-    PrevTheme,
-    // Focus
-    FocusNext,
-    FocusPrev,
-    FocusLeft,
-    FocusRight,
-    FocusUp,
-    FocusDown,
-    // Pan
-    PanLeft,
-    PanRight,
-    PanUp,
-    PanDown,
-    // Resize
-    GrowWidth,
-    ShrinkWidth,
-    GrowHeight,
-    ShrinkHeight,
-    // Actions
-    Close,
-    Float,
-    Unfloat,
-    SplitHorizontal,
-    SplitVertical,
-    Unsplit,
-    ToggleLauncher,
-    ToggleOverview,
-    ToggleScratchpad,
-    ToggleFullscreen,
-    Quit,
-    // Queries (with response)
-    GetState,
-    ListThemes,
-    GetWindows,
+    Single { command: String },
+    Batch { commands: Vec<String> },
 }
+
+impl PartialEq for IpcCommand {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Single { command: a }, Self::Single { command: b }) => a == b,
+            (Self::Batch { commands: a }, Self::Batch { commands: b }) => a == b,
+            _ => false,
+        }
+    }
+}
+impl Eq for IpcCommand {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IpcResponse {
@@ -127,38 +104,38 @@ fn handle_ipc_message(input: &str, tx: &mpsc::Sender<IpcCommand>) -> IpcResponse
     }
 
     // Fallback to plain text command (backward compat)
-    let cmd = match input {
-        "next-theme" => IpcCommand::NextTheme,
-        "prev-theme" => IpcCommand::PrevTheme,
-        "focus-next" => IpcCommand::FocusNext,
-        "focus-prev" => IpcCommand::FocusPrev,
-        "focus-left" => IpcCommand::FocusLeft,
-        "focus-right" => IpcCommand::FocusRight,
-        "focus-up" => IpcCommand::FocusUp,
-        "focus-down" => IpcCommand::FocusDown,
-        "pan-left" => IpcCommand::PanLeft,
-        "pan-right" => IpcCommand::PanRight,
-        "pan-up" => IpcCommand::PanUp,
-        "pan-down" => IpcCommand::PanDown,
-        "grow-width" => IpcCommand::GrowWidth,
-        "shrink-width" => IpcCommand::ShrinkWidth,
-        "grow-height" => IpcCommand::GrowHeight,
-        "shrink-height" => IpcCommand::ShrinkHeight,
-        "close" => IpcCommand::Close,
-        "float" => IpcCommand::Float,
-        "unfloat" => IpcCommand::Unfloat,
-        "launcher" => IpcCommand::ToggleLauncher,
-        "quit" => IpcCommand::Quit,
-        _ => return IpcResponse { success: false, message: Some(format!("unknown command: {}", input)), data: None },
-    };
-
+    let cmd = IpcCommand::Single { command: input.into() };
     let _ = tx.send(cmd);
     IpcResponse { success: true, message: Some("ok".into()), data: None }
 }
 
 fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -> IpcResponse {
-    let cmd_str = json.get("command").and_then(|v| v.as_str()).unwrap_or("");
+    // Handle batch commands
+    if let Some(commands) = json.get("commands").and_then(|v| v.as_array()) {
+        let mut results = Vec::new();
+        for cmd_val in commands {
+            let cmd_str = cmd_val.as_str().unwrap_or("");
+            let result = process_single_command(cmd_str, tx);
+            results.push(result);
+        }
+        return IpcResponse {
+            success: true,
+            message: Some(format!("batch: {} commands", results.len())),
+            data: Some(Value::Array(results)),
+        };
+    }
 
+    let cmd_str = json.get("command").and_then(|v| v.as_str()).unwrap_or("");
+    let result = process_single_command(cmd_str, tx);
+    if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+        IpcResponse { success: true, message: Some("ok".into()), data: None }
+    } else {
+        let err_msg = result.get("error").and_then(|v| v.as_str()).unwrap_or("unknown error").to_string();
+        IpcResponse { success: false, message: Some(err_msg), data: None }
+    }
+}
+
+fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde_json::Value {
     // Handle query commands directly in IPC thread
     match cmd_str {
         "list-themes" => {
@@ -166,53 +143,75 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
                 Ok(t) => t,
                 Err(_) => vec![],
             };
-            return IpcResponse {
-                success: true,
-                message: Some(format!("{} themes", themes.len())),
-                data: Some(Value::Array(themes.into_iter().map(|t| Value::String(t)).collect())),
-            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": themes,
+            });
         }
         "get-state" => {
             let state = serde_json::json!({
                 "status": "running",
                 "version": env!("CARGO_PKG_VERSION"),
             });
-            return IpcResponse { success: true, message: Some("running".into()), data: Some(state) };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": state,
+            });
+        }
+        "get-windows" => {
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": serde_json::Value::Array(vec![]),
+            });
         }
         _ => {}
     }
 
     let cmd = match cmd_str {
-        "next-theme" => IpcCommand::NextTheme,
-        "prev-theme" => IpcCommand::PrevTheme,
-        "focus-next" => IpcCommand::FocusNext,
-        "focus-prev" => IpcCommand::FocusPrev,
-        "focus-left" => IpcCommand::FocusLeft,
-        "focus-right" => IpcCommand::FocusRight,
-        "focus-up" => IpcCommand::FocusUp,
-        "focus-down" => IpcCommand::FocusDown,
-        "pan-left" => IpcCommand::PanLeft,
-        "pan-right" => IpcCommand::PanRight,
-        "pan-up" => IpcCommand::PanUp,
-        "pan-down" => IpcCommand::PanDown,
-        "grow-width" => IpcCommand::GrowWidth,
-        "shrink-width" => IpcCommand::ShrinkWidth,
-        "grow-height" => IpcCommand::GrowHeight,
-        "shrink-height" => IpcCommand::ShrinkHeight,
-        "close" => IpcCommand::Close,
-        "float" => IpcCommand::Float,
-        "unfloat" => IpcCommand::Unfloat,
-        "split-horizontal" => IpcCommand::SplitHorizontal,
-        "split-vertical" => IpcCommand::SplitVertical,
-        "unsplit" => IpcCommand::Unsplit,
-        "launcher" => IpcCommand::ToggleLauncher,
-        "overview" => IpcCommand::ToggleOverview,
-        "scratchpad" => IpcCommand::ToggleScratchpad,
-        "fullscreen" => IpcCommand::ToggleFullscreen,
-        "quit" => IpcCommand::Quit,
-        _ => return IpcResponse { success: false, message: Some(format!("unknown command: {}", cmd_str)), data: None },
+        "next-theme" => IpcCommand::Single { command: "next-theme".into() },
+        "prev-theme" => IpcCommand::Single { command: "prev-theme".into() },
+        "focus-next" => IpcCommand::Single { command: "focus-next".into() },
+        "focus-prev" => IpcCommand::Single { command: "focus-prev".into() },
+        "focus-left" => IpcCommand::Single { command: "focus-left".into() },
+        "focus-right" => IpcCommand::Single { command: "focus-right".into() },
+        "focus-up" => IpcCommand::Single { command: "focus-up".into() },
+        "focus-down" => IpcCommand::Single { command: "focus-down".into() },
+        "pan-left" => IpcCommand::Single { command: "pan-left".into() },
+        "pan-right" => IpcCommand::Single { command: "pan-right".into() },
+        "pan-up" => IpcCommand::Single { command: "pan-up".into() },
+        "pan-down" => IpcCommand::Single { command: "pan-down".into() },
+        "grow-width" => IpcCommand::Single { command: "grow-width".into() },
+        "shrink-width" => IpcCommand::Single { command: "shrink-width".into() },
+        "grow-height" => IpcCommand::Single { command: "grow-height".into() },
+        "shrink-height" => IpcCommand::Single { command: "shrink-height".into() },
+        "close" => IpcCommand::Single { command: "close".into() },
+        "float" => IpcCommand::Single { command: "float".into() },
+        "unfloat" => IpcCommand::Single { command: "unfloat".into() },
+        "split-horizontal" => IpcCommand::Single { command: "split-horizontal".into() },
+        "split-vertical" => IpcCommand::Single { command: "split-vertical".into() },
+        "unsplit" => IpcCommand::Single { command: "unsplit".into() },
+        "launcher" => IpcCommand::Single { command: "launcher".into() },
+        "overview" => IpcCommand::Single { command: "overview".into() },
+        "scratchpad" => IpcCommand::Single { command: "scratchpad".into() },
+        "fullscreen" => IpcCommand::Single { command: "fullscreen".into() },
+        "tab" => IpcCommand::Single { command: "tab".into() },
+        "untab" => IpcCommand::Single { command: "untab".into() },
+        "quit" => IpcCommand::Single { command: "quit".into() },
+        _ => {
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "error": format!("unknown command: {}", cmd_str),
+            });
+        }
     };
 
     let _ = tx.send(cmd);
-    IpcResponse { success: true, message: Some("ok".into()), data: None }
+    serde_json::json!({
+        "success": true,
+        "command": cmd_str,
+    })
 }

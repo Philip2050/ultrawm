@@ -42,8 +42,18 @@ All notable changes to UltraWM will be documented in this file.
 ### Added
 - **7 new built-in themes**: dracula, monokai, solarized-dark, ayu-dark, one-dark, material-ocean, catppuccin-latte (light theme)
 - Total of 12 built-in themes (5 dark + 1 light)
-- Updated `list_themes()` and `ThemeManager::load()` with all new themes### Fixed
+- Updated `list_themes()` and `ThemeManager::load()` with all new themes
+
+### Changed
 - Animation timestep: capped at 1/30s to prevent spring instability
+
+## [0.5.4] - 2026-08-28 — IPC Batch Commands + New Tab/Untab Commands
+
+### Added
+- **IPC batch commands**: `{"commands": ["focus-left", "grow-width", "split-vertical"]}` executes multiple commands atomically in one pipe write
+- **IPC tab/untab commands**: `tab` and `untab` commands via JSON IPC
+- `IpcCommand::Single { command }` and `IpcCommand::Batch { commands }` enum variants for cleaner IPC protocol
+- `process_single_command()` helper for unified command processing in IPC thread
 
 ## [0.4.2] - 2026-08-28 — Swap Flash Animation
 

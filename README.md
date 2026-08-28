@@ -162,9 +162,11 @@ Available commands:
 - `grow-width`, `shrink-width`, `grow-height`, `shrink-height`
 - `close`, `float`, `unfloat`
 - `split-horizontal`, `split-vertical`, `unsplit`
+- `tab`, `untab`
 - `launcher`, `overview`, `scratchpad`, `fullscreen`
 - `quit`
 - **Queries**: `get-state`, `list-themes`, `get-windows`
+- **Batch**: `{"commands": ["focus-left", "grow-width", "split-vertical"]}`
 
 ## Architecture
 

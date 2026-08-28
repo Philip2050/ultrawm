@@ -1154,94 +1154,45 @@ impl Platform {
 
     pub fn handle_ipc_command(&mut self, cmd: crate::ipc::IpcCommand, theme_mgr: &mut crate::theme::ThemeManager) {
         match cmd {
-            crate::ipc::IpcCommand::NextTheme => {
-                let _ = theme_mgr.next_theme();
-            }
-            crate::ipc::IpcCommand::PrevTheme => {
-                let _ = theme_mgr.prev_theme();
-            }
-            crate::ipc::IpcCommand::FocusNext => {
-                self.move_focus(0, 1);
-            }
-            crate::ipc::IpcCommand::FocusPrev => {
-                self.move_focus(0, -1);
-            }
-            crate::ipc::IpcCommand::FocusLeft => {
-                self.move_focus(0, -1);
-            }
-            crate::ipc::IpcCommand::FocusRight => {
-                self.move_focus(0, 1);
-            }
-            crate::ipc::IpcCommand::FocusUp => {
-                self.move_focus(-1, 0);
-            }
-            crate::ipc::IpcCommand::FocusDown => {
-                self.move_focus(1, 0);
-            }
-            crate::ipc::IpcCommand::PanLeft => {
-                self.pan_camera(0, -1);
-            }
-            crate::ipc::IpcCommand::PanRight => {
-                self.pan_camera(0, 1);
-            }
-            crate::ipc::IpcCommand::PanUp => {
-                self.pan_camera(-1, 0);
-            }
-            crate::ipc::IpcCommand::PanDown => {
-                self.pan_camera(1, 0);
-            }
-            crate::ipc::IpcCommand::GrowWidth => {
-                self.resize_width(true);
-            }
-            crate::ipc::IpcCommand::ShrinkWidth => {
-                self.resize_width(false);
-            }
-            crate::ipc::IpcCommand::GrowHeight => {
-                self.resize_height(true);
-            }
-            crate::ipc::IpcCommand::ShrinkHeight => {
-                self.resize_height(false);
-            }
-            crate::ipc::IpcCommand::Close => {
-                self.close_focused();
-            }
-            crate::ipc::IpcCommand::Float => {
-                self.toggle_floating();
-            }
-            crate::ipc::IpcCommand::Unfloat => {
-                self.toggle_floating();
-            }
-            crate::ipc::IpcCommand::ToggleLauncher => {
-                self.toggle_launcher();
-            }
-            crate::ipc::IpcCommand::ToggleOverview => {
-                self.toggle_overview();
-            }
-            crate::ipc::IpcCommand::ToggleScratchpad => {
-                self.toggle_scratchpad();
-            }
-            crate::ipc::IpcCommand::ToggleFullscreen => {
-                self.toggle_fullscreen();
-            }
-            crate::ipc::IpcCommand::SplitHorizontal => {
-                self.split_focused(true);
-            }
-            crate::ipc::IpcCommand::SplitVertical => {
-                self.split_focused(false);
-            }
-            crate::ipc::IpcCommand::Unsplit => {
-                self.unsplit_focused();
-            }
-            crate::ipc::IpcCommand::GetState |
-            crate::ipc::IpcCommand::ListThemes |
-            crate::ipc::IpcCommand::GetWindows => {
-                // Query commands handled by IPC thread directly
-            }
-            crate::ipc::IpcCommand::Quit => {
-                log::info!("IPC: quit requested");
-                unsafe {
-                    let _ = PostQuitMessage(0);
+            crate::ipc::IpcCommand::Single { command } => {
+                match command.as_str() {
+                    "next-theme" => { let _ = theme_mgr.next_theme(); }
+                    "prev-theme" => { let _ = theme_mgr.prev_theme(); }
+                    "focus-next" => { self.move_focus(0, 1); }
+                    "focus-prev" => { self.move_focus(0, -1); }
+                    "focus-left" => { self.move_focus(0, -1); }
+                    "focus-right" => { self.move_focus(0, 1); }
+                    "focus-up" => { self.move_focus(-1, 0); }
+                    "focus-down" => { self.move_focus(1, 0); }
+                    "pan-left" => { self.pan_camera(0, -1); }
+                    "pan-right" => { self.pan_camera(0, 1); }
+                    "pan-up" => { self.pan_camera(-1, 0); }
+                    "pan-down" => { self.pan_camera(1, 0); }
+                    "grow-width" => { self.resize_width(true); }
+                    "shrink-width" => { self.resize_width(false); }
+                    "grow-height" => { self.resize_height(true); }
+                    "shrink-height" => { self.resize_height(false); }
+                    "close" => { self.close_focused(); }
+                    "float" => { self.toggle_floating(); }
+                    "unfloat" => { self.toggle_floating(); }
+                    "launcher" => { self.toggle_launcher(); }
+                    "overview" => { self.toggle_overview(); }
+                    "scratchpad" => { self.toggle_scratchpad(); }
+                    "fullscreen" => { self.toggle_fullscreen(); }
+                    "split-horizontal" => { self.split_focused(true); }
+                    "split-vertical" => { self.split_focused(false); }
+                    "unsplit" => { self.unsplit_focused(); }
+                    "tab" => { self.cycle_tab(true); }
+                    "untab" => { self.untab_focused(); }
+                    "quit" => {
+                        log::info!("IPC: quit requested");
+                        unsafe { let _ = PostQuitMessage(0); }
+                    }
+                    _ => {}
                 }
+            }
+            crate::ipc::IpcCommand::Batch { .. } => {
+                // Batch commands handled in IPC thread directly
             }
         }
     }
