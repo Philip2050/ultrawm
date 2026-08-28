@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [6.5.0] - 2026-08-29 — Bar Position Configuration
+### Added
+- Bar can be positioned at top or bottom of screen via `bar.position` config
+- Default position: "top"
+- Bar window repositioned using `SetWindowPos` after creation
+- `SetWindowPos` with `SWP_FRAMECHANGED` flag ensures proper redraw
+
+### Example config
+```toml
+[bar]
+position = "bottom"
+```
+
 ## [6.4.0] - 2026-08-29 — Config Validation
 ### Added
 - `Config::validate()` method checks config on load for common errors

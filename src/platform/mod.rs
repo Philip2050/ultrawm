@@ -433,9 +433,25 @@ impl Platform {
                 bar_cfg.show_volume,
                 bar_cfg.show_battery,
             ) {
-                Ok(bar) => {
+                Ok(mut bar) => {
+                    // Position bar at top or bottom based on config
+                    if bar_cfg.position == "bottom" {
+                        if let Some(mon) = self.primary_monitor() {
+                            let _ = unsafe {
+                                SetWindowPos(
+                                    bar.hwnd,
+                                    HWND_TOPMOST,
+                                    0,
+                                    mon.height() - bar_height,
+                                    bar_width,
+                                    bar_height,
+                                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                                )
+                            };
+                        }
+                    }
                     self.bar = Some(bar);
-                    info!("AppBar created");
+                    info!("AppBar created (position={})", bar_cfg.position);
                 }
                 Err(e) => {
                     warn!("AppBar creation failed: {}", e);
