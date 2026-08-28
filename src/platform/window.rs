@@ -29,6 +29,8 @@ pub struct WindowInfo {
     pub sticky: bool,
     pub max_width: Option<u32>,
     pub max_height: Option<u32>,
+    pub min_width: Option<u32>,
+    pub min_height: Option<u32>,
 }
 
 impl WindowInfo {
@@ -95,6 +97,8 @@ impl WindowInfo {
                 sticky: false,
                 max_width: None,
                 max_height: None,
+                min_width: None,
+                min_height: None,
             })
         }
     }

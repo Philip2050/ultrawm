@@ -153,6 +153,12 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
             if let Some(max_height_val) = json.get("max_height") {
                 rule_json["max_height"] = max_height_val.clone();
             }
+            if let Some(min_width_val) = json.get("min_width") {
+                rule_json["min_width"] = min_width_val.clone();
+            }
+            if let Some(min_height_val) = json.get("min_height") {
+                rule_json["min_height"] = min_height_val.clone();
+            }
             let rule_str = serde_json::to_string(&rule_json).unwrap_or_default();
             let _ = tx.send(crate::ipc::IpcCommand::Single { command: rule_str });
             return IpcResponse { success: true, message: Some("rule added".into()), data: None };

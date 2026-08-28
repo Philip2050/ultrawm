@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.5.0] - 2026-08-29 — Min Width/Height Window Constraints
+### Added
+- **`min_width` and `min_height` rule fields**: enforce minimum tiled window dimensions per-rule
+- Pairs with existing `max_width`/`max_height` for full size control
+- Rules applied at tiling time — windows never shrink below configured min size
+- IPC `add-rule` now accepts `min_width` and `min_height` parameters
+
 ## [3.4.0] - 2026-08-29 — Configurable Floating Window Size
 ### Added
 - **`default_float_width` and `default_float_height`** config options: set the default size for floated windows

@@ -759,6 +759,13 @@ impl Platform {
                     if let Some(mh) = info.max_height {
                         ph = ph.min(mh as i32);
                     }
+                    // Enforce min size constraints from rules
+                    if let Some(mw) = info.min_width {
+                        pw = pw.max(mw as i32);
+                    }
+                    if let Some(mh) = info.min_height {
+                        ph = ph.max(mh as i32);
+                    }
 
                     unsafe {
                         let _ = SetWindowPos(
@@ -1441,6 +1448,8 @@ impl Platform {
         let sticky = json.get("sticky").and_then(|v| v.as_bool());
         let max_width = json.get("max_width").and_then(|v| v.as_u64()).map(|v| v as u32);
         let max_height = json.get("max_height").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let min_width = json.get("min_width").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let min_height = json.get("min_height").and_then(|v| v.as_u64()).map(|v| v as u32);
 
         let rule = crate::config::WindowRule {
             match_: match_str.to_string(),
@@ -1450,12 +1459,14 @@ impl Platform {
             height: None,
             max_width,
             max_height,
+            min_width,
+            min_height,
             opacity,
             sticky,
         };
 
         self.config.rules.push(rule);
-        info!("Added rule: match='{}', float={:?}, workspace={:?}, max={:?}x{:?}", match_str, float, workspace, max_width, max_height);
+        info!("Added rule: match='{}', float={:?}, workspace={:?}, min={:?}x{:?}, max={:?}x{:?}", match_str, float, workspace, min_width, min_height, max_width, max_height);
     }
 
     pub fn unfloat_all(&mut self) {
@@ -1654,6 +1665,16 @@ impl Platform {
             if let Some(mh) = rule.max_height {
                 if mh > 0 {
                     win_info.max_height = Some(mh);
+                }
+            }
+            if let Some(mw) = rule.min_width {
+                if mw > 0 {
+                    win_info.min_width = Some(mw);
+                }
+            }
+            if let Some(mh) = rule.min_height {
+                if mh > 0 {
+                    win_info.min_height = Some(mh);
                 }
             }
         }
