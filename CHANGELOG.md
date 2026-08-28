@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [0.4.2] - 2026-08-28 — Swap Flash Animation
+
+### Added
+- **Swap flash animation**: when windows swap positions via `Win+Shift+arrows`, both windows flash white for ~20 frames (~333ms) with smooth fade-out, giving clear visual feedback of the swap
+- `Platform.swap_flash`: HashMap tracking flash animation timers per window
+- `blend_color()`: color interpolation helper for flash-to-accent/inactive transitions
+- Swap flash decay in event loop (frame-by-frame countdown)
+
+### Fixed
+- Extensive borrow-checker refactoring in `platform/mod.rs` to support gesture code alongside existing features
+
 ## [0.4.1] - 2026-08-28 — Touchpad Gesture Support
 
 ### Added
