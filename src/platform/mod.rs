@@ -125,6 +125,7 @@ pub struct Platform {
     pub window_workspaces: HashMap<u64, usize>, // wid -> workspace index (0-3)
     pub window_monitors: HashMap<u64, usize>,   // wid -> monitor index
     pub anim: HashMap<u64, WindowAnimState>,
+    pub swap_flash: HashMap<u64, u32>, // wid -> flash timer (countdown frames)
     pub config: crate::config::Config,
     pub config_reload_counter: u32,
     pub next_id: u64,
@@ -174,6 +175,7 @@ impl Platform {
             window_workspaces: HashMap::new(),
             window_monitors: HashMap::new(),
             anim: HashMap::new(),
+            swap_flash: HashMap::new(),
             config: crate::config::Config::default(),
             config_reload_counter: 0,
             next_id: 1,
@@ -488,6 +490,12 @@ impl Platform {
             // Focus-follows-mouse check (every frame if enabled)
             self.focus_follows_mouse_check();
 
+            // Decay swap flash timers
+            self.swap_flash.retain(|_, timer| {
+                *timer = timer.saturating_sub(1);
+                *timer > 0
+            });
+
             // Vsync-aligned wait (LeopardWM-proven DwmFlush)
             unsafe {
                 let _ = DwmFlush();
@@ -633,7 +641,12 @@ impl Platform {
                     }
 
                     let is_focused = focused_hwnd == Some(hwnd_wrapper);
-                    let color = if is_focused {
+                    let flash = self.swap_flash.get(&wid).copied().unwrap_or(0);
+                    let color = if flash > 0 {
+                        // Flash white during swap animation, fading with timer
+                        let alpha = flash.min(20) as f32 / 20.0;
+                        blend_color(0xFFFFFFFF, if is_focused { accent_rgb } else { inactive_rgb }, alpha)
+                    } else if is_focused {
                         accent_rgb
                     } else {
                         inactive_rgb
@@ -956,7 +969,23 @@ impl Platform {
 
     pub fn move_focus(&mut self, dr: i32, dc: i32) {
         let grid = self.current_grid();
+        let prev_focused = grid.focused_window;
         if let Some(wid) = grid.move_focus(dr, dc) {
+            // Check if a swap happened (focused window changed cell)
+            if let Some(prev) = prev_focused {
+                if prev != wid {
+                    if let Some(prev_cell) = grid.window_positions.get(&prev) {
+                        if let Some(&swapped_wid) = grid.cells.get(prev_cell) {
+                            if swapped_wid != prev {
+                                // Flash both windows involved in swap
+                                self.swap_flash.insert(prev, 20);
+                                self.swap_flash.insert(swapped_wid, 20);
+                            }
+                        }
+                    }
+                }
+            }
+
             for (&hwnd_wrapper, info) in &self.windows {
                 if info.id == wid {
                     unsafe {
@@ -1449,6 +1478,19 @@ fn hex_to_rgb(hex: &str) -> u32 {
     } else {
         0
     }
+}
+
+fn blend_color(flash: u32, base: u32, t: f32) -> u32 {
+    let fr = (flash & 0xFF) as f32;
+    let fg = ((flash >> 8) & 0xFF) as f32;
+    let fb = ((flash >> 16) & 0xFF) as f32;
+    let br = (base & 0xFF) as f32;
+    let bg = ((base >> 8) & 0xFF) as f32;
+    let bb = ((base >> 16) & 0xFF) as f32;
+    let r = (fr * t + br * (1.0 - t)) as u32;
+    let g = (fg * t + bg * (1.0 - t)) as u32;
+    let b = (fb * t + bb * (1.0 - t)) as u32;
+    (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
 }
 
 // ============ Win32 Callbacks ============
