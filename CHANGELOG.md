@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.6.0] - 2026-08-29 — Enhanced Bar Title Rendering
+### Added
+- Title color rendering in status bar (configurable per-focus via `set_title_color`)
+- `DT_END_ELLIPSIS` flag for long title truncation in bar
+- Title rendering uses configurable `title_color` instead of fixed `fg_color`
+- `set_title_color()` method on AppBar for per-window accent coloring
+- `title_color` field in `BarState` struct
+- Title right edge respects clock/volume/battery space allocation
+
+### Changed
+- Title text rendered with `title_color` instead of `fg_color` for visual distinction
+- Long window titles now truncate with "..." instead of overflowing
+
 ## [5.5.0] - 2026-08-29 — Snap Layouts
 ### Added
 - **snap-layout \<cols>x\<rows>** IPC command: rearranges all tiled windows into a flat grid

@@ -13,6 +13,7 @@ struct BarState {
     workspaces: Vec<String>,
     active_workspace: usize,
     title: String,
+    title_color: u32,
     bg_color: u32,
     fg_color: u32,
     clock: String,
@@ -79,6 +80,7 @@ impl AppBar {
                 workspaces,
                 active_workspace: 0,
                 title: String::new(),
+                title_color: fg_color,
                 bg_color,
                 fg_color,
                 clock: String::new(),
@@ -125,6 +127,16 @@ impl AppBar {
             let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
             if !ptr.is_null() {
                 (*ptr).title = title.to_string();
+                self.update();
+            }
+        }
+    }
+
+    pub fn set_title_color(&self, color: u32) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).title_color = color;
                 self.update();
             }
         }
@@ -286,22 +298,6 @@ unsafe extern "system" fn bar_wnd_proc(
                 x += 10;
             }
 
-            // Draw title
-            let title_text = format!(" {} ", state.title);
-            let title_w: Vec<u16> = title_text.encode_utf16().chain(Some(0)).collect();
-            let mut title_rect = RECT {
-                left: x + 10,
-                top: 0,
-                right: 9999,
-                bottom: 9999,
-            };
-            let _ = DrawTextW(
-                hdc,
-                &mut title_w.clone(),
-                &mut title_rect,
-                DT_VCENTER | DT_SINGLELINE | DT_LEFT,
-            );
-
             // Draw clock (right-aligned)
             let mut right_x = 9999i32;
             if state.show_battery {
@@ -309,6 +305,25 @@ unsafe extern "system" fn bar_wnd_proc(
             }
             if state.show_volume {
                 right_x -= 80;
+            }
+
+            // Draw title (with ellipsis truncation and accent color)
+            if !state.title.is_empty() {
+                let _ = SetTextColor(hdc, COLORREF(state.title_color));
+                let title_text = format!(" {} ", state.title);
+                let title_w: Vec<u16> = title_text.encode_utf16().chain(Some(0)).collect();
+                let mut title_rect = RECT {
+                    left: x + 10,
+                    top: 0,
+                    right: right_x - 10,
+                    bottom: 9999,
+                };
+                let _ = DrawTextW(
+                    hdc,
+                    &mut title_w.clone(),
+                    &mut title_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_LEFT | DT_END_ELLIPSIS,
+                );
             }
             if state.show_clock && !state.clock.is_empty() {
                 let clock_w: Vec<u16> = state.clock.encode_utf16().chain(Some(0)).collect();
