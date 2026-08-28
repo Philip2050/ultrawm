@@ -748,8 +748,16 @@ impl Platform {
                     let pad = self.config.layout.inner_padding as i32;
                     let px = ax as i32 + pad;
                     let py = ay as i32 + pad;
-                    let pw = (aw as i32 - pad * 2).max(pad * 2);
-                    let ph = (ah as i32 - pad * 2).max(pad * 2);
+                    let mut pw = (aw as i32 - pad * 2).max(pad * 2);
+                    let mut ph = (ah as i32 - pad * 2).max(pad * 2);
+
+                    // Enforce max size constraints from rules
+                    if let Some(mw) = info.max_width {
+                        pw = pw.min(mw as i32);
+                    }
+                    if let Some(mh) = info.max_height {
+                        ph = ph.min(mh as i32);
+                    }
 
                     unsafe {
                         let _ = SetWindowPos(
@@ -1372,6 +1380,8 @@ impl Platform {
         let workspace = json.get("workspace").and_then(|v| v.as_u64()).map(|v| v as usize);
         let opacity = json.get("opacity").and_then(|v| v.as_f64()).map(|v| v as f32);
         let sticky = json.get("sticky").and_then(|v| v.as_bool());
+        let max_width = json.get("max_width").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let max_height = json.get("max_height").and_then(|v| v.as_u64()).map(|v| v as u32);
 
         let rule = crate::config::WindowRule {
             match_: match_str.to_string(),
@@ -1379,14 +1389,14 @@ impl Platform {
             workspace,
             width: None,
             height: None,
-            max_width: None,
-            max_height: None,
+            max_width,
+            max_height,
             opacity,
             sticky,
         };
 
         self.config.rules.push(rule);
-        info!("Added rule: match='{}', float={:?}, workspace={:?}", match_str, float, workspace);
+        info!("Added rule: match='{}', float={:?}, workspace={:?}, max={:?}x{:?}", match_str, float, workspace, max_width, max_height);
     }
 
     pub fn unfloat_all(&mut self) {
@@ -1576,6 +1586,16 @@ impl Platform {
             }
             if let Some(sticky) = rule.sticky {
                 win_info.sticky = sticky;
+            }
+            if let Some(mw) = rule.max_width {
+                if mw > 0 {
+                    win_info.max_width = Some(mw);
+                }
+            }
+            if let Some(mh) = rule.max_height {
+                if mh > 0 {
+                    win_info.max_height = Some(mh);
+                }
             }
         }
     }

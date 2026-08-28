@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.0.0] - 2026-08-29 — Window Size Constraints
+### Added
+- **`max_width` and `max_height` rule fields**: constrain tiled window dimensions per-rule
+- Rules applied at tiling time — windows never exceed configured max size
+- IPC `add-rule` now accepts `max_width` and `max_height` parameters
+- Example: `echo '{"command":"add-rule","match":"class:Notepad","max_width":800,"max_height":600}' > \\.\pipe\ultrawm-ipc`
+
 ## [2.12.0] - 2026-08-28 — IPC reload-config Command
 ### Added
 - **`reload-config` IPC command**: reload config.toml at runtime
