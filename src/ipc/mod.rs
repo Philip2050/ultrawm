@@ -127,6 +127,33 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
     }
 
     let cmd_str = json.get("command").and_then(|v| v.as_str()).unwrap_or("");
+
+    // Handle add-rule command with structured input
+    if cmd_str == "add-rule" {
+        if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
+            let mut rule_json = serde_json::json!({
+                "command": "add-rule",
+                "match": match_str,
+            });
+            if let Some(float_val) = json.get("float") {
+                rule_json["float"] = float_val.clone();
+            }
+            if let Some(workspace_val) = json.get("workspace") {
+                rule_json["workspace"] = workspace_val.clone();
+            }
+            if let Some(opacity_val) = json.get("opacity") {
+                rule_json["opacity"] = opacity_val.clone();
+            }
+            if let Some(sticky_val) = json.get("sticky") {
+                rule_json["sticky"] = sticky_val.clone();
+            }
+            let rule_str = serde_json::to_string(&rule_json).unwrap_or_default();
+            let _ = tx.send(crate::ipc::IpcCommand::Single { command: rule_str });
+            return IpcResponse { success: true, message: Some("rule added".into()), data: None };
+        }
+        return IpcResponse { success: false, message: Some("missing 'match' field".into()), data: None };
+    }
+
     let result = process_single_command(cmd_str, tx);
     if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         IpcResponse { success: true, message: Some("ok".into()), data: None }

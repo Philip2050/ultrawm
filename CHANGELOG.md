@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.8.0] - 2026-08-28 — IPC add-rule Command
+### Added
+- **`add-rule` IPC command**: add window rules at runtime without editing config.toml
+- Supports `match`, `float`, `workspace`, `opacity`, `sticky` fields
+- IPC usage: `echo '{"command":"add-rule","match":"class:Notepad","float":true}' > \\.\pipe\ultrawm-ipc`
+- Rules applied immediately to matching windows on next tile pass
+
 ## [2.7.0] - 2026-08-28 — Dynamic Gap Adjustment
 ### Added
 - **`adjust_gap(delta)`**: dynamically grow/shrink window gaps at runtime

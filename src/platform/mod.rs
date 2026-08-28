@@ -1362,6 +1362,33 @@ impl Platform {
         info!("Gap adjusted: {}px", new_gap);
     }
 
+    fn apply_rule_from_json(&mut self, json: serde_json::Value) {
+        let match_str = json.get("match").and_then(|v| v.as_str()).unwrap_or("");
+        if match_str.is_empty() {
+            warn!("add-rule: missing 'match' field");
+            return;
+        }
+        let float = json.get("float").and_then(|v| v.as_bool());
+        let workspace = json.get("workspace").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let opacity = json.get("opacity").and_then(|v| v.as_f64()).map(|v| v as f32);
+        let sticky = json.get("sticky").and_then(|v| v.as_bool());
+
+        let rule = crate::config::WindowRule {
+            match_: match_str.to_string(),
+            float,
+            workspace,
+            width: None,
+            height: None,
+            max_width: None,
+            max_height: None,
+            opacity,
+            sticky,
+        };
+
+        self.config.rules.push(rule);
+        info!("Added rule: match='{}', float={:?}, workspace={:?}", match_str, float, workspace);
+    }
+
     pub fn minimize_focused(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -1429,6 +1456,12 @@ impl Platform {
                 }
                 if command == "always-on-top" {
                     self.toggle_always_on_top();
+                    return;
+                }
+                if command.starts_with("add-rule:") {
+                    if let Ok(rule_json) = serde_json::from_str::<serde_json::Value>(&command["add-rule:".len()..]) {
+                        self.apply_rule_from_json(rule_json);
+                    }
                     return;
                 }
                 if command == "grow-gap" {
