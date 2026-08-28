@@ -2,6 +2,21 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.8.0] - 2026-08-29 — Named Workspaces
+### Added
+- **workspace_names** config field: list of custom names for workspaces (falls back to numbers)
+- `Platform::workspace_names()` helper returns names or numeric fallback
+- Bar renders workspace names instead of numbers when configured
+- IPC `get-workspaces` returns configured names from LayoutConfig
+- Empty workspace_names array defaults to "1", "2", "3", ... numbering
+
+### Example config
+```toml
+[layout]
+workspace_count = 4
+workspace_names = ["web", "code", "chat", "media"]
+```
+
 ## [5.7.0] - 2026-08-29 — Per-App Bar Color
 ### Added
 - Bar title color adapts to focused app's identity via exe name hash

@@ -302,7 +302,12 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 if !ptr.is_null() {
                     let platform = &*ptr;
                     let ws_count = platform.monitor_workspaces[0].grids.len();
-                    let names: Vec<String> = (1..=ws_count).map(|i| i.to_string()).collect();
+                    let ws_names = &platform.config.layout.workspace_names;
+                    let names: Vec<String> = if ws_names.is_empty() {
+                        (1..=ws_count).map(|i| i.to_string()).collect()
+                    } else {
+                        ws_names.iter().take(ws_count).cloned().collect()
+                    };
                     (ws_count, names)
                 } else {
                     (4, vec!["1".into(), "2".into(), "3".into(), "4".into()])

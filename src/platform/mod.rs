@@ -560,12 +560,10 @@ impl Platform {
                                     }
                                 }
                                 self.monitor_workspaces[mon].current = ws;
-                                // Update bar
+                                // Update bar with workspace names
                                 if let Some(ref bar) = self.bar {
-                                    bar.set_workspaces(
-                                        (0..self.monitor_workspaces[mon].grids.len()).map(|i| (i + 1).to_string()).collect(),
-                                        ws,
-                                    );
+                                    let names = self.workspace_names(mon);
+                                    bar.set_workspaces(names, ws);
                                 }
                                 // Show non-sticky windows on new workspace
                                 for (_, info) in &self.windows {
@@ -1614,6 +1612,16 @@ impl Platform {
                     let _ = SetWindowPos(hwnd_wrapper.0, HWND(null_mut()), x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
                 }
             }
+        }
+    }
+
+    pub fn workspace_names(&self, mon_idx: usize) -> Vec<String> {
+        let count = self.monitor_workspaces[mon_idx].grids.len();
+        let names = &self.config.layout.workspace_names;
+        if names.is_empty() {
+            (0..count).map(|i| (i + 1).to_string()).collect()
+        } else {
+            names.iter().take(count).cloned().collect()
         }
     }
 
