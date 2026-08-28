@@ -883,11 +883,7 @@ impl Platform {
                     } else {
                         inactive_rgb
                     };
-                    let title = if is_focused {
-                        get_window_title(hwnd_wrapper.0)
-                    } else {
-                        None
-                    };
+                    let title = get_window_title(hwnd_wrapper.0);
                     border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, info.floating, title));
 
                     // Apply DWM blur to windows
@@ -968,7 +964,7 @@ impl Platform {
 
             let is_focused = self.focused_hwnd == Some(HWnd(*hwnd));
             let color = if is_focused { accent_rgb } else { inactive_rgb };
-            let title = if is_focused { get_window_title(*hwnd) } else { None };
+            let title = get_window_title(*hwnd);
             let hwnd_wrapper = HWnd(*hwnd);
             let floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
             border_rects.push((x, y, cell_w, cell_h, color, is_focused, floating, title));

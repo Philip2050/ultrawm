@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.4.0] - 2026-08-29 — All-Window Title Rendering in Border Overlay
+### Added
+- Window titles rendered for ALL managed windows, not just focused
+- Focused window titles: accent color background with white text
+- Unfocused window titles: dimmed text on semi-transparent dark background (0x40000000)
+- Floating window titles: blue dimmed text matching floating border color
+- Title text rendered after border drawing in `BorderOverlay::update()`
+- `get_window_title()` called for every tiled window in `tile_all_windows()`
+- `get_window_title()` called for every overview window in `tile_overview()`
+
+### Changed
+- Title rendering moved out of `if focused && !floating` block to apply to all windows
+- Background brush color for titles: `color_rgb & 0xFF333333` for focused, `0x40000000` for unfocused
+
 ## [5.3.0] - 2026-08-29 — Geometry Constraint Enforcement
 ### Added
 - **clamp-focused** IPC command: clamps focused floating window to its min/max size constraints

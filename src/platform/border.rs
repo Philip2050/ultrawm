@@ -189,34 +189,6 @@ impl BorderOverlay {
                     );
                     SelectObject(self.mem_dc, old_pen);
                     let _ = DeleteObject(pen);
-
-                    // Window title with background
-                    if let Some(ref t) = title {
-                        let old_font = SelectObject(self.mem_dc, self.title_font);
-                        SetBkMode(self.mem_dc, TRANSPARENT);
-                        SetTextColor(self.mem_dc, COLORREF(0xFFFFFF));
-
-                        let text_y = y + half + 2;
-                        let text_x = x + half + 6;
-                        let mut wide: Vec<u16> = t.encode_utf16().chain(Some(0)).collect();
-
-                        // Measure text width
-                        let mut sz = SIZE { cx: 0, cy: 0 };
-                        let _ = GetTextExtentPoint32W(self.mem_dc, &wide, &mut sz);
-                        let text_w = sz.cx + 12;
-                        let text_h = 16;
-
-                        // Draw title background
-                        let bg_brush = CreateSolidBrush(COLORREF(color_rgb & 0xFF333333));
-                        let old_brush = SelectObject(self.mem_dc, bg_brush);
-                        let _ = PatBlt(self.mem_dc, text_x, text_y, text_w, text_h, PATCOPY);
-                        SelectObject(self.mem_dc, old_brush);
-                        let _ = DeleteObject(bg_brush);
-
-                        // Draw title text
-                        TextOutW(self.mem_dc, text_x + 6, text_y + 1, &wide);
-                        SelectObject(self.mem_dc, old_font);
-                    }
                 } else if floating {
                     // Floating window: dashed blue border
                     let pen = CreatePen(PS_DASH, bw, COLORREF(0xFF4488FF));
@@ -232,16 +204,6 @@ impl BorderOverlay {
                     );
                     SelectObject(self.mem_dc, old_pen);
                     let _ = DeleteObject(pen);
-
-                    // "FLOATING" label
-                    let label: Vec<u16> = "FLOATING".encode_utf16().chain(Some(0)).collect();
-                    let old_font = SelectObject(self.mem_dc, self.title_font);
-                    SetBkMode(self.mem_dc, TRANSPARENT);
-                    SetTextColor(self.mem_dc, COLORREF(0xFF4488FF));
-                    let text_y = y + half + 2;
-                    let text_x = x + half + 6;
-                    TextOutW(self.mem_dc, text_x, text_y, &label);
-                    SelectObject(self.mem_dc, old_font);
                 } else {
                     let pen = CreatePen(PS_SOLID, bw, COLORREF(pen_color));
                     let old_pen = SelectObject(self.mem_dc, pen);
@@ -256,6 +218,44 @@ impl BorderOverlay {
                     );
                     SelectObject(self.mem_dc, old_pen);
                     let _ = DeleteObject(pen);
+                }
+
+                // Window title for all windows
+                if let Some(ref t) = title {
+                    let old_font = SelectObject(self.mem_dc, self.title_font);
+                    SetBkMode(self.mem_dc, TRANSPARENT);
+
+                    let text_y = y + half + 2;
+                    let text_x = x + half + 6;
+                    let mut wide: Vec<u16> = t.encode_utf16().chain(Some(0)).collect();
+
+                    // Measure text width
+                    let mut sz = SIZE { cx: 0, cy: 0 };
+                    let _ = GetTextExtentPoint32W(self.mem_dc, &wide, &mut sz);
+                    let text_w = sz.cx + 12;
+                    let text_h = 16;
+
+                    if focused && !floating {
+                        // Focused window: accent background, white text
+                        SetTextColor(self.mem_dc, COLORREF(0xFFFFFF));
+                        let bg_brush = CreateSolidBrush(COLORREF(color_rgb & 0xFF333333));
+                        let old_brush = SelectObject(self.mem_dc, bg_brush);
+                        let _ = PatBlt(self.mem_dc, text_x, text_y, text_w, text_h, PATCOPY);
+                        SelectObject(self.mem_dc, old_brush);
+                        let _ = DeleteObject(bg_brush);
+                    } else {
+                        // Unfocused: dimmed text on semi-transparent dark background
+                        let dim_color = if floating { 0xFF4488FF } else { color_dim(color_rgb, 0.5) };
+                        SetTextColor(self.mem_dc, COLORREF(dim_color));
+                        let bg_brush = CreateSolidBrush(COLORREF(0x40000000));
+                        let old_brush = SelectObject(self.mem_dc, bg_brush);
+                        let _ = PatBlt(self.mem_dc, text_x, text_y, text_w, text_h, PATCOPY);
+                        SelectObject(self.mem_dc, old_brush);
+                        let _ = DeleteObject(bg_brush);
+                    }
+
+                    TextOutW(self.mem_dc, text_x + 6, text_y + 1, &wide);
+                    SelectObject(self.mem_dc, old_font);
                 }
             }
 
