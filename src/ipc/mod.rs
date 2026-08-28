@@ -317,6 +317,37 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 }),
             });
         }
+        "get-managed-windows" => {
+            let mut managed = Vec::new();
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    for (hwnd_wrapper, info) in &platform.windows {
+                        let ws = platform.window_workspaces.get(&info.id).copied().unwrap_or(0);
+                        managed.push(serde_json::json!({
+                            "id": info.id,
+                            "hwnd": hwnd_wrapper.0 .0 as usize,
+                            "title": info.title,
+                            "exe": info.exe,
+                            "workspace": ws,
+                            "floating": info.floating,
+                            "sticky": info.sticky,
+                            "maximized": info.maximized,
+                            "minimized": info.minimized,
+                            "always_on_top": info.always_on_top,
+                            "opacity": info.opacity,
+                            "visible": info.visible,
+                        }));
+                    }
+                }
+            }
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": serde_json::Value::Array(managed),
+            });
+        }
         "list-rules" => {
             let rules = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
@@ -392,6 +423,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "idle-inhibit" => IpcCommand::Single { command: "idle-inhibit".into() },
         "idle-noinhibit" => IpcCommand::Single { command: "idle-noinhibit".into() },
         "notify" => IpcCommand::Single { command: "notify".into() },
+        "get-managed-windows" => IpcCommand::Single { command: "get-managed-windows".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

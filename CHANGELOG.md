@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [5.1.0] - 2026-08-29 — Managed Windows IPC Query with Full State
+### Added
+- **get-managed-windows** IPC command: returns full state for all UltraWM-managed windows
+- Includes window id, hwnd, title, exe, workspace, floating, sticky, maximized, minimized, always_on_top, opacity, visible
+- Uses PLATFORM_PTR for direct access to Platform.windows map
+- Complements existing `get-windows` (which uses EnumWindows for all top-level windows)
+
 ## [5.0.0] - 2026-08-29 — Overlay Notification System with IPC and Event Notifications
 ### Added
 - **Overlay notifications**: toast-style overlay in bottom-right corner with fade in/out

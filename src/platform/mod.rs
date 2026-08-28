@@ -41,7 +41,7 @@ mod scratchpad;
 mod wallpaper;
 
 #[derive(Debug, Clone, Copy)]
-struct HWnd(HWND);
+pub struct HWnd(pub HWND);
 
 #[derive(Debug, Clone, Copy)]
 struct WindowAnimState {
