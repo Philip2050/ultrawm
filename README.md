@@ -16,7 +16,7 @@ An **ultimate tiling window manager for Windows 11** that combines:
 - **Bidirectional tiling**: split cells horizontally or vertically with adjustable ratios
 - Multi-monitor workspaces (each monitor has independent workspace set)
 - Window enumeration and tiling via SetWindowPos
-- Theme engine with 5 built-in themes + JSON theme support
+- Theme engine with 12 built-in themes (catppuccin, tokyo-night, gruvbox, nord, rose-pine, dracula, monokai, solarized-dark, ayu-dark, one-dark, material-ocean, catppuccin-latte) + JSON theme support
 - Low-level keyboard hook for Win+key shortcuts
 - Config system (TOML) with defaults and hot-reload
 - Spring animation primitives

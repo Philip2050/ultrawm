@@ -36,7 +36,13 @@ All notable changes to UltraWM will be documented in this file.
 - `get_battery_level()` using `GetSystemPowerStatus` from `Win32::System::Power`
 - Added `Win32_System_Power` feature to Cargo.toml
 - Battery updates every ~10 seconds in event loop
-### Fixed
+
+## [0.5.3] - 2026-08-28 — Expanded Built-in Themes
+
+### Added
+- **7 new built-in themes**: dracula, monokai, solarized-dark, ayu-dark, one-dark, material-ocean, catppuccin-latte (light theme)
+- Total of 12 built-in themes (5 dark + 1 light)
+- Updated `list_themes()` and `ThemeManager::load()` with all new themes### Fixed
 - Animation timestep: capped at 1/30s to prevent spring instability
 
 ## [0.4.2] - 2026-08-28 — Swap Flash Animation

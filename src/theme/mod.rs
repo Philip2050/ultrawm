@@ -149,6 +149,174 @@ impl Theme {
             launcher_border_radius: Some(12),
         }
     }
+
+    pub fn dracula() -> Self {
+        Self {
+            name: "dracula".into(),
+            author: Some("dracula".into()),
+            background: "#282a36".into(),
+            foreground: "#f8f8f2".into(),
+            accent: "#bd93f9".into(),
+            inactive: "#44475a".into(),
+            urgent: "#ff5555".into(),
+            shadow: "#00000066".into(),
+            wallpaper: None,
+            dark_mode: true,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Dark".into()),
+            bar_background: Some("#21222c".into()),
+            bar_foreground: Some("#f8f8f2".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#21222c".into()),
+            launcher_foreground: Some("#f8f8f2".into()),
+            launcher_accent: Some("#bd93f9".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
+
+    pub fn monokai() -> Self {
+        Self {
+            name: "monokai".into(),
+            author: Some("wimer".into()),
+            background: "#272822".into(),
+            foreground: "#f8f8f2".into(),
+            accent: "#a6e22e".into(),
+            inactive: "#3e3d32".into(),
+            urgent: "#f92672".into(),
+            shadow: "#00000066".into(),
+            wallpaper: None,
+            dark_mode: true,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Dark".into()),
+            bar_background: Some("#1e1f1a".into()),
+            bar_foreground: Some("#f8f8f2".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#1e1f1a".into()),
+            launcher_foreground: Some("#f8f8f2".into()),
+            launcher_accent: Some("#a6e22e".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
+
+    pub fn solarized_dark() -> Self {
+        Self {
+            name: "solarized-dark".into(),
+            author: Some("esch".into()),
+            background: "#002b36".into(),
+            foreground: "#839496".into(),
+            accent: "#268bd2".into(),
+            inactive: "#073642".into(),
+            urgent: "#dc322f".into(),
+            shadow: "#00000066".into(),
+            wallpaper: None,
+            dark_mode: true,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Dark".into()),
+            bar_background: Some("#001e2b".into()),
+            bar_foreground: Some("#839496".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#001e2b".into()),
+            launcher_foreground: Some("#839496".into()),
+            launcher_accent: Some("#268bd2".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
+
+    pub fn ayu_dark() -> Self {
+        Self {
+            name: "ayu-dark".into(),
+            author: Some("ayu".into()),
+            background: "#0a0e14".into(),
+            foreground: "#e6e1cf".into(),
+            accent: "#59c2ff".into(),
+            inactive: "#1a1f29".into(),
+            urgent: "#ff3333".into(),
+            shadow: "#00000066".into(),
+            wallpaper: None,
+            dark_mode: true,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Dark".into()),
+            bar_background: Some("#05080a".into()),
+            bar_foreground: Some("#e6e1cf".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#05080a".into()),
+            launcher_foreground: Some("#e6e1cf".into()),
+            launcher_accent: Some("#59c2ff".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
+
+    pub fn one_dark() -> Self {
+        Self {
+            name: "one-dark".into(),
+            author: Some("binaryify".into()),
+            background: "#282c34".into(),
+            foreground: "#abb2bf".into(),
+            accent: "#61afef".into(),
+            inactive: "#3b4048".into(),
+            urgent: "#e06c75".into(),
+            shadow: "#00000066".into(),
+            wallpaper: None,
+            dark_mode: true,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Dark".into()),
+            bar_background: Some("#21252b".into()),
+            bar_foreground: Some("#abb2bf".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#21252b".into()),
+            launcher_foreground: Some("#abb2bf".into()),
+            launcher_accent: Some("#61afef".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
+
+    pub fn material_ocean() -> Self {
+        Self {
+            name: "material-ocean".into(),
+            author: Some("material-theme".into()),
+            background: "#0f111a".into(),
+            foreground: "#c0c5ce".into(),
+            accent: "#ffcc66".into(),
+            inactive: "#1c1f27".into(),
+            urgent: "#ff3333".into(),
+            shadow: "#00000066".into(),
+            wallpaper: None,
+            dark_mode: true,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Dark".into()),
+            bar_background: Some("#090b10".into()),
+            bar_foreground: Some("#c0c5ce".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#090b10".into()),
+            launcher_foreground: Some("#c0c5ce".into()),
+            launcher_accent: Some("#ffcc66".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
+
+    pub fn catppuccin_latte() -> Self {
+        Self {
+            name: "catppuccin-latte".into(),
+            author: Some("catppuccin".into()),
+            background: "#eff1f5".into(),
+            foreground: "#4c4f69".into(),
+            accent: "#8839ef".into(),
+            inactive: "#e6e9ef".into(),
+            urgent: "#d20f39".into(),
+            shadow: "#00000033".into(),
+            wallpaper: None,
+            dark_mode: false,
+            cursor_theme: Some("Bibata-Modern-Classic".into()),
+            icon_theme: Some("Papirus-Light".into()),
+            bar_background: Some("#e6e9ef".into()),
+            bar_foreground: Some("#4c4f69".into()),
+            bar_height: Some(40),
+            launcher_background: Some("#dce0e8".into()),
+            launcher_foreground: Some("#4c4f69".into()),
+            launcher_accent: Some("#8839ef".into()),
+            launcher_border_radius: Some(12),
+        }
+    }
 }
 
 pub struct ThemeManager {
@@ -169,7 +337,11 @@ impl ThemeManager {
 
     pub fn list_themes() -> anyhow::Result<Vec<String>> {
         let mut themes = Vec::new();
-        for name in ["catppuccin-mocha", "tokyo-night", "gruvbox-dark", "nord", "rose-pine"] {
+        for name in [
+            "catppuccin-mocha", "tokyo-night", "gruvbox-dark", "nord", "rose-pine",
+            "dracula", "monokai", "solarized-dark", "ayu-dark", "one-dark",
+            "material-ocean", "catppuccin-latte",
+        ] {
             themes.push(name.into());
         }
         let dir = Self::themes_dir();
@@ -197,6 +369,13 @@ impl ThemeManager {
             Theme::gruvbox_dark(),
             Theme::nord(),
             Theme::rose_pine(),
+            Theme::dracula(),
+            Theme::monokai(),
+            Theme::solarized_dark(),
+            Theme::ayu_dark(),
+            Theme::one_dark(),
+            Theme::material_ocean(),
+            Theme::catppuccin_latte(),
         ];
 
         let dir = Self::themes_dir();
