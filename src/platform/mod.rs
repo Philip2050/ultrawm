@@ -464,10 +464,10 @@ impl Platform {
                         if let (Some(ws), Some(mon)) = (self.ws_pending_ws, self.ws_pending_monitor) {
                             if ws < self.monitor_workspaces[mon].grids.len() {
                                 let old_ws = self.monitor_workspaces[mon].current;
-                                // Hide windows on old workspace
+                                // Hide non-sticky windows on old workspace
                                 for (_, info) in &self.windows {
                                     if let Some(wm) = self.window_monitors.get(&info.id) {
-                                        if *wm == mon {
+                                        if *wm == mon && !info.sticky {
                                             if let Some(ws_id) = self.window_workspaces.get(&info.id) {
                                                 if *ws_id == old_ws {
                                                     unsafe { let _ = ShowWindow(info.hwnd, SW_HIDE); }
@@ -484,10 +484,10 @@ impl Platform {
                                         ws,
                                     );
                                 }
-                                // Show windows on new workspace
+                                // Show non-sticky windows on new workspace
                                 for (_, info) in &self.windows {
                                     if let Some(wm) = self.window_monitors.get(&info.id) {
-                                        if *wm == mon {
+                                        if *wm == mon && !info.sticky {
                                             if let Some(ws_id) = self.window_workspaces.get(&info.id) {
                                                 if *ws_id == ws {
                                                     unsafe { let _ = ShowWindow(info.hwnd, SW_SHOW); }
@@ -1258,6 +1258,15 @@ impl Platform {
                     info!("Unfloating window: {} (id={})", title, wid);
                 }
                 self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+            }
+        }
+    }
+
+    pub fn toggle_sticky(&mut self) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                info.sticky = !info.sticky;
+                info!("Sticky toggled: {} (id={}, sticky={})", info.title, info.id, info.sticky);
             }
         }
     }

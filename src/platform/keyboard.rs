@@ -134,6 +134,11 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             }
             return LRESULT(1);
         }
+        0x59 => {
+            // Y — toggle sticky
+            platform.toggle_sticky();
+            return LRESULT(1);
+        }
         0x54 => {
             // T — next theme (Win+T), prev theme (Win+Shift+T), or tab (Win+Alt+T)
             if alt {
