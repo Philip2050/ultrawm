@@ -82,6 +82,12 @@ impl TabGroup {
     pub fn is_empty(&self) -> bool { self.windows.is_empty() }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LayoutMode {
+    Grid,
+    Master,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CellNode {
     Leaf(WindowId),
@@ -159,6 +165,7 @@ pub struct GridState {
     pub focused_window: Option<WindowId>,
     /// Bidirectional split tree per cell
     pub cell_nodes: BTreeMap<Cell, CellNode>,
+    pub layout_mode: LayoutMode,
 }
 
 impl GridState {
@@ -175,6 +182,7 @@ impl GridState {
             gap_y: 8,
             focused_window: None,
             cell_nodes: BTreeMap::new(),
+            layout_mode: LayoutMode::Grid,
         }
     }
 
@@ -624,6 +632,29 @@ impl GridState {
     }
 
     pub fn cell_rect(&self, cell: Cell, viewport_w: i32, viewport_h: i32) -> (i32, i32, u32, u32) {
+        if self.layout_mode == LayoutMode::Master && cell.col == 0 {
+            // Master window: full height, 50% width
+            let mw = (viewport_w / 2).max(100);
+            let mh = viewport_h.max(100);
+            let x = (cell.col - self.camera.col) * (mw + self.gap_x)
+                - (self.peek_x - self.gap_x / 2).max(0);
+            let y = (cell.row - self.camera.row) * (mh + self.gap_y)
+                - (self.peek_y - self.gap_y / 2).max(0);
+            return (x.max(0), y.max(0), mw as u32, mh as u32);
+        }
+
+        if self.layout_mode == LayoutMode::Master && cell.col == 1 {
+            // Stack windows: 50% width, height divided among stack windows
+            let sw = (viewport_w - viewport_w / 2 - self.gap_x).max(100);
+            let stack_count = self.cells.keys().filter(|c| c.col == 1).count().max(1);
+            let sh = (viewport_h / stack_count as i32).max(100);
+            let x = viewport_w / 2 + (cell.col - self.camera.col) * (sw + self.gap_x)
+                - (self.peek_x - self.gap_x / 2).max(0);
+            let y = (cell.row - self.camera.row) * (sh + self.gap_y)
+                - (self.peek_y - self.gap_y / 2).max(0);
+            return (x.max(0), y.max(0), sw as u32, sh as u32);
+        }
+
         let cw = self.cell_width(cell);
         let ch = self.cell_height(cell);
         let dx = (cell.col - self.camera.col) * (cw as i32 + self.gap_x)

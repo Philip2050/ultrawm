@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [8.0.0] - 2026-08-29 — Master-Stack Layout with Variable Cell Sizes
+### Added
+- `LayoutMode` enum: `Grid` (equal cells) and `Master` (50/50 split)
+- `layout_mode` field on `GridState` controls cell rendering
+- `cell_rect` handles `Master` mode: column 0 = 50% width (master), column 1 = 50% width divided among stack windows
+- `layout-master` IPC command sets Master mode and arranges windows: first window as master, rest stacked
+- `layout-columns`/`layout-rows`/`layout-fibonacci` reset to Grid mode
+- `snap_layout` also resets to Grid mode
+
+### Changed
+- Grid rendering uses variable cell sizes in Master mode
+- Master window gets full viewport height, 50% width
+- Stack windows share 50% width, equal height division
+
 ## [7.7.0] - 2026-08-29 — Runtime Window Opacity Control
 ### Added
 - `set-window-opacity <value>` — set focused window opacity (0.0-1.0)

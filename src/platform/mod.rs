@@ -1833,6 +1833,7 @@ impl Platform {
         let wids: Vec<u64> = visible_wids.into_iter().map(|(wid, _)| wid).collect();
 
         let grid = self.current_grid();
+        grid.layout_mode = crate::layout::LayoutMode::Grid;
         grid.snap_layout(&wids, cols, rows);
         info!("Snap layout: {}x{} ({} windows)", cols, rows, wids.len());
     }
@@ -1854,6 +1855,7 @@ impl Platform {
         let wids = self.collect_visible_wids();
         if wids.is_empty() { return; }
         let grid = self.current_grid();
+        grid.layout_mode = crate::layout::LayoutMode::Grid;
         grid.snap_layout(&wids, n, 1);
         self.save_session();
         info!("Layout preset: columns ({})", n);
@@ -1864,6 +1866,7 @@ impl Platform {
         let wids = self.collect_visible_wids();
         if wids.is_empty() { return; }
         let grid = self.current_grid();
+        grid.layout_mode = crate::layout::LayoutMode::Grid;
         grid.snap_layout(&wids, 1, n);
         self.save_session();
         info!("Layout preset: rows ({})", n);
@@ -1873,14 +1876,36 @@ impl Platform {
         let wids = self.collect_visible_wids();
         if wids.is_empty() { return; }
         let grid = self.current_grid();
+        grid.layout_mode = crate::layout::LayoutMode::Master;
+        grid.cells.clear();
+        grid.window_positions.clear();
+        grid.cell_nodes.clear();
+        grid.focused_window = None;
+
         if wids.len() == 1 {
-            grid.snap_layout(&wids, 1, 1);
+            let wid = wids[0];
+            grid.cells.insert(crate::layout::Cell::new(0, 0), wid);
+            grid.window_positions.insert(wid, crate::layout::Cell::new(0, 0));
+            grid.cell_nodes.insert(crate::layout::Cell::new(0, 0), crate::layout::CellNode::Leaf(wid));
+            grid.focused_window = Some(wid);
         } else {
-            let rows = ((wids.len() - 1) + 1) / 1;
-            grid.snap_layout(&wids, 2, rows.max(1));
+            // First window: master (column 0)
+            let master_wid = wids[0];
+            grid.cells.insert(crate::layout::Cell::new(0, 0), master_wid);
+            grid.window_positions.insert(master_wid, crate::layout::Cell::new(0, 0));
+            grid.cell_nodes.insert(crate::layout::Cell::new(0, 0), crate::layout::CellNode::Leaf(master_wid));
+
+            // Rest: stack (column 1, rows 0, 1, 2, ...)
+            for (i, &wid) in wids.iter().skip(1).enumerate() {
+                let cell = crate::layout::Cell::new(i as i32, 1);
+                grid.cells.insert(cell, wid);
+                grid.window_positions.insert(wid, cell);
+                grid.cell_nodes.insert(cell, crate::layout::CellNode::Leaf(wid));
+            }
+            grid.focused_window = Some(master_wid);
         }
         self.save_session();
-        info!("Layout preset: master");
+        info!("Layout preset: master ({} windows)", wids.len());
     }
 
     pub fn layout_preset_fibonacci(&mut self) {
@@ -1888,6 +1913,7 @@ impl Platform {
         if wids.is_empty() { return; }
         let n = wids.len();
         let grid = self.current_grid();
+        grid.layout_mode = crate::layout::LayoutMode::Grid;
         // Fibonacci: 1, 1, 2, 3, 5, 8, ... columns
         let fib: Vec<usize> = (0..10).scan((0u64, 1u64), |state, _| {
             let next = state.0 + state.1;
