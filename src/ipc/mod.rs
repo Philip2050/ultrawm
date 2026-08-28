@@ -161,6 +161,57 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "data": state,
             });
         }
+        "get-config" => {
+            let config_data = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let monitor_count: usize = platform.monitors.len();
+                    let window_count: usize = platform.window_count();
+                    serde_json::json!({
+                        "layout": {
+                            "gaps": platform.config.layout.gaps,
+                            "inner_padding": platform.config.layout.inner_padding,
+                            "outer_padding": platform.config.layout.outer_padding,
+                            "border_width": platform.config.layout.border_width,
+                            "corner_radius": platform.config.layout.corner_radius,
+                            "spring_stiffness": platform.config.layout.spring_stiffness,
+                            "spring_damping": platform.config.layout.spring_damping,
+                            "workspace_count": platform.config.layout.workspace_count,
+                            "center_focused": platform.config.layout.center_focused,
+                            "focus_follows_mouse": platform.config.layout.focus_follows_mouse,
+                        },
+                        "bar": {
+                            "enabled": platform.config.bar.enabled,
+                            "height": platform.config.bar.height,
+                            "position": platform.config.bar.position,
+                            "transparency": platform.config.bar.transparency,
+                            "show_workspaces": platform.config.bar.show_workspaces,
+                            "show_clock": platform.config.bar.show_clock,
+                            "show_volume": platform.config.bar.show_volume,
+                            "show_battery": platform.config.bar.show_battery,
+                        },
+                        "theme": {
+                            "default": platform.config.theme.default,
+                        },
+                        "launcher": {
+                            "enabled": platform.config.launcher.enabled,
+                            "fuzzy_search": platform.config.launcher.fuzzy_search,
+                            "show_recent": platform.config.launcher.show_recent,
+                        },
+                        "monitors": monitor_count,
+                        "windows": window_count,
+                    })
+                } else {
+                    serde_json::json!({ "error": "platform not available" })
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": config_data,
+            });
+        }
         "get-windows" => {
             let mut windows = Vec::new();
             unsafe {

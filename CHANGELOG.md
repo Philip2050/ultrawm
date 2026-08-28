@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.5.0] - 2026-08-28 — IPC get-config Command
+### Added
+- **`get-config` IPC command**: returns runtime config as JSON (layout, bar, theme, launcher settings)
+- Returns monitor count and window count alongside config values
+- Useful for external status bars and configuration monitoring
+- IPC: `echo '{"command":"get-config"}' > \\.\pipe\ultrawm-ipc`
+
 ## [2.4.0] - 2026-08-28 — Overview Mode Click-to-Focus
 ### Added
 - **Click-to-focus in overview mode**: clicking any window in overview focuses it and exits overview

@@ -224,6 +224,10 @@ impl Platform {
         }
     }
 
+    pub fn window_count(&self) -> usize {
+        self.windows.len()
+    }
+
     fn window_for_hwnd(&self, hwnd: HWND) -> Option<&WindowInfo> {
         self.windows.get(&HWnd(hwnd))
     }
