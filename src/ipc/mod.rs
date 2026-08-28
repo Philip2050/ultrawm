@@ -288,6 +288,31 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 }),
             });
         }
+        "list-rules" => {
+            let rules = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let rules: Vec<serde_json::Value> = platform.config.rules.iter().map(|r| {
+                        serde_json::json!({
+                            "match": r.match_,
+                            "float": r.float,
+                            "workspace": r.workspace,
+                            "opacity": r.opacity,
+                            "sticky": r.sticky,
+                        })
+                    }).collect();
+                    rules
+                } else {
+                    Vec::new()
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": serde_json::Value::Array(rules),
+            });
+        }
         _ => {}
     }
 
@@ -328,6 +353,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "grow-gap" => IpcCommand::Single { command: "grow-gap".into() },
         "shrink-gap" => IpcCommand::Single { command: "shrink-gap".into() },
         "unfloat-all" => IpcCommand::Single { command: "unfloat-all".into() },
+        "list-rules" => IpcCommand::Single { command: "list-rules".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

@@ -2,6 +2,12 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [2.11.0] - 2026-08-28 — IPC list-rules Command
+### Added
+- **`list-rules` IPC command**: list all active window rules as JSON array
+- Each rule shows: match pattern, float, workspace, opacity, sticky
+- IPC: `echo '{"command":"list-rules"}' > \\.\pipe\ultrawm-ipc`
+
 ## [2.10.0] - 2026-08-28 — Enhanced get-state IPC
 ### Added
 - **`get-state` IPC returns monitor count**: `{"status":"running","version":"x.y.z","monitors":N}`
