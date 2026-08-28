@@ -9,6 +9,7 @@ use windows::{
         Foundation::*,
         Storage::FileSystem::*,
         System::Pipes::*,
+        UI::WindowsAndMessaging::*,
     },
 };
 
@@ -161,10 +162,21 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
             });
         }
         "get-windows" => {
+            let mut windows = Vec::new();
+            unsafe {
+                let _ = EnumWindows(Some(enum_windows_proc), LPARAM(&mut windows as *mut Vec<_> as isize));
+            }
             return serde_json::json!({
                 "success": true,
                 "command": cmd_str,
-                "data": serde_json::Value::Array(vec![]),
+                "data": serde_json::Value::Array(
+                    windows.into_iter().map(|(hwnd, title): (HWND, String)| {
+                        serde_json::json!({
+                            "hwnd": hwnd.0 as usize,
+                            "title": title,
+                        })
+                    }).collect(),
+                ),
             });
         }
         _ => {}
@@ -214,4 +226,21 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "success": true,
         "command": cmd_str,
     })
+}
+
+unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    if !IsWindowVisible(hwnd).as_bool() {
+        return TRUE;
+    }
+
+    let windows = &mut *(lparam.0 as *mut Vec<(HWND, String)>);
+    let len = GetWindowTextLengthW(hwnd);
+    if len > 0 {
+        let mut buf = vec![0u16; (len + 1) as usize];
+        let _ = GetWindowTextW(hwnd, &mut buf);
+        let title = String::from_utf16_lossy(&buf[..len as usize]);
+        windows.push((hwnd, title));
+    }
+
+    TRUE
 }
