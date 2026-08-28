@@ -26,9 +26,11 @@ pub struct BorderOverlay {
     title_font: HFONT,
     resize_target: Option<(HWND, i32, i32, i32, i32)>,
     resize_edge: u8,
+    move_source: Option<HWND>,
 }
 
 pub const WM_OVERVIEW_CLICK: u32 = WM_USER + 0x100;
+pub const WM_SWAP_WINDOWS: u32 = WM_USER + 0x101;
 
 fn color_dim(c: u32, factor: f32) -> u32 {
     let r = ((c & 0xFF) as f32 * factor) as u32;
@@ -110,6 +112,7 @@ impl BorderOverlay {
                 title_font,
                 resize_target: None,
                 resize_edge: 0,
+                move_source: None,
             })
         }
     }
@@ -426,6 +429,25 @@ unsafe extern "system" fn border_wnd_proc(
                         return LRESULT(1);
                     }
                 }
+
+                // Check if on a tiled window for move/swap
+                for &(rx, ry, rw, rh, win_hwnd) in &overlay.tile_rects {
+                    if x >= rx && x < rx + rw && y >= ry && y < ry + rh {
+                        if let Some(src) = overlay.move_source {
+                            if src != win_hwnd {
+                                // Swap move_source with clicked window
+                                let _ = PostMessageW(hwnd, WM_SWAP_WINDOWS, WPARAM(src.0 as usize), LPARAM(win_hwnd.0 as isize));
+                            }
+                            overlay.move_source = None;
+                        } else {
+                            overlay.move_source = Some(win_hwnd);
+                        }
+                        return LRESULT(0);
+                    }
+                }
+
+                // Clicked empty space — cancel move
+                overlay.move_source = None;
 
                 // Overview click
                 for &(rx, ry, rw, rh, hwnd_val) in &overlay.overview_positions {

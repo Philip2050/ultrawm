@@ -461,6 +461,13 @@ impl Platform {
                         self.overview_positions.clear();
                     }
 
+                    // Handle window swap from border overlay drag
+                    if msg.message == border::WM_SWAP_WINDOWS {
+                        let src_hwnd = HWND(msg.wParam.0 as *mut _);
+                        let tgt_hwnd = HWND(msg.lParam.0 as *mut _);
+                        self.swap_windows(src_hwnd, tgt_hwnd);
+                    }
+
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 } else {
@@ -1246,6 +1253,31 @@ impl Platform {
             grid.move_window(wid, dr, dc);
             self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
         }
+    }
+
+    pub fn swap_windows(&mut self, src_hwnd: HWND, tgt_hwnd: HWND) {
+        let src_wrapper = HWnd(src_hwnd);
+        let tgt_wrapper = HWnd(tgt_hwnd);
+
+        let src_id = self.windows.get(&src_wrapper).map(|i| i.id);
+        let tgt_id = self.windows.get(&tgt_wrapper).map(|i| i.id);
+
+        if let (Some(src_id), Some(tgt_id)) = (src_id, tgt_id) {
+            let grid = self.current_grid();
+            let src_cell = grid.window_positions.get(&src_id).copied();
+            let tgt_cell = grid.window_positions.get(&tgt_id).copied();
+
+            if let (Some(src_cell), Some(tgt_cell)) = (src_cell, tgt_cell) {
+                grid.window_positions.insert(src_id, tgt_cell);
+                grid.window_positions.insert(tgt_id, src_cell);
+                grid.cells.insert(src_cell, tgt_id);
+                grid.cells.insert(tgt_cell, src_id);
+                self.swap_flash.insert(src_id, 20);
+                self.swap_flash.insert(tgt_id, 20);
+                info!("Swapped windows: {} <-> {}", src_id, tgt_id);
+            }
+        }
+        self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
     }
 
     pub fn close_focused(&mut self) {

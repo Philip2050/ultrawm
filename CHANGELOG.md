@@ -2,6 +2,13 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.7.0] - 2026-08-29 — Click-to-Swap Window Move
+### Added
+- **Click-to-swap window move**: click a tiled window to select it, click another to swap positions
+- Visual feedback: swap flash animation (white fade) on both windows
+- Works on border overlay — no keyboard shortcut needed
+- Cancel move by clicking empty space
+
 ## [3.6.0] - 2026-08-29 — Dynamic Opacity Control via IPC
 ### Added
 - **`set-opacity` IPC command**: dynamically set focused window opacity at runtime
