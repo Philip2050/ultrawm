@@ -2,6 +2,12 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [3.2.0] - 2026-08-29 — Enhanced Session Save/Restore
+### Added
+- **Session saves per-window state**: floating, workspace, opacity, sticky, maximized, always-on-top
+- Session restore re-applies all properties when windows are re-managed on startup
+- Windows return to their exact previous state after restart
+
 ## [3.1.0] - 2026-08-29 — Float Window Center on Monitor
 ### Added
 - **Floating windows center on monitor**: toggling float centers the window at 50% of monitor work area

@@ -3,8 +3,20 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionWindowState {
+    pub exe: String,
+    pub cell: crate::layout::Cell,
+    pub floating: bool,
+    pub workspace: usize,
+    pub opacity: Option<f32>,
+    pub sticky: bool,
+    pub maximized: bool,
+    pub always_on_top: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionState {
-    pub window_positions: BTreeMap<String, crate::layout::Cell>,
+    pub windows: Vec<SessionWindowState>,
     pub camera: crate::layout::Cell,
 }
 

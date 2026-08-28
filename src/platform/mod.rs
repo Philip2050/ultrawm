@@ -947,11 +947,34 @@ impl Platform {
                 {
                     grid.place_window(wid);
 
-                    // Restore position from session if available
+                    // Restore state from session if available
                     if let Some(ref session) = self.session {
-                        if let Some(cell) = session.window_positions.get(&exe) {
-                            grid.window_positions.insert(wid, *cell);
-                            grid.cells.insert(*cell, wid);
+                        for sw in &session.windows {
+                            if sw.exe == exe {
+                                grid.window_positions.insert(wid, sw.cell);
+                                grid.cells.insert(sw.cell, wid);
+                                // Restore window properties
+                                if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                                    info.floating = sw.floating;
+                                    info.opacity = sw.opacity;
+                                    info.sticky = sw.sticky;
+                                    info.maximized = sw.maximized;
+                                    info.always_on_top = sw.always_on_top;
+                                    if sw.floating {
+                                        // Float: remove from grid, position manually
+                                        grid.remove_window(wid);
+                                        unsafe {
+                                            let _ = SetWindowPos(
+                                                info.hwnd,
+                                                if sw.always_on_top { HWND_TOPMOST } else { HWND_NOTOPMOST },
+                                                info.saved_x, info.saved_y, info.saved_w, info.saved_h,
+                                                SWP_FRAMECHANGED,
+                                            );
+                                        }
+                                    }
+                                }
+                                break;
+                            }
                         }
                     }
 
@@ -1633,15 +1656,24 @@ impl Platform {
 
     pub fn save_session(&mut self) {
         let grid = &self.monitor_workspaces[0].grids[self.monitor_workspaces[0].current];
-        let mut positions = BTreeMap::new();
+        let mut windows = Vec::new();
         for (&hwnd_wrapper, info) in &self.windows {
             if let Some(cell) = grid.window_positions.get(&info.id) {
-                positions.insert(info.exe.clone(), *cell);
+                windows.push(crate::session::SessionWindowState {
+                    exe: info.exe.clone(),
+                    cell: *cell,
+                    floating: info.floating,
+                    workspace: self.monitor_workspaces[0].current,
+                    opacity: info.opacity,
+                    sticky: info.sticky,
+                    maximized: info.maximized,
+                    always_on_top: info.always_on_top,
+                });
             }
         }
 
         let state = crate::session::SessionState {
-            window_positions: positions,
+            windows,
             camera: grid.camera,
         };
 
