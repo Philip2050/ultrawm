@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.57.0] - 2026-08-29 — Per-Monitor Bar Enabled State
+### Added
+- **IPC `set-monitor-bar-enabled` command**: show/hide bar for a specific monitor
+- **IPC `get-monitor-bar-enabled` command**: query bar enabled state for a monitor or list all overrides
+- **Per-monitor bar enabled**: `bar_enabled_monitors: HashMap<usize, bool>` in Platform
+- Falls back to global `config.bar.enabled` when no override is set
+
+### IPC usage
+```
+echo '{"command":"set-monitor-bar-enabled","monitor":1,"enabled":false}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-bar-enabled","monitor":0}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-bar-enabled"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.56.0] - 2026-08-29 — Per-Monitor Bar Transparency
 ### Added
 - **IPC `set-monitor-bar-transparency` command**: set bar transparency for a specific monitor (0.0-1.0)

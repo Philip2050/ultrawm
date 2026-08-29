@@ -1954,6 +1954,69 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-monitor-bar-enabled command
+    if cmd_str == "set-monitor-bar-enabled" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let enabled = params.get("enabled").and_then(|v| v.as_bool());
+        if let (Some(mon_idx), Some(e)) = (monitor_idx, enabled) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let monitors = crate::platform::monitor::get_monitors();
+                    if mon_idx < monitors.len() {
+                        platform.bar_enabled_monitors.insert(mon_idx, e);
+                        return serde_json::json!({
+                            "success": true,
+                            "monitor": mon_idx,
+                            "enabled": e,
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range (0-{})", mon_idx, monitors.len() - 1),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid parameters (monitor, enabled)",
+        });
+    }
+
+    // Handle get-monitor-bar-enabled command
+    if cmd_str == "get-monitor-bar-enabled" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let default_enabled = platform.config.bar.enabled;
+                if let Some(m_idx) = monitor_idx {
+                    let e = platform.bar_enabled_monitors.get(&m_idx).copied().unwrap_or(default_enabled);
+                    return serde_json::json!({
+                        "success": true,
+                        "monitor": m_idx,
+                        "enabled": e,
+                    });
+                } else {
+                    let all_enabled: Vec<(usize, bool)> = platform.bar_enabled_monitors.iter().map(|(k, v)| (*k, *v)).collect();
+                    return serde_json::json!({
+                        "success": true,
+                        "default_enabled": default_enabled,
+                        "overrides": all_enabled,
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-bar-transparency command
     if cmd_str == "set-monitor-bar-transparency" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
