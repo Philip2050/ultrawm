@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.79.0] - 2026-08-29 — IPC Reset-Monitor-Layout Command
+### Added
+- **IPC `reset-monitor-layout` command**: reset per-monitor layout overrides to global defaults
+- Clears gaps, padding, border width, and corner radius for the target monitor
+- Persists changes to config.toml
+
+### IPC usage
+```
+echo '{"command":"reset-monitor-layout","monitor":1}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.78.0] - 2026-08-29 — IPC Get-Bar-State Command
 ### Added
 - **IPC `get-bar-state` command**: get current bar visibility, height, width, and HWND

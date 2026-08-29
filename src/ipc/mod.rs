@@ -2770,6 +2770,44 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle reset-monitor-layout command
+    if cmd_str == "reset-monitor-layout" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        if let Some(mon_idx) = monitor_idx {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    let layouts = &mut platform.config.layout.monitor_layouts;
+                    if mon_idx < layouts.len() {
+                        layouts[mon_idx] = crate::config::MonitorLayout {
+                            gaps: None,
+                            inner_padding: None,
+                            outer_padding: None,
+                            border_width: None,
+                            corner_radius: None,
+                        };
+                        let _ = platform.config.save();
+                        return serde_json::json!({
+                            "success": true,
+                            "monitor": mon_idx,
+                            "message": "monitor layout reset to defaults",
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range", mon_idx),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'monitor' parameter",
+        });
+    }
+
     // Handle set-monitor-layout command
     if cmd_str == "set-monitor-layout" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
