@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.65.0] - 2026-08-29 — IPC Set-Monitor-Workspace Command
+### Added
+- **IPC `set-monitor-workspace` command**: switch a specific monitor to a workspace by index
+- Updates bar workspace indicator for the target monitor
+- Useful for external scripts that need to control per-monitor workspaces
+
+### IPC usage
+```
+echo '{"command":"set-monitor-workspace","monitor":0,"workspace":2}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.64.0] - 2026-08-29 — IPC Set-Wallpaper-Image-Monitor Command
 ### Added
 - **IPC `set-wallpaper-image-monitor` command**: set an image wallpaper for a specific monitor

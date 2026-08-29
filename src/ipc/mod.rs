@@ -2337,6 +2337,48 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-monitor-workspace command
+    if cmd_str == "set-monitor-workspace" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let workspace_idx = params.get("workspace").and_then(|v| v.as_u64()).map(|v| v as usize);
+        if let (Some(mon_idx), Some(ws_idx)) = (monitor_idx, workspace_idx) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    if mon_idx < platform.monitor_workspaces.len() {
+                        if ws_idx < platform.monitor_workspaces[mon_idx].grids.len() {
+                            platform.monitor_workspaces[mon_idx].current = ws_idx;
+                            let ws_names = platform.workspace_names(mon_idx);
+                            if let Some(ref bar) = platform.bar {
+                                bar.set_workspaces(ws_names, ws_idx, platform.window_count_per_workspace(mon_idx));
+                            }
+                            return serde_json::json!({
+                                "success": true,
+                                "monitor": mon_idx,
+                                "workspace": ws_idx,
+                            });
+                        } else {
+                            return serde_json::json!({
+                                "success": false,
+                                "error": format!("workspace {} out of range", ws_idx),
+                            });
+                        }
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range", mon_idx),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'monitor' or 'workspace' parameter",
+        });
+    }
+
     // Handle get-active-monitor command
     if cmd_str == "get-active-monitor" {
         unsafe {
