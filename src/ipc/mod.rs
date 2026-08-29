@@ -2121,6 +2121,80 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle list-monitor-workspaces command
+    if cmd_str == "list-monitor-workspaces" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let monitors = crate::platform::monitor::get_monitors();
+
+                // If no monitor specified, list all
+                if monitor_idx.is_none() {
+                    let mut all: Vec<serde_json::Value> = Vec::new();
+                    for (idx, mws) in platform.monitor_workspaces.iter().enumerate() {
+                        let mon_name = monitors.get(idx).map(|m| m.name.clone()).unwrap_or_else(|| "unknown".into());
+                        let mut ws_list: Vec<serde_json::Value> = Vec::new();
+                        for (ws_idx, grid) in mws.grids.iter().enumerate() {
+                            let win_count = grid.windows.len();
+                            let is_active = mws.current == ws_idx;
+                            ws_list.push(serde_json::json!({
+                                "index": ws_idx,
+                                "active": is_active,
+                                "window_count": win_count,
+                            }));
+                        }
+                        all.push(serde_json::json!({
+                            "monitor": idx,
+                            "name": mon_name,
+                            "current": mws.current,
+                            "workspaces": ws_list,
+                        }));
+                    }
+                    return serde_json::json!({
+                        "success": true,
+                        "monitors": all,
+                    });
+                }
+
+                // Specific monitor
+                if let Some(m_idx) = monitor_idx {
+                    if m_idx < platform.monitor_workspaces.len() {
+                        let mws = &platform.monitor_workspaces[m_idx];
+                        let mon_name = monitors.get(m_idx).map(|m| m.name.clone()).unwrap_or_else(|| "unknown".into());
+                        let mut ws_list: Vec<serde_json::Value> = Vec::new();
+                        for (ws_idx, grid) in mws.grids.iter().enumerate() {
+                            let win_count = grid.windows.len();
+                            let is_active = mws.current == ws_idx;
+                            ws_list.push(serde_json::json!({
+                                "index": ws_idx,
+                                "active": is_active,
+                                "window_count": win_count,
+                            }));
+                        }
+                        return serde_json::json!({
+                            "success": true,
+                            "monitor": m_idx,
+                            "name": mon_name,
+                            "current": mws.current,
+                            "workspaces": ws_list,
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range", m_idx),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle list-all-windows command
     if cmd_str == "list-all-windows" {
         unsafe {

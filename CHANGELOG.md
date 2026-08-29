@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.63.0] - 2026-08-29 — IPC List-Monitor-Workspaces Command
+### Added
+- **IPC `list-monitor-workspaces` command**: list workspaces for a specific monitor or all monitors
+- Returns workspace index, active state, and window count per workspace
+- Useful for external status bars and workspace indicators
+
+### IPC usage
+```
+echo '{"command":"list-monitor-workspaces","monitor":0}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"list-monitor-workspaces"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.62.0] - 2026-08-29 — IPC Get-Monitor-Info Command
 ### Added
 - **IPC `get-monitor-info` command**: get detailed info about all monitors
