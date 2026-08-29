@@ -2736,6 +2736,39 @@ impl Platform {
         info!("Custom layout '{}': {} cols x {} rows ({} windows)", name, widths.len().max(1), heights.len().max(1), wids.len());
     }
 
+    /// Save current grid's custom widths/heights as a named snap layout
+    pub fn save_snap_layout(&mut self, name: &str) {
+        use crate::config::SnapLayout;
+
+        let grid = self.current_grid();
+        let widths = if grid.custom_widths.is_empty() {
+            vec![800]  // default single column
+        } else {
+            grid.custom_widths.clone()
+        };
+        let heights = if grid.custom_heights.is_empty() {
+            vec![600]  // default single row
+        } else {
+            grid.custom_heights.clone()
+        };
+
+        let layout = SnapLayout {
+            name: name.to_string(),
+            widths,
+            heights,
+        };
+
+        // Remove existing with same name
+        self.config.layout.snap_layouts.retain(|l| l.name != name);
+        self.config.layout.snap_layouts.push(layout);
+
+        if let Err(e) = self.config.save() {
+            warn!("Failed to save snap layout '{}': {}", name, e);
+        } else {
+            info!("Snap layout '{}' saved ({}x{})", name, grid.custom_widths.len().max(1), grid.custom_heights.len().max(1));
+        }
+    }
+
     pub fn minimize_to_tray(&mut self) {
         let hwnd = match self.focused_hwnd {
             Some(h) => h.0,

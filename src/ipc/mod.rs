@@ -437,6 +437,48 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("missing 'name' field. Use: {\"command\":\"snap-custom\",\"name\":\"my-layout\"}".into()), data: None };
     }
 
+    // Handle save-snap-layout: save current grid as named layout
+    if cmd_str == "save-snap-layout" {
+        if let Some(name) = json.get("name").and_then(|v| v.as_str()) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    platform.save_snap_layout(name);
+                    return IpcResponse { success: true, message: Some(format!("Snap layout '{}' saved", name)), data: None };
+                }
+            }
+        }
+        return IpcResponse { success: false, message: Some("missing 'name' field. Use: {\"command\":\"save-snap-layout\",\"name\":\"my-layout\"}".into()), data: None };
+    }
+
+    // Handle list-snap-layouts
+    if cmd_str == "list-snap-layouts" {
+        let layouts = unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                platform.config.layout.snap_layouts.iter().map(|l| {
+                    serde_json::json!({
+                        "name": l.name,
+                        "widths": l.widths,
+                        "heights": l.heights,
+                    })
+                }).collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            }
+        };
+        return serde_json::json!({
+            "success": true,
+            "command": cmd_str,
+            "data": {
+                "count": layouts.len(),
+                "layouts": layouts,
+            },
+        });
+    }
+
     // Handle session save/restore commands
     if cmd_str == "save-session" {
         unsafe {

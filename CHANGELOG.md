@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.19.0] - 2026-08-29 — Dynamic Snap Layout Save & List
+### Added
+- **`save_snap_layout()`**: save current grid's custom widths/heights as a named snap layout
+- **Dynamic layout persistence**: save current tiling arrangement to config.toml
+- **IPC `save-snap-layout`**: save current tiling as named layout
+- **IPC `list-snap-layouts`**: list all saved snap layouts with widths/heights
+- Auto-removes existing layout with same name before saving
+- Uses grid's `custom_widths` and `custom_heights` from current arrangement
+
+### IPC usage
+```
+echo '{"command":"save-snap-layout","name":"my-layout"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"list-snap-layouts"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"snap-custom","name":"my-layout"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.18.0] - 2026-08-29 — System Tray Icon with Quick Actions Menu
 ### Added
 - **Persistent system tray icon**: UltraWM icon shown in Windows notification area
