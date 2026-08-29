@@ -2082,6 +2082,45 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle reload-config command
+    if cmd_str == "reload-config" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &mut *ptr;
+                match platform.config.reload_if_changed() {
+                    Ok(Some(new_config)) => {
+                        let old = std::mem::replace(&mut platform.config, new_config);
+                        let changes = vec!["config reloaded from disk"];
+                        let _ = platform.config.save();
+                        return serde_json::json!({
+                            "success": true,
+                            "message": "Config reloaded",
+                            "changes": changes,
+                        });
+                    }
+                    Ok(None) => {
+                        return serde_json::json!({
+                            "success": true,
+                            "message": "Config unchanged",
+                            "changes": vec![],
+                        });
+                    }
+                    Err(e) => {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("Failed to reload config: {}", e),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle list-all-windows command
     if cmd_str == "list-all-windows" {
         unsafe {

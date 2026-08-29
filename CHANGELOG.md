@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.61.0] - 2026-08-29 — IPC Reload-Config Command
+### Added
+- **IPC `reload-config` command**: reload config from disk without restarting
+- Uses `Config::reload_if_changed()` for efficient change detection
+- Saves updated config and returns reload status
+
+### IPC usage
+```
+echo '{"command":"reload-config"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.60.0] - 2026-08-29 — IPC List-All-Windows Command
 ### Added
 - **IPC `list-all-windows` command**: list all managed windows with their properties
