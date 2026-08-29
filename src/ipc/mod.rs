@@ -2337,6 +2337,94 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle add-monitor-workspace command
+    if cmd_str == "add-monitor-workspace" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        if let Some(mon_idx) = monitor_idx {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    if mon_idx < platform.monitor_workspaces.len() {
+                        let new_count = platform.monitor_workspaces[mon_idx].grids.len() + 1;
+                        platform.monitor_workspaces[mon_idx].grids.push(GridState::new());
+                        if platform.config.layout.workspace_count < new_count {
+                            platform.config.layout.workspace_count = new_count;
+                        }
+                        if let Some(ref bar) = platform.bar {
+                            let ws_names = platform.workspace_names(mon_idx);
+                            let current = platform.monitor_workspaces[mon_idx].current;
+                            bar.set_workspaces(ws_names, current, platform.window_count_per_workspace(mon_idx));
+                        }
+                        return serde_json::json!({
+                            "success": true,
+                            "monitor": mon_idx,
+                            "workspace_count": new_count,
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range", mon_idx),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'monitor' parameter",
+        });
+    }
+
+    // Handle remove-monitor-workspace command
+    if cmd_str == "remove-monitor-workspace" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        if let Some(mon_idx) = monitor_idx {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    if mon_idx < platform.monitor_workspaces.len() {
+                        let mws = &mut platform.monitor_workspaces[mon_idx];
+                        if mws.grids.len() > 1 {
+                            mws.grids.pop();
+                            if mws.current >= mws.grids.len() {
+                                mws.current = mws.grids.len() - 1;
+                            }
+                            if platform.config.layout.workspace_count > mws.grids.len() {
+                                platform.config.layout.workspace_count = mws.grids.len();
+                            }
+                            if let Some(ref bar) = platform.bar {
+                                let ws_names = platform.workspace_names(mon_idx);
+                                let current = mws.current;
+                                bar.set_workspaces(ws_names, current, platform.window_count_per_workspace(mon_idx));
+                            }
+                            return serde_json::json!({
+                                "success": true,
+                                "monitor": mon_idx,
+                                "workspace_count": mws.grids.len(),
+                            });
+                        } else {
+                            return serde_json::json!({
+                                "success": false,
+                                "error": "cannot remove last workspace",
+                            });
+                        }
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range", mon_idx),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'monitor' parameter",
+        });
+    }
+
     // Handle set-monitor-workspace command
     if cmd_str == "set-monitor-workspace" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

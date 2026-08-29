@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.66.0] - 2026-08-29 — IPC Add/Remove-Monitor-Workspace Commands
+### Added
+- **IPC `add-monitor-workspace` command**: add a new workspace for a specific monitor
+- **IPC `remove-monitor-workspace` command**: remove the last workspace from a specific monitor
+- Updates global `workspace_count` config to match
+- Updates bar workspace indicator automatically
+
+### IPC usage
+```
+echo '{"command":"add-monitor-workspace","monitor":0}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"remove-monitor-workspace","monitor":0}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.65.0] - 2026-08-29 — IPC Set-Monitor-Workspace Command
 ### Added
 - **IPC `set-monitor-workspace` command**: switch a specific monitor to a workspace by index
