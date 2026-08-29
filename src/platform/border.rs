@@ -137,12 +137,11 @@ impl BorderOverlay {
         }
     }
 
-    pub fn update(&mut self, rects: &[(i32, i32, i32, i32, u32, bool, bool, Option<String>)]) {
+    pub fn update(&mut self, rects: &[(i32, i32, i32, i32, u32, bool, bool, Option<String>, i32)]) {
         unsafe {
             std::ptr::write_bytes(self.bits, 0, (self.width * self.height * 4) as usize);
 
-            for &(x, y, w, h, color_rgb, focused, floating, ref title) in rects {
-                let bw = self.border_width;
+            for &(x, y, w, h, color_rgb, focused, floating, ref title, bw) in rects {
                 let half = bw / 2;
                 let pen_color = if floating { 0xFF4488FF } else { color_rgb };
 

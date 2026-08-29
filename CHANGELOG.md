@@ -2,6 +2,24 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.32.0] - 2026-08-29 — Per-App Border Width from Window Rules
+### Added
+- **`border_width` field in WindowRule**: rules can set custom border width per app
+- **Per-window border width storage**: `window_border_widths: HashMap<u64, u32>` in Platform
+- **Border rendering**: per-window border width passed through `border_rects` tuple and applied in BorderOverlay
+- Rules override global `layout.border_width` for matching windows
+
+### Config example
+```toml
+[[rules]]
+match = "chrome"
+border_width = 4
+
+[[rules]]
+match = "terminal"
+border_width = 1
+```
+
 ## [10.31.0] - 2026-08-29 — IPC Get-Stats Command
 ### Added
 - **IPC `get-stats` command**: returns WM statistics as JSON

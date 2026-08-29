@@ -41,6 +41,7 @@ pub struct WindowRule {
     pub border_color: Option<u32>,
     pub fullscreen: Option<bool>,
     pub corner_radius: Option<u32>,
+    pub border_width: Option<u32>,
 }
 
 impl WindowRule {

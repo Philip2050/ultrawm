@@ -140,6 +140,7 @@ pub struct Platform {
     pub monitor_workspaces: Vec<MonitorWorkspaces>,
     pub window_workspaces: HashMap<u64, usize>, // wid -> workspace index (0-3)
     pub window_monitors: HashMap<u64, usize>,   // wid -> monitor index
+    pub window_border_widths: HashMap<u64, u32>, // wid -> border width override
     pub anim: HashMap<u64, WindowAnimState>,
     pub swap_flash: HashMap<u64, u32>, // wid -> flash timer (countdown frames)
     pub opacity_anim: HashMap<u64, crate::anim::SpringValue>, // wid -> opacity spring animation
@@ -232,6 +233,7 @@ impl Platform {
             monitor_workspaces,
             window_workspaces: HashMap::new(),
             window_monitors: HashMap::new(),
+            window_border_widths: HashMap::new(),
             anim: HashMap::new(),
             swap_flash: HashMap::new(),
             opacity_anim: HashMap::new(),
@@ -987,7 +989,7 @@ impl Platform {
     }
 
     pub fn tile_all_windows(&mut self, accent_rgb: u32, inactive_rgb: u32) {
-        let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>)> = Vec::new();
+        let mut border_rects: Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>, u32)> = Vec::new();
         let mut tile_rects: Vec<(i32, i32, i32, i32, HWND)> = Vec::new();
 
         // Overview mode: compact grid of all windows
@@ -1045,6 +1047,7 @@ impl Platform {
                         is_focused,
                         info.floating,
                         Some(title),
+                        self.window_border_widths.get(&info.id).copied().unwrap_or(self.config.layout.border_width),
                     ));
 
                     if let Some(ref mut overlay) = self.border_overlay {
@@ -1214,7 +1217,8 @@ impl Platform {
                         base_color
                     };
                     let title = get_window_title(hwnd_wrapper.0);
-                    border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, info.floating, title));
+                    let bw = self.window_border_widths.get(&info.id).copied().unwrap_or(self.config.layout.border_width);
+                    border_rects.push((ax as i32, ay as i32, aw as i32, ah as i32, color, is_focused, info.floating, title, bw as i32));
 
                     // Apply DWM blur to windows
                     let _ = enable_blur(hwnd_wrapper.0, accent_rgb);
@@ -1246,7 +1250,7 @@ impl Platform {
         &mut self,
         accent_rgb: u32,
         inactive_rgb: u32,
-        border_rects: &mut Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>)>,
+        border_rects: &mut Vec<(i32, i32, i32, i32, u32, bool, bool, Option<String>, u32)>,
     ) {
         let (wl, wt, wr, wb) = self.current_work_area();
         let vw = wr - wl;
@@ -1303,7 +1307,8 @@ impl Platform {
             let title = get_window_title(*hwnd);
             let hwnd_wrapper = HWnd(*hwnd);
             let floating = self.windows.get(&hwnd_wrapper).map(|i| i.floating).unwrap_or(false);
-            border_rects.push((x, y, cell_w, cell_h, color, is_focused, floating, title));
+            let bw = self.window_border_widths.get(&wid).copied().unwrap_or(self.config.layout.border_width);
+            border_rects.push((x, y, cell_w, cell_h, color, is_focused, floating, title, bw as i32));
             self.overview_positions.push((x, y, cell_w, cell_h, hwnd_wrapper));
         }
     }
@@ -3876,6 +3881,11 @@ impl Platform {
             }
             if let Some(bc) = rule.border_color {
                 win_info.border_color = bc;
+            }
+            if let Some(bw) = rule.border_width {
+                if bw > 0 {
+                    self.window_border_widths.insert(win_info.id, bw);
+                }
             }
             if let Some(cr) = rule.corner_radius {
                 // Apply per-app corner radius via DWM window corner preference
