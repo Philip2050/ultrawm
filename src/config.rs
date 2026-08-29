@@ -34,6 +34,20 @@ pub struct WindowRule {
     pub sticky: Option<bool>,
 }
 
+impl WindowRule {
+    pub fn match_exe(&self, exe: &str) -> bool {
+        !self.match_.is_empty() && exe.contains(&self.match_)
+    }
+
+    pub fn match_class(&self, class: &str) -> bool {
+        !self.match_.is_empty() && class.contains(&self.match_)
+    }
+
+    pub fn match_title(&self, title: &str) -> bool {
+        !self.match_.is_empty() && title.contains(&self.match_)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LayoutConfig {
     pub gaps: u32,

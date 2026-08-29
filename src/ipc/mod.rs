@@ -226,6 +226,51 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle get-window-rules command
+    if cmd_str == "get-window-rules" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let mut matching_rules = Vec::new();
+
+                if let Some(hwnd) = platform.focused_hwnd {
+                    if let Some(info) = platform.windows.get(&hwnd) {
+                        for rule in &platform.config.rules {
+                            if rule.match_exe(&info.exe) || rule.match_class(&info.class) || rule.match_title(&info.title) {
+                                matching_rules.push(serde_json::json!({
+                                    "match": rule.match_,
+                                    "float": rule.float,
+                                    "workspace": rule.workspace,
+                                    "opacity": rule.opacity,
+                                    "sticky": rule.sticky,
+                                    "max_width": rule.max_width,
+                                    "max_height": rule.max_height,
+                                    "min_width": rule.min_width,
+                                    "min_height": rule.min_height,
+                                }));
+                            }
+                        }
+                    }
+                }
+
+                return serde_json::json!({
+                    "success": true,
+                    "command": cmd_str,
+                    "data": serde_json::json!({
+                        "rules": matching_rules,
+                        "count": matching_rules.len(),
+                    }),
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {

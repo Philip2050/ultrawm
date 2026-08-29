@@ -275,7 +275,7 @@ impl Platform {
         self.windows.len()
     }
 
-    fn window_for_hwnd(&self, hwnd: HWND) -> Option<&WindowInfo> {
+    pub fn window_for_hwnd(&self, hwnd: HWND) -> Option<&WindowInfo> {
         self.windows.get(&HWnd(hwnd))
     }
 

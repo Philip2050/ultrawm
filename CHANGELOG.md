@@ -28,6 +28,27 @@ Win+/ — toggle keybind help overlay
 - Dark theme styling matching Catppuccin Mocha palette
 
 ### Changed
+- Made `window_for_hwnd()` public on Platform for IPC access
+
+## [10.7.0] - 2026-08-29 — Window Rules Preview
+### Added
+- **Window rules preview**: IPC command to list all rules matching the focused window
+- `match_exe()`, `match_class()`, `match_title()` helper methods on WindowRule
+- **`get-window-rules` IPC command**: returns matching rules for focused window
+- Structured JSON response with rule details (float, workspace, opacity, etc.)
+
+### Keybind
+```
+ipc get-window-rules — list rules matching the focused window
+```
+
+### Implementation
+- IPC handler reads focused window from Platform
+- Iterates through all configured rules
+- Checks exe, class, and title for substring matches
+- Returns JSON array of matching rules with their properties
+
+### Changed
 - Keyboard hook dispatches "/" key (0xBF) to toggle help
 - Help overlay reuses launcher/search overlay pattern
 - Keybinds config fully documented in help overlay
