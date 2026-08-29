@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.67.0] - 2026-08-29 — IPC Set-Monitor-Layout Command
+### Added
+- **IPC `set-monitor-layout` command**: set per-monitor layout properties
+- Supports gaps, inner_padding, border_width, corner_radius per monitor
+- Overrides global layout settings for the target monitor
+- Persists to config.toml
+
+### IPC usage
+```
+echo '{"command":"set-monitor-layout","monitor":0,"gaps":12,"border_width":3}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.66.0] - 2026-08-29 — IPC Add/Remove-Monitor-Workspace Commands
 ### Added
 - **IPC `add-monitor-workspace` command**: add a new workspace for a specific monitor

@@ -2337,6 +2337,55 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-monitor-layout command
+    if cmd_str == "set-monitor-layout" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let gaps = params.get("gaps").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let inner_padding = params.get("inner_padding").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let border_width = params.get("border_width").and_then(|v| v.as_u64()).map(|v| v as u32);
+        let corner_radius = params.get("corner_radius").and_then(|v| v.as_u64()).map(|v| v as u32);
+
+        if let Some(mon_idx) = monitor_idx {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let layouts = &mut platform.config.layout.monitor_layouts;
+                    if mon_idx >= layouts.len() {
+                        layouts.resize(mon_idx + 1, crate::config::MonitorLayout {
+                            gaps: None,
+                            inner_padding: None,
+                            outer_padding: None,
+                            border_width: None,
+                            corner_radius: None,
+                        });
+                    }
+                    let layout = &mut layouts[mon_idx];
+                    if let Some(g) = gaps { layout.gaps = Some(g); }
+                    if let Some(ip) = inner_padding { layout.inner_padding = Some(ip); }
+                    if let Some(bw) = border_width { layout.border_width = Some(bw); }
+                    if let Some(cr) = corner_radius { layout.corner_radius = Some(cr); }
+
+                    let _ = platform.config.save();
+                    return serde_json::json!({
+                        "success": true,
+                        "monitor": mon_idx,
+                        "layout": {
+                            "gaps": layout.gaps,
+                            "inner_padding": layout.inner_padding,
+                            "border_width": layout.border_width,
+                            "corner_radius": layout.corner_radius,
+                        },
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'monitor' parameter",
+        });
+    }
+
     // Handle add-monitor-workspace command
     if cmd_str == "add-monitor-workspace" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
