@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.77.0] - 2026-08-29 — IPC Help Command
+### Added
+- **IPC `help` command**: list all available IPC commands
+- Returns command names and total count
+- Useful for discovering UltraWM's IPC API
+
+### IPC usage
+```
+echo '{"command":"help"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.76.0] - 2026-08-29 — IPC Set-Monitor-Workspace-Names Command
 ### Added
 - **IPC `set-monitor-workspace-names` command**: set all workspace names for a monitor at once

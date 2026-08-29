@@ -2473,6 +2473,72 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle help command
+    if cmd_str == "help" {
+        let commands = vec![
+            "ping",
+            "reload-config",
+            "list-monitors",
+            "list-all-windows",
+            "list-workspaces",
+            "list-monitor-workspaces",
+            "list-monitor-bars",
+            "get-config",
+            "get-bar-config",
+            "get-theme",
+            "list-themes",
+            "get-layout-presets",
+            "apply-layout-preset",
+            "get-monitor-info",
+            "get-monitor-layout",
+            "set-monitor-layout",
+            "set-monitor-layout-preset",
+            "set-bar-position",
+            "set-monitor-bar-height",
+            "get-monitor-bar-height",
+            "set-monitor-bar-transparency",
+            "get-monitor-bar-transparency",
+            "set-monitor-bar-enabled",
+            "get-monitor-bar-enabled",
+            "get-active-monitor",
+            "set-monitor-focus",
+            "get-workspace-names",
+            "set-workspace-name",
+            "set-monitor-workspace-names",
+            "add-monitor-workspace",
+            "remove-monitor-workspace",
+            "set-monitor-workspace",
+            "move-window-to-workspace",
+            "set-border-color",
+            "set-border-width",
+            "set-wallpaper-monitor",
+            "set-wallpaper-image-monitor",
+            "set-theme",
+            "cycle-theme",
+            "toggle-snap",
+            "cycle-gap",
+            "get-window-info",
+            "list-all-windows",
+            "set-window-opacity",
+            "get-window-opacity",
+            "set-focus-follows-mouse",
+            "get-focus-follows-mouse",
+            "set-mouse-threshold",
+            "get-mouse-threshold",
+            "get-session",
+            "swap-windows",
+            "toggle-bar",
+            "bring-to-front",
+            "reset-layout",
+        ];
+        return serde_json::json!({
+            "success": true,
+            "command": "help",
+            "commands": commands,
+            "count": commands.len(),
+        });
+    }
+
     // Handle list-all-windows command
     if cmd_str == "list-all-windows" {
         unsafe {
