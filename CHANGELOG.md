@@ -2,6 +2,23 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.20.0] - 2026-08-29 — Theme Picker with Per-Pixel Alpha Rendering
+### Added
+- **Per-pixel alpha theme picker**: modern overlay with rounded corners via UpdateLayeredWindow
+- **Dark theme styling**: Catppuccin-inspired colors (base #1E1E2E, accent #CBA6F7)
+- **Color preview dots**: each theme entry shows a colored preview indicator
+- **Selected highlight**: current theme highlighted with accent color background
+- **Header bar**: top bar with theme picker title
+- **Centered positioning**: 420x340 window centered on primary monitor
+- **Keyboard navigation**: Escape to close, Enter to apply, Up/Down to browse
+- **Consistent rendering**: same per-pixel alpha pattern as help overlay and notifier
+
+### Visual Design
+- Rounded corners (16px outer, 8px item corners)
+- Semi-transparent background (0xCC alpha)
+- Accent color selection highlight
+- Color preview circle for each theme
+
 ## [10.19.0] - 2026-08-29 — Dynamic Snap Layout Save & List
 ### Added
 - **`save_snap_layout()`**: save current grid's custom widths/heights as a named snap layout
