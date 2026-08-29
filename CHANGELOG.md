@@ -2,6 +2,34 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.25.0] - 2026-08-29 — IPC List-Workspaces Command
+### Added
+- **IPC `list-workspaces` command**: returns all workspaces across monitors as JSON
+- Each workspace entry includes: monitor index, workspace index, name, window count, active status
+- Optional `monitor` filter parameter: `{"command":"list-workspaces","monitor":1}`
+- Response includes focused monitor and workspace indices
+- Useful for status bars, scripts, and tools that need workspace state
+
+### IPC usage
+```
+echo '{"command":"list-workspaces"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"list-workspaces","monitor":0}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "list-workspaces",
+  "focused_monitor": 0,
+  "focused_workspace": 1,
+  "workspaces": [
+    {"monitor": 0, "index": 0, "name": "1", "windows": 2, "active": false},
+    {"monitor": 0, "index": 1, "name": "2", "windows": 1, "active": true}
+  ]
+}
+```
+
 ## [10.24.0] - 2026-08-29 — Status Bar Widget Enhancements
 ### Added
 - **Monocle mode indicator**: orange "MONOCLE" label shown in bar when monocle layout is active

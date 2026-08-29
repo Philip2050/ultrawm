@@ -3743,6 +3743,41 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "list-workspaces" {
+                    let monitor_filter = json.get("monitor")
+                        .and_then(|v| v.as_u64())
+                        .map(|m| m as usize);
+                    let mut workspaces = Vec::new();
+                    for (mi, mw) in self.monitor_workspaces.iter().enumerate() {
+                        if let Some(filt) = monitor_filter {
+                            if mi != filt { continue; }
+                        }
+                        for (wi, grid) in mw.grids.iter().enumerate() {
+                            let ws_name = self.workspace_names.get(mi)
+                                .and_then(|names| names.get(wi))
+                                .map(|s| s.clone())
+                                .unwrap_or_else(|| format!("{}", wi + 1));
+                            let win_count = grid.windows.len();
+                            workspaces.push(serde_json::json!({
+                                "monitor": mi,
+                                "index": wi,
+                                "name": ws_name,
+                                "windows": win_count,
+                                "active": mi == mw.current_monitor && wi == mw.current,
+                            }));
+                        }
+                    }
+                    let focused_monitor = self.monitor_workspaces.iter().position(|mw| mw.current_monitor == mw.current_monitor).unwrap_or(0);
+                    let response = serde_json::json!({
+                        "success": true,
+                        "command": "list-workspaces",
+                        "focused_monitor": focused_monitor,
+                        "focused_workspace": self.monitor_workspaces.get(focused_monitor).map(|mw| mw.current).unwrap_or(0),
+                        "workspaces": workspaces,
+                    });
+                    log::debug!("IPC list-workspaces: {} workspaces across {} monitors", workspaces.len(), self.monitor_workspaces.len());
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
