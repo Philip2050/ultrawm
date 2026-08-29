@@ -2,6 +2,42 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.36.0] - 2026-08-29 — IPC Get-Bar-Config Command
+### Added
+- **IPC `get-bar-config` command**: returns bar configuration and runtime state as JSON
+- Config includes: enabled, height, position, transparency, workspace/clock/volume/battery/cpu/memory toggles
+- State includes: visible (runtime), height (actual)
+- Useful for status bars and tools that need bar settings
+
+### IPC usage
+```
+echo '{"command":"get-bar-config"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "get-bar-config",
+  "config": {
+    "enabled": true,
+    "height": 40,
+    "position": "top",
+    "transparency": 0.85,
+    "show_workspaces": true,
+    "show_clock": true,
+    "show_volume": true,
+    "show_battery": true,
+    "show_cpu": true,
+    "show_memory": true
+  },
+  "state": {
+    "visible": true,
+    "height": 40
+  }
+}
+```
+
 ## [10.35.0] - 2026-08-29 — Scrolling Window Titles in Bar
 ### Added
 - **Scrolling titles**: long window titles scroll horizontally when they exceed available space

@@ -477,6 +477,37 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle get-bar-config command
+    if cmd_str == "get-bar-config" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let bar_value = serde_json::to_value(&platform.config.bar).unwrap_or_else(|_| serde_json::json!({}));
+                let bar_state = platform.bar.as_ref().map(|b| {
+                    serde_json::json!({
+                        "visible": platform.bar_visible,
+                        "height": b.height,
+                    })
+                }).unwrap_or_else(|| serde_json::json!({
+                    "visible": false,
+                    "height": 0,
+                }));
+                return serde_json::json!({
+                    "success": true,
+                    "command": "get-bar-config",
+                    "config": bar_value,
+                    "state": bar_state,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1341,6 +1372,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "bring-to-front" => IpcCommand::Single { command: "bring-to-front".into() },
         "get-stats" => IpcCommand::Single { command: "get-stats".into() },
         "list-monitors" => IpcCommand::Single { command: "list-monitors".into() },
+        "get-bar-config" => IpcCommand::Single { command: "get-bar-config".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
