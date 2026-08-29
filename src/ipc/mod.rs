@@ -2168,6 +2168,47 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-monitor-info command
+    if cmd_str == "get-monitor-info" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let monitors = crate::platform::monitor::get_monitors();
+                let mut mon_infos: Vec<serde_json::Value> = Vec::new();
+                for (idx, mon) in monitors.iter().enumerate() {
+                    let ws_count = platform.monitor_workspaces.get(idx).map(|mws| mws.grids.len()).unwrap_or(0);
+                    let current_ws = platform.monitor_workspaces.get(idx).map(|mws| mws.current).unwrap_or(0);
+                    let window_count = platform.window_monitors.values().filter(|&&m| m == idx).count();
+                    mon_infos.push(serde_json::json!({
+                        "index": idx,
+                        "name": mon.name,
+                        "x": mon.left,
+                        "y": mon.top,
+                        "width": mon.width(),
+                        "height": mon.height(),
+                        "work_width": mon.work_width(),
+                        "work_height": mon.work_height(),
+                        "scale_factor": mon.scale_factor,
+                        "workspace_count": ws_count,
+                        "current_workspace": current_ws,
+                        "window_count": window_count,
+                        "primary": mon.is_primary,
+                    }));
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "monitor_count": monitors.len(),
+                    "monitors": mon_infos,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle get-active-monitor command
     if cmd_str == "get-active-monitor" {
         unsafe {

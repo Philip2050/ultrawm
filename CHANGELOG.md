@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.62.0] - 2026-08-29 — IPC Get-Monitor-Info Command
+### Added
+- **IPC `get-monitor-info` command**: get detailed info about all monitors
+- Returns monitor index, name, position, size, scale factor, workspace info, and window count
+- Includes primary monitor flag and work area dimensions
+
+### IPC usage
+```
+echo '{"command":"get-monitor-info"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.61.0] - 2026-08-29 — IPC Reload-Config Command
 ### Added
 - **IPC `reload-config` command**: reload config from disk without restarting
