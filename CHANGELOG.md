@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.53.0] - 2026-08-29 — Focus-Follows-Mouse IPC Commands
+### Added
+- **IPC `set-focus-follows-mouse` command**: enable/disable focus-follows-mouse at runtime
+- **IPC `get-focus-follows-mouse` command**: query current focus-follows-mouse status
+- **IPC `set-mouse-threshold` command**: set mouse follow threshold in milliseconds (0-5000)
+- **IPC `get-mouse-threshold` command**: query current mouse follow threshold
+- **IPC `set-monitor-focus` command**: switch focus to a specific monitor by index
+- `mouse_follow_threshold` config field for tuning focus delay (default: 1000ms)
+
+### IPC usage
+```
+echo '{"command":"set-focus-follows-mouse","enabled":true}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"set-mouse-threshold","threshold":500}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"set-monitor-focus","monitor":1}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.52.0] - 2026-08-29 — Per-Monitor Wallpaper on Monitor Switch
 ### Added
 - **Automatic wallpaper on monitor switch**: applies per-monitor wallpaper when focus changes monitors

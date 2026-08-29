@@ -10,6 +10,7 @@ pub struct Config {
     pub bar: BarConfig,
     pub launcher: LauncherConfig,
     pub rules: Vec<WindowRule>,
+    pub focus_follows_mouse: bool,
     #[serde(skip)]
     pub last_modified: Option<SystemTime>,
 }
@@ -279,6 +280,7 @@ impl Default for Config {
             },
             rules: Vec::new(),
             last_modified: None,
+            mouse_follow_threshold: 1000.0,
         }
     }
 }

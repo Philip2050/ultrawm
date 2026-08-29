@@ -1790,4 +1790,122 @@ fn capture_screenshot() -> serde_json::Value {
             "path": path_str,
         })
     }
+
+    // Handle set-monitor-focus command
+    if cmd_str == "set-monitor-focus" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        if let Some(mon_idx) = monitor_idx {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let monitors = crate::platform::monitor::get_monitors();
+                    if mon_idx < monitors.len() {
+                        platform.switch_monitor(mon_idx);
+                        return serde_json::json!({
+                            "success": true,
+                            "monitor": mon_idx,
+                            "name": monitors[mon_idx].name,
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range (0-{})", mon_idx, monitors.len() - 1),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid 'monitor' parameter",
+        });
+    }
+
+    // Handle set-mouse-threshold command
+    if cmd_str == "set-mouse-threshold" {
+        let threshold = params.get("threshold").and_then(|v| v.as_f64()).map(|v| v as f32);
+        if let Some(t) = threshold {
+            if t >= 0.0 && t <= 5000.0 {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &*ptr;
+                        platform.config.mouse_follow_threshold = t;
+                        let _ = platform.save_config();
+                        return serde_json::json!({
+                            "success": true,
+                            "threshold": t,
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid 'threshold' parameter (0-5000)",
+        });
+    }
+
+    // Handle get-mouse-threshold command
+    if cmd_str == "get-mouse-threshold" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                return serde_json::json!({
+                    "success": true,
+                    "threshold": platform.config.mouse_follow_threshold,
+                    "focus_follows_mouse": platform.config.layout.focus_follows_mouse,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
+    // Handle set-focus-follows-mouse command
+    if cmd_str == "set-focus-follows-mouse" {
+        let enabled = params.get("enabled").and_then(|v| v.as_bool());
+        if let Some(e) = enabled {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    platform.config.layout.focus_follows_mouse = e;
+                    platform.focus_follows_mouse_check();
+                    let _ = platform.save_config();
+                    return serde_json::json!({
+                        "success": true,
+                        "focus_follows_mouse": e,
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid 'enabled' parameter",
+        });
+    }
+
+    // Handle get-focus-follows-mouse command
+    if cmd_str == "get-focus-follows-mouse" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                return serde_json::json!({
+                    "success": true,
+                    "focus_follows_mouse": platform.config.layout.focus_follows_mouse,
+                    "threshold": platform.config.mouse_follow_threshold,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
 }
