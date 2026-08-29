@@ -716,6 +716,60 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle set-bar-position command
+    if cmd_str == "set-bar-position" {
+        if let Some(position) = json.get("position").and_then(|v| v.as_str()) {
+            if position == "top" || position == "bottom" {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        platform.config.bar.position = position.to_string();
+                        if let Some(ref bar) = platform.bar {
+                            let mon = platform.primary_monitor().copied();
+                            if let Some(mon) = mon {
+                                let bar_height = bar.height;
+                                let bar_width = 9999;
+                                if position == "bottom" {
+                                    let _ = SetWindowPos(
+                                        bar.hwnd,
+                                        HWND_TOPMOST,
+                                        0,
+                                        mon.height() - bar_height,
+                                        bar_width,
+                                        bar_height,
+                                        SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                                    );
+                                } else {
+                                    let _ = SetWindowPos(
+                                        bar.hwnd,
+                                        HWND_TOPMOST,
+                                        0,
+                                        0,
+                                        bar_width,
+                                        bar_height,
+                                        SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                                    );
+                                }
+                            }
+                            let _ = platform.config.save();
+                            return serde_json::json!({
+                                "success": true,
+                                "command": cmd_str,
+                                "message": format!("Bar position set to {}", position),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Usage: {\"command\":\"set-bar-position\",\"position\":\"top\"}",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1594,6 +1648,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "get-layout-presets" => IpcCommand::Single { command: "get-layout-presets".into() },
         "set-workspace-name" => IpcCommand::Single { command: "set-workspace-name".into() },
         "set-wallpaper-monitor" => IpcCommand::Single { command: "set-wallpaper-monitor".into() },
+        "set-bar-position" => IpcCommand::Single { command: "set-bar-position".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.51.0] - 2026-08-29 — IPC Set-Bar-Position Command
+### Added
+- **IPC `set-bar-position` command**: move the status bar to top or bottom at runtime
+- Repositions the bar window using `SetWindowPos`
+- Persists position to `config.toml`
+- Supports values: "top" or "bottom"
+
+### IPC usage
+```
+echo '{"command":"set-bar-position","position":"bottom"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.50.0] - 2026-08-29 — Per-Monitor Wallpaper Support
 ### Added
 - **Per-monitor wallpaper paths**: `wallpapers: Vec<Option<String>>` in Platform
