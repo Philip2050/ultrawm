@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.64.0] - 2026-08-29 — IPC Set-Wallpaper-Image-Monitor Command
+### Added
+- **IPC `set-wallpaper-image-monitor` command**: set an image wallpaper for a specific monitor
+- Stores the wallpaper path in `wallpapers` for persistence
+- Supports bmp, jpg, png, jpeg image formats
+- Falls back to global wallpaper on failure
+
+### IPC usage
+```
+echo '{"command":"set-wallpaper-image-monitor","path":"C:\\wallpaper.jpg","monitor":0}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.63.0] - 2026-08-29 — IPC List-Monitor-Workspaces Command
 ### Added
 - **IPC `list-monitor-workspaces` command**: list workspaces for a specific monitor or all monitors

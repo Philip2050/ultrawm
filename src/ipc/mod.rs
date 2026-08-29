@@ -683,6 +683,60 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle set-wallpaper-image-monitor command
+    if cmd_str == "set-wallpaper-image-monitor" {
+        let path = params.get("path").and_then(|v| v.as_str());
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        if let Some(p) = path {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let monitors = crate::platform::monitor::get_monitors();
+
+                    // Store the wallpaper path for the monitor
+                    let target_mon = monitor_idx.unwrap_or(0);
+                    if target_mon < monitors.len() {
+                        if std::path::Path::new(p).exists() {
+                            platform.wallpapers[target_mon] = Some(p.to_string());
+
+                            // Apply the wallpaper
+                            match crate::platform::wallpaper::apply_wallpaper_image_monitor(p) {
+                                Ok(_) => {
+                                    return serde_json::json!({
+                                        "success": true,
+                                        "monitor": target_mon,
+                                        "path": p,
+                                    });
+                                }
+                                Err(e) => {
+                                    return serde_json::json!({
+                                        "success": false,
+                                        "error": format!("Failed to apply wallpaper: {}", e),
+                                    });
+                                }
+                            }
+                        } else {
+                            return serde_json::json!({
+                                "success": false,
+                                "error": format!("Wallpaper file not found: {}", p),
+                            });
+                        }
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("monitor {} out of range", target_mon),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'path' parameter",
+        });
+    }
+
     // Handle set-wallpaper-monitor command
     if cmd_str == "set-wallpaper-monitor" {
         let monitor_idx = json.get("monitor").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
