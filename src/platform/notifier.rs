@@ -86,14 +86,14 @@ impl Notifier {
             let elapsed = state.created.elapsed();
             if elapsed >= state.duration {
                 // Fade out
-                let fade = state.duration.subsec_millis() as u32;
+                let fade = elapsed - state.duration;
                 let total = 500;
                 if fade >= total {
                     state.alpha = 0;
                     self.update_alpha();
                     return false;
                 }
-                state.alpha = ((1.0 - fade as f32 / total as f32) * 230.0) as u8;
+                state.alpha = ((1.0 - fade.as_millis() as f32 / total as f32) * 230.0) as u8;
                 self.update_alpha();
                 return true;
             }

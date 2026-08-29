@@ -168,6 +168,31 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle notify command with structured input
+    if cmd_str == "notify" {
+        if let Some(message) = json.get("message").and_then(|v| v.as_str()) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    if let Some(ref notifier) = platform.notifier {
+                        notifier.show(message);
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": "Notification shown",
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Notifier not available or missing message",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {

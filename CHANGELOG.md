@@ -2,6 +2,35 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.1.0] - 2026-08-29 — Notification System (Toast Popups)
+### Added
+- **Toast notifications** via existing Notifier infrastructure with animated fade-in/out
+- **`notify` IPC command**: trigger notifications from scripts/CLI with custom messages
+- **Fade-in animation**: notifications fade in over 200ms with smooth alpha blending
+- **Fade-out animation**: notifications fade out over 500ms after 3-second display duration
+- **Auto-positioning**: notifications appear at bottom-right of primary monitor
+- **Notification tick**: `tick_notifier()` called every frame in animation loop
+- **Layered window rendering**: uses UpdateLayeredWindow for smooth transparency
+
+### IPC usage
+```
+echo '{"command":"notify","message":"Hello from UltraWM"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Config
+```toml
+# Notifier created automatically if enabled in config
+# Position: bottom-right corner with 20px margin
+# Size: 300x40px
+# Colors: bg=#1E1E2E, fg=#CDD6F4 (Catppuccin)
+# Duration: 3 seconds display + 500ms fade out
+```
+
+### Changed
+- Fixed fade-out timing calculation to use actual elapsed time instead of subsec_millis
+- Notifier already existed but is now fully wired to IPC and animation loop
+- All `notify` calls will display toast popup in bottom-right corner
+
 ## [10.0.0] - 2026-08-29 — System Info Bar (CPU, Memory, Clock)
 ### Added
 - **CPU usage display** in bar: shows real-time CPU percentage with 1-second refresh
