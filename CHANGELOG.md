@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.46.0] - 2026-08-29 — IPC Cycle-Theme Command
+### Added
+- **IPC `cycle-theme` command**: cycle to the next theme in the theme list
+- Uses `ThemeManager::next_theme()` for theme cycling
+- Persists the new theme to `config.toml`
+- Pairs with `set-theme` for programmatic theme control
+
+### IPC usage
+```
+echo '{"command":"cycle-theme"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.45.0] - 2026-08-29 — IPC Get-Window-Info Command
 ### Added
 - **IPC `get-window-info` command**: returns detailed info about the focused window as JSON

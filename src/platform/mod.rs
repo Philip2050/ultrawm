@@ -3850,6 +3850,14 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "cycle-theme" {
+                    if let Some(theme_mgr) = &mut theme_mgr {
+                        theme_mgr.next_theme();
+                        self.config.theme.default = theme_mgr.current_name().to_string();
+                        let _ = self.config.save();
+                    }
+                    return;
+                }
                 if command.starts_with("set-theme ") {
                     if let Some(theme_name) = command.strip_prefix("set-theme ") {
                         if let Some(theme_mgr) = &mut theme_mgr {

@@ -1459,6 +1459,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "cycle-gap" => IpcCommand::Single { command: "cycle-gap".into() },
         "toggle-snap" => IpcCommand::Single { command: "toggle-snap".into() },
         "get-window-info" => IpcCommand::Single { command: "get-window-info".into() },
+        "cycle-theme" => IpcCommand::Single { command: "cycle-theme".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
