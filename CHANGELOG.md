@@ -2,6 +2,29 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.47.0] - 2026-08-29 — IPC List-Themes Command
+### Added
+- **IPC `list-themes` command**: returns all available theme names as JSON
+- Includes current theme name and total count
+- Themes sourced from `ThemeManager::theme_names()`
+- Useful for theme picker tools and status bars
+
+### IPC usage
+```
+echo '{"command":"list-themes"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "list-themes",
+  "current": "catppuccin-mocha",
+  "themes": ["catppuccin-mocha", "dracula", "nord", "tokyo-night"],
+  "count": 4
+}
+```
+
 ## [10.46.0] - 2026-08-29 — IPC Cycle-Theme Command
 ### Added
 - **IPC `cycle-theme` command**: cycle to the next theme in the theme list

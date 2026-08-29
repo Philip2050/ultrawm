@@ -586,6 +586,32 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle list-themes command
+    if cmd_str == "list-themes" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                if let Some(theme_mgr) = &platform.theme_mgr {
+                    let themes: Vec<String> = theme_mgr.theme_names();
+                    let current = theme_mgr.current_name().to_string();
+                    return serde_json::json!({
+                        "success": true,
+                        "command": "list-themes",
+                        "current": current,
+                        "themes": themes,
+                        "count": themes.len(),
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1460,6 +1486,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "toggle-snap" => IpcCommand::Single { command: "toggle-snap".into() },
         "get-window-info" => IpcCommand::Single { command: "get-window-info".into() },
         "cycle-theme" => IpcCommand::Single { command: "cycle-theme".into() },
+        "list-themes" => IpcCommand::Single { command: "list-themes".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
