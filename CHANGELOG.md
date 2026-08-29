@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.72.0] - 2026-08-29 — IPC Move-Window-To-Workspace Command
+### Added
+- **IPC `move-window-to-workspace` command**: move any window to a specific workspace/monitor
+- Supports `window_id` to target a specific window or `focused:true` for focused window
+- Updates bar workspace indicators automatically
+
+### IPC usage
+```
+echo '{"command":"move-window-to-workspace","window_id":123,"workspace":2,"monitor":0}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"move-window-to-workspace","workspace":1,"focused":true}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.71.0] - 2026-08-29 — IPC Get-Workspace-Names Command
 ### Added
 - **IPC `get-workspace-names` command**: query workspace names for a monitor or all monitors

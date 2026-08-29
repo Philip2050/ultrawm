@@ -2224,6 +2224,89 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle move-window-to-workspace command
+    if cmd_str == "move-window-to-workspace" {
+        let window_id = params.get("window_id").and_then(|v| v.as_u64()).map(|v| v as u64);
+        let workspace_idx = params.get("workspace").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let focused_only = params.get("focused").and_then(|v| v.as_bool()).unwrap_or(false);
+
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &mut *ptr;
+
+                // Determine target window
+                let target_wid = if !focused_only {
+                    window_id
+                } else {
+                    None
+                };
+
+                if let Some(wid) = target_wid {
+                    let hwnd_opt = platform.windows.iter().find(|(_, i)| i.id == wid).map(|(hw, _)| *hw);
+                    if let Some(hwnd_wrapper) = hwnd_opt {
+                        if let Some(ws_idx) = workspace_idx {
+                            let target_mon = monitor_idx.unwrap_or_else(|| {
+                                platform.window_monitors.get(&wid).copied().unwrap_or(0)
+                            });
+                            if target_mon < platform.monitor_workspaces.len() {
+                                if ws_idx < platform.monitor_workspaces[target_mon].grids.len() {
+                                    platform.window_workspaces.insert(wid, ws_idx);
+                                    platform.window_monitors.insert(wid, target_mon);
+                                    platform.refresh_bar_workspaces(target_mon);
+                                    return serde_json::json!({
+                                        "success": true,
+                                        "window_id": wid,
+                                        "workspace": ws_idx,
+                                        "monitor": target_mon,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fall back to focused window
+                if focused_only || window_id.is_none() {
+                    if let Some(hwnd_wrapper) = platform.focused_hwnd {
+                        if let Some(info) = platform.windows.get(&hwnd_wrapper) {
+                            let wid = info.id;
+                            if let Some(ws_idx) = workspace_idx {
+                                let target_mon = monitor_idx.unwrap_or_else(|| {
+                                    platform.window_monitors.get(&wid).copied().unwrap_or(0)
+                                });
+                                if target_mon < platform.monitor_workspaces.len() {
+                                    if ws_idx < platform.monitor_workspaces[target_mon].grids.len() {
+                                        platform.window_workspaces.insert(wid, ws_idx);
+                                        platform.window_monitors.insert(wid, target_mon);
+                                        platform.refresh_bar_workspaces(target_mon);
+                                        return serde_json::json!({
+                                            "success": true,
+                                            "window_id": wid,
+                                            "workspace": ws_idx,
+                                            "monitor": target_mon,
+                                            "note": "applied to focused window",
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return serde_json::json!({
+                    "success": false,
+                    "error": "no window specified or focused",
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle get-session command
     if cmd_str == "get-session" {
         unsafe {
