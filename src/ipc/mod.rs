@@ -135,11 +135,24 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
                 if !ptr.is_null() {
                     let platform = &mut *ptr;
-                    let monitor_idx = platform.focused_hwnd
-                        .and_then(|hwnd| platform.window_for_hwnd(hwnd.0))
-                        .and_then(|info| platform.window_monitors.get(&info.id))
-                        .copied()
-                        .unwrap_or(0);
+                    let monitor_idx = json.get("monitor")
+                        .and_then(|v| v.as_u64())
+                        .map(|m| m as usize)
+                        .unwrap_or_else(|| {
+                            platform.focused_hwnd
+                                .and_then(|hwnd| platform.window_for_hwnd(hwnd.0))
+                                .and_then(|info| platform.window_monitors.get(&info.id))
+                                .copied()
+                                .unwrap_or(0)
+                        });
+
+                    if monitor_idx >= platform.monitor_workspaces.len() {
+                        return serde_json::json!({
+                            "success": false,
+                            "command": cmd_str,
+                            "message": format!("Invalid monitor index: {} ({} monitors)", monitor_idx, platform.monitor_workspaces.len()),
+                        });
+                    }
 
                     let ws_count = platform.monitor_workspaces[monitor_idx].grids.len();
                     let target_ws = (ws_num as usize - 1).min(ws_count - 1);
@@ -149,13 +162,13 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
                         return serde_json::json!({
                             "success": true,
                             "command": cmd_str,
-                            "message": format!("Switching to workspace {} with animation", ws_num),
+                            "message": format!("Switching monitor {} to workspace {} with animation", monitor_idx + 1, ws_num),
                         });
                     } else {
                         return serde_json::json!({
                             "success": false,
                             "command": cmd_str,
-                            "message": format!("Already on workspace {}", ws_num),
+                            "message": format!("Monitor {} already on workspace {}", monitor_idx + 1, ws_num),
                         });
                     }
                 }
@@ -542,29 +555,66 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
             });
         }
         "get-workspaces" => {
-            let (count, names) = unsafe {
+            let (monitor_idx, workspaces) = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
                 if !ptr.is_null() {
                     let platform = &*ptr;
-                    let ws_count = platform.monitor_workspaces[0].grids.len();
-                    let ws_names = &platform.config.layout.workspace_names;
-                    let names: Vec<String> = if ws_names.is_empty() {
-                        (1..=ws_count).map(|i| i.to_string()).collect()
+                    let mon_idx = platform.focused_hwnd
+                        .and_then(|hwnd| platform.window_for_hwnd(hwnd.0))
+                        .and_then(|info| platform.window_monitors.get(&info.id))
+                        .copied()
+                        .unwrap_or(0);
+                    let mws = &platform.monitor_workspaces[mon_idx];
+                    let ws_count = mws.grids.len();
+                    let per_mon = &platform.config.layout.per_monitor_workspace_names;
+                    let ws_names: Vec<String> = if let Some(names) = per_mon.get(mon_idx) {
+                        if !names.is_empty() {
+                            names.iter().take(ws_count).cloned().collect()
+                        } else {
+                            let global = &platform.config.layout.workspace_names;
+                            if global.is_empty() {
+                                (1..=ws_count).map(|i| i.to_string()).collect()
+                            } else {
+                                global.iter().take(ws_count).cloned().collect()
+                            }
+                        }
                     } else {
-                        ws_names.iter().take(ws_count).cloned().collect()
+                        let global = &platform.config.layout.workspace_names;
+                        if global.is_empty() {
+                            (1..=ws_count).map(|i| i.to_string()).collect()
+                        } else {
+                            global.iter().take(ws_count).cloned().collect()
+                        }
                     };
-                    (ws_count, names)
+                    let counts = platform.window_count_per_workspace();
+                    let mut ws_data = Vec::new();
+                    for (i, name) in ws_names.iter().enumerate() {
+                        ws_data.push(serde_json::json!({
+                            "index": i,
+                            "name": name,
+                            "window_count": counts.get(i).copied().unwrap_or(0),
+                            "active": i == mws.current,
+                        }));
+                    }
+                    let mon_count = platform.monitors.len();
+                    (mon_count, serde_json::json!({
+                        "monitor_count": mon_count,
+                        "workspaces": ws_data,
+                        "current": mws.current,
+                    }))
                 } else {
-                    (4, vec!["1".into(), "2".into(), "3".into(), "4".into()])
+                    (0, serde_json::json!({
+                        "monitor_count": 0,
+                        "workspaces": Vec::new(),
+                        "current": 0,
+                    }))
                 }
             };
             return serde_json::json!({
                 "success": true,
                 "command": cmd_str,
-                "data": serde_json::json!({
-                    "count": count,
-                    "names": names,
-                }),
+                "data": workspaces,
+                "monitors": monitor_idx,
             });
         }
         "get-managed-windows" => {

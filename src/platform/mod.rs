@@ -700,7 +700,8 @@ impl Platform {
                             // Update bar with workspace names
                             if let Some(ref bar) = self.bar {
                                 let names = self.workspace_names(mon);
-                                bar.set_workspaces(names, ws);
+                                let counts = self.window_count_per_workspace(mon);
+                                bar.set_workspaces(names, ws, counts);
                             }
                             // Show non-sticky windows on new workspace
                             for (_, info) in &self.windows {
@@ -1574,7 +1575,8 @@ impl Platform {
             if let (Some(mon_idx), Some(ref bar)) = (new_mon, self.bar.as_ref()) {
                 let names = self.workspace_names(mon_idx);
                 let current = self.monitor_workspaces[mon_idx].current;
-                bar.set_workspaces(names, current);
+                let counts = self.window_count_per_workspace(mon_idx);
+                bar.set_workspaces(names, current, counts);
             }
         }
     }
@@ -2159,13 +2161,34 @@ impl Platform {
         }
     }
 
+    pub fn window_count_per_workspace(&self, mon_idx: usize) -> Vec<usize> {
+        let count = self.monitor_workspaces[mon_idx].grids.len();
+        let mut counts = vec![0usize; count];
+        for (&wid, &ws) in &self.window_workspaces {
+            if ws < count {
+                if let Some(&wm) = self.window_monitors.get(&wid) {
+                    if wm == mon_idx {
+                        counts[ws] += 1;
+                    }
+                }
+            }
+        }
+        counts
+    }
+
     pub fn workspace_names(&self, mon_idx: usize) -> Vec<String> {
         let count = self.monitor_workspaces[mon_idx].grids.len();
-        let names = &self.config.layout.workspace_names;
-        if names.is_empty() {
+        let per_mon = &self.config.layout.per_monitor_workspace_names;
+        if let Some(names) = per_mon.get(mon_idx) {
+            if !names.is_empty() {
+                return names.iter().take(count).cloned().collect();
+            }
+        }
+        let global = &self.config.layout.workspace_names;
+        if global.is_empty() {
             (0..count).map(|i| (i + 1).to_string()).collect()
         } else {
-            names.iter().take(count).cloned().collect()
+            global.iter().take(count).cloned().collect()
         }
     }
 
@@ -2237,7 +2260,8 @@ impl Platform {
                 .copied()
                 .unwrap_or(0);
             let names = self.workspace_names(mon_idx);
-            bar.set_workspaces(names, self.monitor_workspaces[mon_idx].current);
+            let counts = self.window_count_per_workspace(mon_idx);
+            bar.set_workspaces(names, self.monitor_workspaces[mon_idx].current, counts);
         }
     }
 

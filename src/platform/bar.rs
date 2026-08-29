@@ -31,6 +31,7 @@ struct BarState {
     show_cpu: bool,
     show_memory: bool,
     workspace_count: usize,
+    window_counts: Vec<usize>, // window count per workspace
     snap_mode: bool,
     reload_flash: u32, // frames remaining for green reload flash
     resize_flash: u32, // frames remaining for resize size indicator
@@ -108,6 +109,7 @@ impl AppBar {
                 show_cpu,
                 show_memory,
                 workspace_count,
+                window_counts: vec![0; workspace_count],
                 snap_mode: false,
                 reload_flash: 0,
                 resize_flash: 0,
@@ -131,12 +133,13 @@ impl AppBar {
         }
     }
 
-    pub fn set_workspaces(&self, workspaces: Vec<String>, active: usize) {
+    pub fn set_workspaces(&self, workspaces: Vec<String>, active: usize, window_counts: Vec<usize>) {
         unsafe {
             let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
             if !ptr.is_null() {
                 (*ptr).workspaces = workspaces;
                 (*ptr).active_workspace = active;
+                (*ptr).window_counts = window_counts;
                 self.update();
             }
         }
@@ -334,29 +337,34 @@ unsafe extern "system" fn bar_wnd_proc(
             SetBkMode(hdc, TRANSPARENT);
             let _ = SetTextColor(hdc, COLORREF(state.fg_color));
 
-            // Draw workspace indicators
+            // Draw workspace indicators with window counts
             let mut x = 10i32;
             if state.show_workspaces {
                 for (i, ws) in state.workspaces.iter().enumerate() {
                     if i >= state.workspace_count { break; }
-                    let ws_text = format!(" {} ", ws);
+                    let count = state.window_counts.get(i).copied().unwrap_or(0);
+                    let ws_text = if count > 0 {
+                        format!(" {} ({}) ", ws, count)
+                    } else {
+                        format!(" {} ", ws)
+                    };
                     let ws_w: Vec<u16> = ws_text.encode_utf16().chain(Some(0)).collect();
 
                     if i == state.active_workspace {
                         let _ = SetTextColor(hdc, COLORREF(state.bg_color));
                         RoundRect(
                             hdc,
-                            x, 4, x + 36, 26,
+                            x, 4, x + 44, 26,
                             state.corner_radius, state.corner_radius,
                         );
                         let active_brush = CreateSolidBrush(COLORREF(state.fg_color));
-                        let _ = FillRect(hdc, &RECT { left: x + 1, top: 5, right: x + 35, bottom: 25 }, active_brush);
+                        let _ = FillRect(hdc, &RECT { left: x + 1, top: 5, right: x + 43, bottom: 25 }, active_brush);
                         let _ = DeleteObject(active_brush);
                     } else {
                         let _ = SetTextColor(hdc, COLORREF(state.fg_color));
                         RoundRect(
                             hdc,
-                            x, 4, x + 36, 26,
+                            x, 4, x + 44, 26,
                             state.corner_radius, state.corner_radius,
                         );
                     }
@@ -364,7 +372,7 @@ unsafe extern "system" fn bar_wnd_proc(
                     let mut ws_rect = RECT {
                         left: x,
                         top: 2,
-                        right: x + 40,
+                        right: x + 44,
                         bottom: 28,
                     };
                     let _ = DrawTextW(
@@ -374,7 +382,7 @@ unsafe extern "system" fn bar_wnd_proc(
                         DT_VCENTER | DT_SINGLELINE | DT_CENTER,
                     );
 
-                    x += 40;
+                    x += 48;
                 }
                 x += 10;
             }
@@ -591,8 +599,8 @@ unsafe extern "system" fn bar_wnd_proc(
                 if state.show_workspaces {
                     for (i, _ws) in state.workspaces.iter().enumerate() {
                         if i >= state.workspace_count { break; }
-                        let ws_left = 10i32 + (i * 40) as i32;
-                        let ws_right = ws_left + 36;
+                        let ws_left = 10i32 + (i * 48) as i32;
+                        let ws_right = ws_left + 44;
                         if x_pos >= ws_left && x_pos < ws_right {
                             // Post workspace switch to platform message loop
                             let msg = WM_BAR_WORKSPACE_CLICK;

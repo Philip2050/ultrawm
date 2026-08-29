@@ -2,6 +2,22 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.10.0] - 2026-08-29 — Per-Monitor Workspace Switching & Window Counts
+### Added
+- **Per-monitor workspace switching**: IPC `switch-workspace` supports optional `monitor` parameter for independent monitor workspace switching
+- **`window_count_per_workspace()` method**: returns window counts per workspace for each monitor
+- **Window counts in bar**: workspace buttons now show "name (count)" when windows exist
+- **Widened workspace buttons**: expanded from 36px to 44px with 48px spacing for better readability
+
+### IPC enhancements
+- `get-workspaces` now returns per-monitor data with workspace names, window counts, and active status
+- `switch-workspace` accepts optional `{"monitor": N}` parameter for targeted monitor switching
+- When no monitor specified, workspace switch applies to the focused window's monitor
+
+### Per-monitor workspace names
+- `per_monitor_workspace_names: Vec<Vec<String>>` in LayoutConfig for monitor-specific workspace labels
+- Falls back to global `workspace_names`, then numbered defaults if per-monitor names are empty
+
 ## [10.9.0] - 2026-08-29 — Monocle Layout Mode
 ### Added
 - **Monocle layout mode**: focused window takes the full viewport, other windows hidden

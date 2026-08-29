@@ -66,6 +66,7 @@ pub struct LayoutConfig {
     pub spring_damping: f32,
     pub workspace_count: usize,
     pub workspace_names: Vec<String>,
+    pub per_monitor_workspace_names: Vec<Vec<String>>, // per-monitor workspace names
     pub default_float_width: u32,
     pub default_float_height: u32,
     pub default_split_dir: String,
@@ -181,6 +182,7 @@ impl Default for Config {
                 spring_damping: 20.0,
                 workspace_count: 4,
                 workspace_names: vec![],
+                per_monitor_workspace_names: vec![],
                 default_float_width: 800,
                 default_float_height: 600,
                 default_split_dir: "vertical".into(),
