@@ -2224,6 +2224,40 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-session command
+    if cmd_str == "get-session" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let session = platform.session.as_ref();
+                let has_session = session.is_some();
+                let window_count = platform.windows.len();
+                let monitor_count = platform.monitors.len();
+
+                let session_data = session.map(|s| {
+                    serde_json::json!({
+                        "window_count": s.windows.len(),
+                        "workspace_count": s.workspace_count,
+                        "timestamp": s.timestamp,
+                    })
+                }).unwrap_or_else(|| serde_json::json!(null));
+
+                return serde_json::json!({
+                    "success": true,
+                    "has_session": has_session,
+                    "current_windows": window_count,
+                    "monitor_count": monitor_count,
+                    "session": session_data,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle list-monitor-workspaces command
     if cmd_str == "list-monitor-workspaces" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

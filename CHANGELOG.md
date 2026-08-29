@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.70.0] - 2026-08-29 — IPC Get-Session Command
+### Added
+- **IPC `get-session` command**: query current session state
+- Returns session info including saved window count, workspace count, and timestamp
+- Shows current window count and monitor count alongside session data
+
+### IPC usage
+```
+echo '{"command":"get-session"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.69.0] - 2026-08-29 — IPC List-Workspaces Command Enhancement
 ### Added
 - **Enhanced `list-workspaces` command**: now lists all workspaces across all monitors
