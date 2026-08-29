@@ -27,6 +27,12 @@ pub struct WindowEntry {
     pub title: String,
     pub exe: String,
     pub hwnd: HWND,
+    pub workspace: usize,
+    pub monitor: usize,
+    pub floating: bool,
+    pub minimized: bool,
+    pub always_on_top: bool,
+    pub opacity: Option<f32>,
 }
 
 impl WindowSearch {
@@ -90,13 +96,19 @@ impl WindowSearch {
     pub fn populate(&mut self, platform: &crate::platform::Platform) {
         self.windows.clear();
         for (hwnd_wrapper, info) in &platform.windows {
-            if info.visible && !info.minimized {
-                let title = info.title.clone();
-                let exe = info.exe.clone();
+            if info.visible {
+                let ws = platform.window_workspaces.get(&info.id).copied().unwrap_or(0);
+                let mon = platform.window_monitors.get(&info.id).copied().unwrap_or(0);
                 self.windows.push(WindowEntry {
-                    title,
-                    exe,
+                    title: info.title.clone(),
+                    exe: info.exe.clone(),
                     hwnd: hwnd_wrapper.0,
+                    workspace: ws,
+                    monitor: mon,
+                    floating: info.floating,
+                    minimized: info.minimized,
+                    always_on_top: info.always_on_top,
+                    opacity: info.opacity,
                 });
             }
         }
@@ -108,7 +120,11 @@ impl WindowSearch {
         unsafe {
             let _ = SendMessageW(self.list_hwnd, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
             for win in &self.windows {
-                let text = format!("{} ({})", win.title, win.exe);
+                let tag = if win.floating { "F" } else { "T" };
+                let min = if win.minimized { " [min]" } else { "" };
+                let aot = if win.always_on_top { " [AOT]" } else { "" };
+                let op = if let Some(o) = win.opacity { format!(" {}%", (o * 100.0) as i32) } else { String::new() };
+                let text = format!("{} | M{} W{} {}{}{}{} | {} ({})", tag, win.monitor + 1, win.workspace + 1, min, aot, op, win.title, win.exe);
                 let text_w: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
                 let _ = SendMessageW(
                     self.list_hwnd,
@@ -128,7 +144,11 @@ impl WindowSearch {
                 if win.title.to_lowercase().contains(&q)
                     || win.exe.to_lowercase().contains(&q)
                 {
-                    let text = format!("{} ({})", win.title, win.exe);
+                    let tag = if win.floating { "F" } else { "T" };
+                    let min = if win.minimized { " [min]" } else { "" };
+                    let aot = if win.always_on_top { " [AOT]" } else { "" };
+                    let op = if let Some(o) = win.opacity { format!(" {}%", (o * 100.0) as i32) } else { String::new() };
+                    let text = format!("{} | M{} W{} {}{}{}{} | {} ({})", tag, win.monitor + 1, win.workspace + 1, min, aot, op, win.title, win.exe);
                     let text_w: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
                     let _ = SendMessageW(
                         self.list_hwnd,

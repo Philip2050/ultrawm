@@ -2,6 +2,29 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.15.0] - 2026-08-29 — Window Search with Rich Metadata & Filters
+### Added
+- **Rich WindowEntry**: search results now include workspace, monitor, floating, minimized, always-on-top, opacity
+- **Visual search tags**: shows F/T (floating/tiled), M/W (monitor/workspace), [min], [AOT], opacity%
+- **IPC `search-windows` command**: search managed windows from scripts with optional filters
+- **Workspace filter**: `{"query":"chrome","workspace":2}` — only search workspace 2
+- **Monitor filter**: `{"query":"","monitor":0}` — only search primary monitor
+- **Floating filter**: `{"query":"","floating":true}` — only floating windows
+- **Minimized filter**: `{"query":"","minimized":true}` — only minimized windows
+- **All-managed visibility**: search includes ALL visible windows (including minimized if filtered)
+
+### Search result format
+```
+F | M1 W2 [min] [AOT] 75% | Google Chrome (chrome.exe)
+T | M2 W1 | Windows Terminal (WindowsTerminal.exe)
+```
+
+### IPC usage
+```
+echo '{"command":"search-windows","query":"chrome"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"search-windows","query":"","workspace":0,"floating":true}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.14.0] - 2026-08-29 — Layout Presets with Save & IPC
 ### Added
 - **`save_layout_preset()`**: save current tiling layout as a named preset

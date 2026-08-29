@@ -814,6 +814,67 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "data": serde_json::Value::Array(managed),
             });
         }
+        "search-windows" => {
+            let query = json.get("query").and_then(|v| v.as_str()).unwrap_or("");
+            let filter_workspace = json.get("workspace").and_then(|v| v.as_u64()).map(|u| u as usize);
+            let filter_monitor = json.get("monitor").and_then(|v| v.as_u64()).map(|u| u as usize);
+            let filter_floating = json.get("floating").and_then(|v| v.as_bool());
+            let filter_minimized = json.get("minimized").and_then(|v| v.as_bool());
+
+            let results = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let q = query.to_lowercase();
+                    let mut matches = Vec::new();
+                    for (hwnd_wrapper, info) in &platform.windows {
+                        if !info.visible { continue; }
+                        if let Some(ws) = filter_workspace {
+                            let win_ws = platform.window_workspaces.get(&info.id).copied().unwrap_or(0);
+                            if win_ws != ws { continue; }
+                        }
+                        if let Some(mon) = filter_monitor {
+                            let win_mon = platform.window_monitors.get(&info.id).copied().unwrap_or(0);
+                            if win_mon != mon { continue; }
+                        }
+                        if let Some(f) = filter_floating {
+                            if info.floating != f { continue; }
+                        }
+                        if let Some(m) = filter_minimized {
+                            if info.minimized != m { continue; }
+                        }
+                        if !q.is_empty() && !info.title.to_lowercase().contains(&q) && !info.exe.to_lowercase().contains(&q) {
+                            continue;
+                        }
+                        let ws = platform.window_workspaces.get(&info.id).copied().unwrap_or(0);
+                        let mon = platform.window_monitors.get(&info.id).copied().unwrap_or(0);
+                        matches.push(serde_json::json!({
+                            "hwnd": hwnd_wrapper.0 .0 as usize,
+                            "title": info.title,
+                            "exe": info.exe,
+                            "workspace": ws,
+                            "monitor": mon,
+                            "floating": info.floating,
+                            "minimized": info.minimized,
+                            "always_on_top": info.always_on_top,
+                            "opacity": info.opacity,
+                        }));
+                    }
+                    matches
+                } else {
+                    Vec::new()
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": {
+                    "query": query,
+                    "count": results.len(),
+                    "windows": results,
+                },
+            });
+        }
         "list-rules" => {
             let rules = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;
