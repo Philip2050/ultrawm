@@ -2,6 +2,36 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.6.0] - 2026-08-29 — Keybind Help Overlay
+### Added
+- **Help overlay**: displays all available keyboard shortcuts in a semi-transparent window
+- `HelpOverlay` struct with custom-drawn keybind list
+- **Keybind display**: shows action name and configured key (e.g., "Focus left: Left")
+- **Grouped categories**: focus/move, pan/resize, actions, UI sections
+- **Esc to close**: dismiss help overlay with Escape key
+- **Auto-dismiss on focus loss**: closes when clicking away
+- **`toggle_help()` method** on Platform to show/hide help overlay
+- **Centered positioning**: 700x500 window centered on primary monitor
+- **`vk_to_string()` helper**: converts VK codes to human-readable names (Left, Right, A-Z, etc.)
+- **`get_primary_monitor_size()` helper** for centering
+
+### Keybind
+```
+Win+/ — toggle keybind help overlay
+```
+
+### Implementation
+- HelpOverlay uses layered window with 240 alpha transparency
+- Reads keybinds from Platform at display time (reflects current config)
+- Custom WM_PAINT draws all keybinds organized by category
+- Footer text: "Press Esc to close"
+- Dark theme styling matching Catppuccin Mocha palette
+
+### Changed
+- Keyboard hook dispatches "/" key (0xBF) to toggle help
+- Help overlay reuses launcher/search overlay pattern
+- Keybinds config fully documented in help overlay
+
 ## [10.5.0] - 2026-08-29 — Window Search Overlay
 ### Added
 - **Window search overlay**: quickly find and focus windows by title or executable name

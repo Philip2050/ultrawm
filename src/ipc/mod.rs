@@ -678,6 +678,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "restore-all-tray" => IpcCommand::Single { command: "restore-all-tray".into() },
         "screenshot" => IpcCommand::Single { command: "screenshot".into() },
         "window-search" => IpcCommand::Single { command: "window-search".into() },
+        "help" => IpcCommand::Single { command: "help".into() },
         "snap-layout" => IpcCommand::Single { command: "snap-layout".into() },
         "snap-custom" => {
             return serde_json::json!({

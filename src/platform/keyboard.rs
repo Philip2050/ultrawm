@@ -189,6 +189,11 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.show_window_search();
             return LRESULT(1);
         }
+        x if x == 0xBF => {
+            // / — help overlay (Win+/)
+            platform.toggle_help();
+            return LRESULT(1);
+        }
         x if x == kb.sticky => {
             platform.toggle_sticky();
             return LRESULT(1);

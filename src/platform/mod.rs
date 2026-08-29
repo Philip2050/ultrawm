@@ -29,6 +29,7 @@ pub use theme_picker::ThemePicker;
 pub use blur::enable_blur;
 pub use scratchpad::ScratchpadManager;
 pub use window_search::WindowSearch;
+pub use help_overlay::HelpOverlay;
 
 mod window;
 pub mod keyboard;
@@ -41,6 +42,7 @@ mod theme_picker;
 mod blur;
 mod scratchpad;
 mod window_search;
+mod help_overlay;
 mod wallpaper;
 mod keybinds;
 
@@ -3545,6 +3547,18 @@ impl Platform {
                 if let Some(ref mut search) = window_search::SEARCH_PTR.as_mut() {
                     search.populate(self);
                 }
+            }
+        }
+    }
+
+    pub fn toggle_help(&mut self) {
+        unsafe {
+            if !help_overlay::HELP_PTR.is_null() {
+                // Dismiss existing help
+                drop(Box::from_raw(help_overlay::HELP_PTR));
+                help_overlay::HELP_PTR = std::ptr::null_mut();
+            } else if let Err(e) = HelpOverlay::create() {
+                warn!("Help overlay creation failed: {}", e);
             }
         }
     }
