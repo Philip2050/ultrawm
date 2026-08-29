@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.29.0] - 2026-08-29 — Floating Window Z-Order Management
+### Added
+- **Floating window bring-to-front**: focused floating windows automatically get HWND_TOPMOST via SetWindowPos
+- **Z-order on focus change**: `on_focus_changed()` calls SetWindowPos(HWND_TOP) for floating windows
+- Floating windows no longer get stuck behind tiling windows when focused
+- Clicking a floating window now properly brings it to the front
+
+### IPC usage
+```
+echo '{"command":"bring-to-front"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.28.0] - 2026-08-29 — IPC Toggle-Bar Command
 ### Added
 - **IPC `toggle-bar` command**: show/hide the status bar at runtime

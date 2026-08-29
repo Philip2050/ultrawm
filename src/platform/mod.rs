@@ -1597,6 +1597,15 @@ impl Platform {
 
         self.focused_hwnd = Some(HWnd(hwnd));
 
+        // Bring floating windows to top of z-order when focused
+        if let Some(info) = self.windows.get(&HWnd(hwnd)) {
+            if info.floating {
+                unsafe {
+                    let _ = SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                }
+            }
+        }
+
         let wid = self.windows.get(&HWnd(hwnd)).map(|i| i.id).unwrap_or(0);
         if wid > 0 {
             // Monocle mode: show focused window, hide others
@@ -3771,6 +3780,18 @@ impl Platform {
                 }
                 if command == "toggle-bar" {
                     self.toggle_bar_visibility();
+                    return;
+                }
+                if command == "bring-to-front" {
+                    if let Some(hwnd) = self.focused_hwnd {
+                        if let Some(info) = self.windows.get(&hwnd) {
+                            if info.floating {
+                                unsafe {
+                                    let _ = SetWindowPos(hwnd.0, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                                }
+                            }
+                        }
+                    }
                     return;
                 }
                 match command.as_str() {
