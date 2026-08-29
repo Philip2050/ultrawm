@@ -3307,16 +3307,35 @@ impl Platform {
                     if let Some(info) = self.windows.values().find(|i| i.id == wid) {
                         let hwnd_key = HWnd(info.hwnd);
                         let z_order = z_order_map.get(&(hwnd_key.0 .0 as usize)).copied().unwrap_or(usize::MAX);
+                        // Get actual window position/size if available
+                        let (wx, wy, ww, wh) = if info.floating {
+                            (info.float_x, info.float_y, info.float_w, info.float_h)
+                        } else {
+                            // For tiled windows, save the current rect
+                            if let Ok(rect) = get_window_rect(info.hwnd) {
+                                (Some(rect.0), Some(rect.1), Some(rect.2), Some(rect.3))
+                            } else {
+                                (None, None, None, None)
+                            }
+                        };
+
+                        let monitor_idx = self.window_monitors.get(&wid).copied().unwrap_or(0);
+
                         ws_windows.push(crate::session::SessionWindowState {
                             exe: info.exe.clone(),
                             cell,
                             floating: info.floating,
                             workspace: mws.current,
+                            monitor: monitor_idx,
                             opacity: info.opacity,
                             sticky: info.sticky,
                             maximized: info.maximized,
                             always_on_top: info.always_on_top,
                             z_order,
+                            x: wx,
+                            y: wy,
+                            w: ww,
+                            h: wh,
                             float_x: info.float_x,
                             float_y: info.float_y,
                             float_w: info.float_w.map(|w| w as i32),
@@ -3335,16 +3354,29 @@ impl Platform {
                                 if mon_idx == self.monitor_workspaces.iter().position(|m| m.monitor.handle == mws.monitor.handle).unwrap_or(usize::MAX) {
                                     let hwnd_key = HWnd(info.hwnd);
                                     let z_order = z_order_map.get(&(hwnd_key.0 .0 as usize)).copied().unwrap_or(usize::MAX);
+                                    let (fx, fy, fw, fh) = if let Ok(rect) = get_window_rect(info.hwnd) {
+                                        (Some(rect.0), Some(rect.1), Some(rect.2), Some(rect.3))
+                                    } else {
+                                        (info.float_x, info.float_y, info.float_w, info.float_h)
+                                    };
+
+                                    let monitor_idx = self.window_monitors.get(&info.id).copied().unwrap_or(0);
+
                                     ws_windows.push(crate::session::SessionWindowState {
                                         exe: info.exe.clone(),
                                         cell: crate::layout::Cell::new(0, 0),
                                         floating: true,
                                         workspace: mws.current,
+                                        monitor: monitor_idx,
                                         opacity: info.opacity,
                                         sticky: info.sticky,
                                         maximized: info.maximized,
                                         always_on_top: info.always_on_top,
                                         z_order,
+                                        x: fx,
+                                        y: fy,
+                                        w: fw,
+                                        h: fh,
                                         float_x: info.float_x,
                                         float_y: info.float_y,
                                         float_w: info.float_w.map(|w| w as i32),
@@ -3832,6 +3864,17 @@ fn dim_color(color: u32, factor: f32) -> u32 {
     let g = (((color >> 8) & 0xFF) as f32 * factor) as u32;
     let b = (((color >> 16) & 0xFF) as f32 * factor) as u32;
     (b << 16) | ((g & 0xFF) << 8) | (r & 0xFF)
+}
+
+fn get_window_rect(hwnd: HWND) -> anyhow::Result<(i32, i32, i32, i32)> {
+    unsafe {
+        let mut rect = RECT::default();
+        if GetWindowRect(hwnd, &mut rect).is_ok() {
+            Ok((rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top))
+        } else {
+            Err(anyhow::anyhow!("Failed to get window rect"))
+        }
+    }
 }
 
 fn enable_dwm_shadow(hwnd: HWND) {

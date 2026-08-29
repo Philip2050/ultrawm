@@ -2,6 +2,45 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.2.0] - 2026-08-29 — Enhanced Session Restore
+### Added
+- **Monitor assignment per window**: session now saves which monitor each window was on
+- **Window position/size restore**: saves actual window rect (x, y, w, h) for both tiled and floating windows
+- **`monitor` field** in `SessionWindowState` for per-window monitor tracking
+- **`x, y, w, h` fields** in `SessionWindowState` for window geometry
+- **`get_window_rect()` helper** to capture current window position/size via GetWindowRect
+- Session restore now places windows back on their original monitors
+- Session restore preserves exact window sizes, not just cell positions
+
+### Changed
+- Session file format upgraded (version 2+)
+- Tiled windows save their current rect when session is saved
+- Floating windows save their actual rect, falling back to float_x/y/w/h
+- Monitor index saved for each window to support multi-monitor setups
+- Session restore reads monitor field to place windows correctly
+
+### Session file format
+```json
+{
+  "version": 2,
+  "monitors": [
+    {
+      "grids": [...],
+      "current": 0,
+      "windows": [
+        {
+          "exe": "notepad.exe",
+          "monitor": 0,
+          "x": 100, "y": 200, "w": 800, "h": 600,
+          "floating": false,
+          ...
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## [10.1.0] - 2026-08-29 — Notification System (Toast Popups)
 ### Added
 - **Toast notifications** via existing Notifier infrastructure with animated fade-in/out
