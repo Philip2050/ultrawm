@@ -141,6 +141,36 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.toggle_sticky();
             return LRESULT(1);
         }
+        x if x == kb.swap_windows => {
+            if let Some(src) = platform.focused_hwnd {
+                let grid = platform.current_grid();
+                let src_id = platform.windows.get(&src).map(|i| i.id);
+                if let Some(src_id) = src_id {
+                    if let Some(&tgt_id) = grid.windows.get(1) {
+                        if let Some(tgt_hwnd) = platform.windows.iter().find(|(_, i)| i.id == tgt_id).map(|(hw, _)| *hw) {
+                            platform.swap_windows(src, tgt_hwnd);
+                        }
+                    }
+                }
+            }
+            return LRESULT(1);
+        }
+        x if x == kb.toggle_bar => {
+            platform.toggle_bar_visibility();
+            return LRESULT(1);
+        }
+        x if x == kb.bring_to_front => {
+            if let Some(hwnd) = platform.focused_hwnd {
+                if let Some(info) = platform.windows.get(&hwnd) {
+                    if info.floating {
+                        unsafe {
+                            let _ = SetWindowPos(hwnd.0, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                        }
+                    }
+                }
+            }
+            return LRESULT(1);
+        }
         x if x == kb.theme_next => {
             if alt {
                 if shift {

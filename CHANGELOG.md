@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.33.0] - 2026-08-29 — Keybinds for Swap, Toggle Bar, Bring to Front
+### Added
+- **`swap_windows` keybind** (default: Win+S): swaps focused window with next tiling window
+- **`toggle_bar` keybind** (default: Win+B): shows/hides the status bar
+- **`bring_to_front` keybind** (default: Win+.): brings focused floating window to front of z-order
+- Keybinds use same IPC commands: `swap-windows`, `toggle-bar`, `bring-to-front`
+- Consistent behavior between keybind and IPC triggers
+
+### Default keybinds
+- Win+S — swap focused window with next
+- Win+B — toggle bar visibility
+- Win+. — bring floating window to front
+
 ## [10.32.0] - 2026-08-29 — Per-App Border Width from Window Rules
 ### Added
 - **`border_width` field in WindowRule**: rules can set custom border width per app
