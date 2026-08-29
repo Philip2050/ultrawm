@@ -198,6 +198,15 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("missing 'rules' array field".into()), data: None };
     }
 
+    // Handle layout-preset with name parameter
+    if cmd_str == "layout-preset" {
+        if let Some(name) = json.get("name").and_then(|v| v.as_str()) {
+            let _ = tx.send(crate::ipc::IpcCommand::Single { command: format!("layout-preset:{}", name) });
+            return IpcResponse { success: true, message: Some(format!("applying preset '{}'", name)), data: None };
+        }
+        return IpcResponse { success: false, message: Some("missing 'name' field. Use: {\"command\":\"layout-preset\",\"name\":\"my-preset\"}".into()), data: None };
+    }
+
     let result = process_single_command(cmd_str, tx);
     if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         IpcResponse { success: true, message: Some("ok".into()), data: None }
@@ -562,6 +571,14 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "layout-rows" => IpcCommand::Single { command: "layout-rows".into() },
         "layout-master" => IpcCommand::Single { command: "layout-master".into() },
         "layout-fibonacci" => IpcCommand::Single { command: "layout-fibonacci".into() },
+        "layout-preset" => {
+            // layout-preset requires a name parameter; handled via channel with name appended
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "error": "layout-preset requires a name parameter. Use: {\"command\":\"layout-preset\",\"name\":\"my-preset\"}",
+            });
+        }
         "set-workspace-count" => IpcCommand::Single { command: "set-workspace-count".into() },
         "set-window-opacity" => IpcCommand::Single { command: "set-window-opacity".into() },
         "increase-opacity" => IpcCommand::Single { command: "increase-opacity".into() },

@@ -2227,6 +2227,91 @@ impl Platform {
         info!("Layout preset: fibonacci ({} cols)", cols);
     }
 
+    pub fn apply_layout_preset(&mut self, name: &str) {
+        let preset = match self.config.layout.layout_presets.iter().find(|p| p.name == name) {
+            Some(p) => p,
+            None => {
+                warn!("Layout preset not found: {}", name);
+                return;
+            }
+        };
+        let wids = self.collect_visible_wids();
+        if wids.is_empty() { return; }
+        let grid = self.current_grid();
+
+        match preset.kind.as_str() {
+            "grid" => {
+                let cols = preset.cols.unwrap_or(2).max(1) as usize;
+                grid.layout_mode = crate::layout::LayoutMode::Grid;
+                grid.snap_layout(&wids, cols, 1);
+                info!("Layout preset '{}': grid {}x1", name, cols);
+            }
+            "columns" => {
+                let n = preset.cols.unwrap_or(2).max(1) as usize;
+                grid.layout_mode = crate::layout::LayoutMode::Grid;
+                grid.snap_layout(&wids, n, 1);
+                info!("Layout preset '{}': columns ({})", name, n);
+            }
+            "rows" => {
+                let n = preset.rows.unwrap_or(2).max(1) as usize;
+                grid.layout_mode = crate::layout::LayoutMode::Grid;
+                grid.snap_layout(&wids, 1, n);
+                info!("Layout preset '{}': rows ({})", name, n);
+            }
+            "master" => {
+                grid.layout_mode = crate::layout::LayoutMode::Master;
+                grid.cells.clear();
+                grid.window_positions.clear();
+                grid.cell_nodes.clear();
+                grid.focused_window = None;
+                if wids.len() == 1 {
+                    let wid = wids[0];
+                    grid.cells.insert(crate::layout::Cell::new(0, 0), wid);
+                    grid.window_positions.insert(wid, crate::layout::Cell::new(0, 0));
+                    grid.cell_nodes.insert(crate::layout::Cell::new(0, 0), crate::layout::CellNode::Leaf(wid));
+                    grid.focused_window = Some(wid);
+                } else {
+                    let master_wid = wids[0];
+                    grid.cells.insert(crate::layout::Cell::new(0, 0), master_wid);
+                    grid.window_positions.insert(master_wid, crate::layout::Cell::new(0, 0));
+                    grid.cell_nodes.insert(crate::layout::Cell::new(0, 0), crate::layout::CellNode::Leaf(master_wid));
+                    for (i, &wid) in wids.iter().skip(1).enumerate() {
+                        let cell = crate::layout::Cell::new(i as i32, 1);
+                        grid.cells.insert(cell, wid);
+                        grid.window_positions.insert(wid, cell);
+                        grid.cell_nodes.insert(cell, crate::layout::CellNode::Leaf(wid));
+                    }
+                    grid.focused_window = Some(master_wid);
+                }
+                info!("Layout preset '{}': master ({} windows)", name, wids.len());
+            }
+            "fibonacci" => {
+                let n = wids.len();
+                grid.layout_mode = crate::layout::LayoutMode::Grid;
+                let fib: Vec<usize> = (0..10).scan((0u64, 1u64), |state, _| {
+                    let next = state.0 + state.1;
+                    state.0 = state.1;
+                    state.1 = next;
+                    Some(next as usize)
+                }).collect();
+                let cols = fib.iter().take_while(|&f| f < n).last().copied().unwrap_or(1).max(1).min(n);
+                grid.snap_layout(&wids, cols, 1);
+                info!("Layout preset '{}': fibonacci ({} cols)", name, cols);
+            }
+            "fullscreen" => {
+                grid.layout_mode = crate::layout::LayoutMode::Grid;
+                if wids.len() == 1 {
+                    grid.snap_layout(&wids, 1, 1);
+                }
+                info!("Layout preset '{}': fullscreen", name);
+            }
+            _ => {
+                warn!("Unknown layout preset kind: {}", preset.kind);
+            }
+        }
+        self.save_session();
+    }
+
     pub fn toggle_shade(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -2820,6 +2905,12 @@ impl Platform {
                 }
                 if command == "layout-fibonacci" {
                     self.layout_preset_fibonacci();
+                    return;
+                }
+                if command.starts_with("layout-preset:") {
+                    if let Some(name) = command.strip_prefix("layout-preset:") {
+                        self.apply_layout_preset(name);
+                    }
                     return;
                 }
                 if command.starts_with("set-window-opacity ") {

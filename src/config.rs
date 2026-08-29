@@ -59,6 +59,15 @@ pub struct LayoutConfig {
     pub monitor_layouts: Vec<MonitorLayout>,
     pub snap_grid_size: u32,
     pub snap_edge_distance: u32,
+    pub layout_presets: Vec<LayoutPreset>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LayoutPreset {
+    pub name: String,
+    pub kind: String,
+    pub cols: Option<u32>,
+    pub rows: Option<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -152,6 +161,7 @@ impl Default for Config {
                 monitor_layouts: vec![],
                 snap_grid_size: 10,
                 snap_edge_distance: 8,
+                layout_presets: vec![],
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

@@ -113,6 +113,39 @@ All notable changes to UltraWM will be documented in this file.
 - Config save creates parent directory if it doesn't exist
 - Failed saves are logged as warnings but don't crash the WM
 
+## [9.4.0] - 2026-08-29 — Layout Presets: Named Window Arrangements
+### Added
+- **Layout presets** in config: named window arrangement definitions
+- `LayoutPreset` struct with `name`, `kind`, `cols`, `rows` fields
+- `layout_presets: Vec<LayoutPreset>` field on `LayoutConfig`
+- Six preset kinds: `grid`, `columns`, `rows`, `master`, `fibonacci`, `fullscreen`
+- `Platform::apply_layout_preset(name)` applies named preset to visible windows
+- **`layout-preset` IPC command**: apply preset by name via JSON
+
+### Config example
+```toml
+[[layout.layout_presets]]
+name = "coding"
+kind = "master"
+cols = 1
+rows = 2
+
+[[layout.layout_presets]]
+name = "quad"
+kind = "grid"
+cols = 2
+rows = 2
+
+[[layout.layout_presets]]
+name = "full"
+kind = "fullscreen"
+```
+
+### IPC usage
+```
+echo '{"command":"layout-preset","name":"coding"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [9.3.0] - 2026-08-29 — Window Rule Import/Export via IPC
 ### Added
 - **`export-rules` IPC command**: exports all window rules as JSON array
