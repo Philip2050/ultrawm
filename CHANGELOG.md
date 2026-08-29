@@ -2,6 +2,41 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.34.0] - 2026-08-29 — IPC List-Monitors Command
+### Added
+- **IPC `list-monitors` command**: returns all monitor info as JSON
+- Each monitor entry: width, height, work area, DPI, primary status, current workspace, workspace count
+- Useful for status bars, scripts, and multi-monitor tools
+
+### IPC usage
+```
+echo '{"command":"list-monitors"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "list-monitors",
+  "count": 2,
+  "monitors": [
+    {
+      "index": 0,
+      "width": 1920,
+      "height": 1080,
+      "work_width": 1920,
+      "work_height": 1040,
+      "work_left": 0,
+      "work_top": 40,
+      "dpi": 96,
+      "primary": true,
+      "current_workspace": 0,
+      "workspace_count": 4
+    }
+  ]
+}
+```
+
 ## [10.33.0] - 2026-08-29 — Keybinds for Swap, Toggle Bar, Bring to Front
 ### Added
 - **`swap_windows` keybind** (default: Win+S): swaps focused window with next tiling window

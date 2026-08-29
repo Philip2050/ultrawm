@@ -437,6 +437,46 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle list-monitors command
+    if cmd_str == "list-monitors" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let mut monitors = Vec::new();
+                for (i, mon) in platform.monitors.iter().enumerate() {
+                    let mws = platform.monitor_workspaces.get(i);
+                    let current_ws = mws.map(|m| m.current).unwrap_or(0);
+                    let ws_count = mws.map(|m| m.grids.len()).unwrap_or(0);
+                    monitors.push(serde_json::json!({
+                        "index": i,
+                        "width": mon.width(),
+                        "height": mon.height(),
+                        "work_width": mon.work_width(),
+                        "work_height": mon.work_height(),
+                        "work_left": mon.work_left,
+                        "work_top": mon.work_top,
+                        "dpi": mon.dpi,
+                        "primary": i == 0,
+                        "current_workspace": current_ws,
+                        "workspace_count": ws_count,
+                    }));
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "command": "list-monitors",
+                    "monitors": monitors,
+                    "count": monitors.len(),
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1300,6 +1340,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "toggle-bar" => IpcCommand::Single { command: "toggle-bar".into() },
         "bring-to-front" => IpcCommand::Single { command: "bring-to-front".into() },
         "get-stats" => IpcCommand::Single { command: "get-stats".into() },
+        "list-monitors" => IpcCommand::Single { command: "list-monitors".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
