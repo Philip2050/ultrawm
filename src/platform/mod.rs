@@ -3827,6 +3827,10 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "reset-layout" {
+                    self.refresh_tiling();
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }

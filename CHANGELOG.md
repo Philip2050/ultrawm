@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.41.0] - 2026-08-29 — IPC Reset-Layout Command
+### Added
+- **IPC `reset-layout` command**: re-tiles all windows on the current workspace
+- Calls `refresh_tiling()` to recalculate and apply the current layout
+- Useful when the layout gets messy after many window operations
+
+### IPC usage
+```
+echo '{"command":"reset-layout"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.40.0] - 2026-08-29 — Animated Opacity from Window Rules
 ### Added
 - **Opacity animation on rule match**: when a window rule sets opacity, it animates smoothly using spring physics
