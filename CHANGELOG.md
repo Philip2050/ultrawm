@@ -2,6 +2,40 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.31.0] - 2026-08-29 — IPC Get-Stats Command
+### Added
+- **IPC `get-stats` command**: returns WM statistics as JSON
+- Window counts: total, tiling, floating
+- Monitor count, total workspaces across all monitors
+- Runtime state: monocle, snap_mode, overview, scratchpad count
+- Focused HWND, rules count
+
+### IPC usage
+```
+echo '{"command":"get-stats"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "get-stats",
+  "data": {
+    "total_windows": 5,
+    "tiling_windows": 3,
+    "floating_windows": 2,
+    "monitors": 2,
+    "total_workspaces": 8,
+    "focused_hwnd": 123456,
+    "monocle": false,
+    "snap_mode": false,
+    "overview": false,
+    "scratchpads": 1,
+    "rules_count": 3
+  }
+}
+```
+
 ## [10.30.0] - 2026-08-29 — Per-App Corner Radius from Window Rules
 ### Added
 - **`corner_radius` field in WindowRule**: rules can set custom corner radius per app

@@ -393,6 +393,50 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle get-stats command
+    if cmd_str == "get-stats" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let total_windows = platform.windows.len();
+                let mut tiling_count = 0;
+                let mut floating_count = 0;
+                for (_, info) in &platform.windows {
+                    if info.floating { floating_count += 1; }
+                    else { tiling_count += 1; }
+                }
+                let monitor_count = platform.monitors.len();
+                let mut total_workspaces = 0;
+                for mw in &platform.monitor_workspaces {
+                    total_workspaces += mw.grids.len();
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "command": "get-stats",
+                    "data": {
+                        "total_windows": total_windows,
+                        "tiling_windows": tiling_count,
+                        "floating_windows": floating_count,
+                        "monitors": monitor_count,
+                        "total_workspaces": total_workspaces,
+                        "focused_hwnd": platform.focused_hwnd.map(|h| h.0),
+                        "monocle": platform.monocle,
+                        "snap_mode": platform.snap_mode,
+                        "overview": platform.overview,
+                        "scratchpads": platform.scratchpad.as_ref().map(|s| s.windows.len()).unwrap_or(0),
+                        "rules_count": platform.config.rules.len(),
+                    },
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1255,6 +1299,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "swap-windows" => IpcCommand::Single { command: "swap-windows".into() },
         "toggle-bar" => IpcCommand::Single { command: "toggle-bar".into() },
         "bring-to-front" => IpcCommand::Single { command: "bring-to-front".into() },
+        "get-stats" => IpcCommand::Single { command: "get-stats".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
