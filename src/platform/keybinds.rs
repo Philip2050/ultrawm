@@ -26,6 +26,7 @@ pub struct ParsedKeybinds {
     pub theme_prev: u32,
     pub theme_picker: u32,
     pub launcher: u32,
+    pub window_search: u32,
 }
 
 pub fn parse_keybind(s: &str) -> u32 {
@@ -101,5 +102,6 @@ pub fn parse_keybinds(config: &crate::config::KeybindsConfig) -> ParsedKeybinds 
         theme_prev: parse_keybind(&config.theme_prev),
         theme_picker: parse_keybind(&config.theme_picker),
         launcher: parse_keybind(&config.launcher),
+        window_search: parse_keybind(&config.window_search),
     }
 }

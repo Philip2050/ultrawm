@@ -116,6 +116,7 @@ pub struct KeybindsConfig {
     pub theme_prev: String,
     pub theme_picker: String,
     pub launcher: String,
+    pub window_search: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -204,6 +205,7 @@ impl Default for Config {
                 theme_prev: "Shift+T".into(),
                 theme_picker: "G".into(),
                 launcher: "Space".into(),
+                window_search: "P".into(),
             },
             theme: ThemeConfig {
                 default: "catppuccin-mocha".into(),

@@ -28,6 +28,7 @@ pub use gesture::GestureReceiver;
 pub use theme_picker::ThemePicker;
 pub use blur::enable_blur;
 pub use scratchpad::ScratchpadManager;
+pub use window_search::WindowSearch;
 
 mod window;
 pub mod keyboard;
@@ -39,6 +40,7 @@ mod gesture;
 mod theme_picker;
 mod blur;
 mod scratchpad;
+mod window_search;
 mod wallpaper;
 mod keybinds;
 
@@ -3529,6 +3531,20 @@ impl Platform {
                 launcher::LAUNCHER_PTR = std::ptr::null_mut();
             } else if let Err(e) = AppLauncher::create() {
                 warn!("Launcher creation failed: {}", e);
+            }
+        }
+    }
+
+    pub fn show_window_search(&mut self) {
+        unsafe {
+            if !window_search::SEARCH_PTR.is_null() {
+                // Dismiss existing search
+                drop(Box::from_raw(window_search::SEARCH_PTR));
+                window_search::SEARCH_PTR = std::ptr::null_mut();
+            } else if let Ok(_) = WindowSearch::create() {
+                if let Some(ref mut search) = window_search::SEARCH_PTR.as_mut() {
+                    search.populate(self);
+                }
             }
         }
     }

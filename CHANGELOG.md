@@ -2,6 +2,41 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.5.0] - 2026-08-29 — Window Search Overlay
+### Added
+- **Window search overlay**: quickly find and focus windows by title or executable name
+- `WindowSearch` struct with editable text field and filtered listbox
+- **Real-time filtering**: list updates as you type
+- **Window entries** show title and exe name (e.g., "Visual Studio Code (Code.exe)")
+- **Focus on selection**: Enter or double-click focuses the selected window
+- **Dismiss on Escape**: closes the search overlay
+- **Auto-dismiss on focus loss**: closes when clicking away
+- **`window-search` keybind**: default key "P" (Win+P) to toggle window search
+- **`show_window_search()` method** on Platform to toggle the overlay
+- **`window-search` IPC command**: trigger window search from scripts
+
+### Keybind
+```
+Win+P — toggle window search overlay
+```
+
+### IPC usage
+```
+echo '{"command":"window-search"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Implementation
+- WindowSearch uses layered window with 240 alpha transparency
+- Populates list from `platform.windows` (visible, non-minimized only)
+- Filter matches against both window title and executable name
+- Uses `SetForegroundWindow` to focus selected window
+- Static pointer pattern (`SEARCH_PTR`) for global access from window proc
+
+### Changed
+- Keybinds config now includes `window_search` field (default: "P")
+- Keyboard hook dispatches window_search key to Platform::show_window_search
+- Window search reuses launcher UI pattern (edit + listbox)
+
 ## [10.4.0] - 2026-08-29 — Improved Window Tiling Animations
 ### Added
 - **Smooth tiling animations**: windows now animate from their current position to new tiled positions

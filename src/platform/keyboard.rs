@@ -185,6 +185,10 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
             platform.toggle_launcher();
             return LRESULT(1);
         }
+        x if x == kb.window_search => {
+            platform.show_window_search();
+            return LRESULT(1);
+        }
         x if x == kb.sticky => {
             platform.toggle_sticky();
             return LRESULT(1);
