@@ -2,6 +2,21 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.55.0] - 2026-08-29 — Per-Window Opacity IPC Commands
+### Added
+- **IPC `set-window-opacity` command**: set transparency for any window by ID or focused window
+- **IPC `get-window-opacity` command**: query opacity of any window by ID or focused window
+- Supports opacity values from 0.0 (invisible) to 1.0 (fully opaque)
+- Uses `SetLayeredWindowAttributes` with LWA_ALPHA for smooth per-window transparency
+- Falls back to focused window when no window_id is specified
+
+### IPC usage
+```
+echo '{"command":"set-window-opacity","window_id":123,"opacity":0.75}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"set-window-opacity","opacity":0.5}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-window-opacity","window_id":123}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.54.0] - 2026-08-29 — Per-Monitor Bar Height
 ### Added
 - **IPC `set-monitor-bar-height` command**: set custom bar height for a specific monitor (20-200px)

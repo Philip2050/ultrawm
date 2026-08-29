@@ -1856,6 +1856,104 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-window-opacity command
+    if cmd_str == "set-window-opacity" {
+        let window_id = params.get("window_id").and_then(|v| v.as_u64()).map(|v| v as u64);
+        let opacity = params.get("opacity").and_then(|v| v.as_f64()).map(|v| v as f32);
+        let focused_only = params.get("focused").and_then(|v| v.as_bool()).unwrap_or(false);
+        if let Some(op) = opacity {
+            if op >= 0.0 && op <= 1.0 {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        if !focused_only {
+                            if let Some(wid) = window_id {
+                                let hwnd_opt = platform.windows.iter().find(|(_, i)| i.id == wid).map(|(hw, _)| *hw);
+                                if let Some(hwnd_wrapper) = hwnd_opt {
+                                    if let Some(info) = platform.windows.get_mut(&hwnd_wrapper) {
+                                        info.opacity = Some(op);
+                                        platform.apply_window_opacity(hwnd_wrapper.0, op);
+                                        return serde_json::json!({
+                                            "success": true,
+                                            "window_id": wid,
+                                            "opacity": op,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        // Fall back to focused window
+                        if let Some(hwnd_wrapper) = platform.focused_hwnd {
+                            if let Some(info) = platform.windows.get_mut(&hwnd_wrapper) {
+                                let wid = info.id;
+                                info.opacity = Some(op);
+                                platform.apply_window_opacity(hwnd_wrapper.0, op);
+                                return serde_json::json!({
+                                    "success": true,
+                                    "window_id": wid,
+                                    "opacity": op,
+                                    "note": "applied to focused window",
+                                });
+                            }
+                        }
+                    }
+                }
+                return serde_json::json!({
+                    "success": false,
+                    "error": "no window specified or focused",
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid 'opacity' parameter (0.0-1.0)",
+        });
+    }
+
+    // Handle get-window-opacity command
+    if cmd_str == "get-window-opacity" {
+        let window_id = params.get("window_id").and_then(|v| v.as_u64()).map(|v| v as u64);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                if let Some(wid) = window_id {
+                    let hwnd_opt = platform.windows.iter().find(|(_, i)| i.id == wid).map(|(hw, _)| *hw);
+                    if let Some(hwnd_wrapper) = hwnd_opt {
+                        if let Some(info) = platform.windows.get(&hwnd_wrapper) {
+                            return serde_json::json!({
+                                "success": true,
+                                "window_id": wid,
+                                "opacity": info.opacity.unwrap_or(1.0),
+                            });
+                        }
+                    }
+                    return serde_json::json!({
+                        "success": false,
+                        "error": format!("window {} not found", wid),
+                    });
+                } else if let Some(hwnd_wrapper) = platform.focused_hwnd {
+                    if let Some(info) = platform.windows.get(&hwnd_wrapper) {
+                        return serde_json::json!({
+                            "success": true,
+                            "window_id": info.id,
+                            "opacity": info.opacity.unwrap_or(1.0),
+                        });
+                    }
+                }
+                return serde_json::json!({
+                    "success": false,
+                    "error": "no window specified or focused",
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-focus command
     if cmd_str == "set-monitor-focus" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
