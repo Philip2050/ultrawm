@@ -156,10 +156,10 @@ pub struct Platform {
     pub scratchpad: Option<ScratchpadManager>,
     idle_inhibit: bool,
     pub theme_mgr: Option<RefCell<ThemeManager>>,
-    ws_fade: f32,           // workspace switch fade (1.0=visible, 0.0=invisible)
-    ws_fade_out: bool,      // true=fading out, false=fading in
+    ws_fade_anim: crate::anim::SpringValue, // workspace switch fade animation
     ws_pending_ws: Option<usize>,
     ws_pending_monitor: Option<usize>,
+    ws_animating: bool,
     last_session_save: std::time::Instant,
     /// Windows minimized to system tray (wid -> hwnd)
     tray_windows: HashMap<u64, HWND>,
@@ -241,10 +241,10 @@ impl Platform {
             scratchpad: None,
             idle_inhibit: false,
             theme_mgr: None,
-            ws_fade: 1.0,
-            ws_fade_out: false,
+            ws_fade_anim: crate::anim::SpringValue::new(1.0),
             ws_pending_ws: None,
             ws_pending_monitor: None,
+            ws_animating: false,
             tray_windows: HashMap::new(),
             tray_hwnd: None,
         })
@@ -303,11 +303,13 @@ impl Platform {
             return;
         }
 
-        // Start workspace fade animation
-        self.ws_fade = 1.0;
-        self.ws_fade_out = true;
+        // Start workspace spring animation
+        self.ws_fade_anim.set_target(0.0);
+        self.ws_fade_anim.current = 1.0;
+        self.ws_fade_anim.velocity = -1.5;
         self.ws_pending_ws = Some(ws);
         self.ws_pending_monitor = Some(monitor_idx);
+        self.ws_animating = true;
 
         info!("Monitor {}: switching to workspace {} (fade)", monitor_idx + 1, ws + 1);
     }
@@ -656,65 +658,71 @@ impl Platform {
             // Tick notifier
             self.tick_notifier();
 
-            // Workspace switch fade animation
-            if self.ws_fade < 1.0 {
-                if self.ws_fade_out {
-                    self.ws_fade -= 0.15;
-                    if self.ws_fade <= 0.0 {
-                        self.ws_fade = 0.0;
-                        self.ws_fade_out = false;
-                        // Execute pending workspace switch
-                        if let (Some(ws), Some(mon)) = (self.ws_pending_ws, self.ws_pending_monitor) {
-                            if ws < self.monitor_workspaces[mon].grids.len() {
-                                let old_ws = self.monitor_workspaces[mon].current;
-                                // Hide non-sticky windows on old workspace
-                                for (_, info) in &self.windows {
-                                    if let Some(wm) = self.window_monitors.get(&info.id) {
-                                        if *wm == mon && !info.sticky {
-                                            if let Some(ws_id) = self.window_workspaces.get(&info.id) {
-                                                if *ws_id == old_ws {
-                                                    unsafe { let _ = ShowWindow(info.hwnd, SW_HIDE); }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                self.monitor_workspaces[mon].current = ws;
-                                self.save_session();
-                                // Update bar with workspace names
-                                if let Some(ref bar) = self.bar {
-                                    let names = self.workspace_names(mon);
-                                    bar.set_workspaces(names, ws);
-                                }
-                                // Show non-sticky windows on new workspace
-                                for (_, info) in &self.windows {
-                                    if let Some(wm) = self.window_monitors.get(&info.id) {
-                                        if *wm == mon && !info.sticky {
-                                            if let Some(ws_id) = self.window_workspaces.get(&info.id) {
-                                                if *ws_id == ws {
-                                                    unsafe { let _ = ShowWindow(info.hwnd, SW_SHOW); }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                info!("Monitor {}: switched to workspace {}", mon + 1, ws + 1);
-                                self.notify(&format!("Workspace {}", ws + 1));
-                            }
-                            self.ws_pending_ws = None;
-                            self.ws_pending_monitor = None;
-                        }
-                    }
-                } else {
-                    self.ws_fade += 0.15;
-                    if self.ws_fade >= 1.0 {
-                        self.ws_fade = 1.0;
-                    }
-                }
+            // Workspace switch spring animation
+            if self.ws_animating {
+                let fade = self.ws_fade_anim.step(1.0 / 60.0).clamp(0.0, 1.0);
+
                 // Apply fade alpha to overlay
                 if let Some(ref overlay) = self.border_overlay {
-                    let alpha = (self.ws_fade * 255.0) as u8;
+                    let alpha = (fade * 255.0) as u8;
                     overlay.set_alpha(alpha);
+                }
+
+                // Check if we've crossed the midpoint (fade out complete)
+                if self.ws_fade_anim.current <= 0.05 && self.ws_fade_anim.velocity < 0.0 {
+                    // Execute pending workspace switch at the dark point
+                    if let (Some(ws), Some(mon)) = (self.ws_pending_ws, self.ws_pending_monitor) {
+                        if ws < self.monitor_workspaces[mon].grids.len() {
+                            let old_ws = self.monitor_workspaces[mon].current;
+                            // Hide non-sticky windows on old workspace
+                            for (_, info) in &self.windows {
+                                if let Some(wm) = self.window_monitors.get(&info.id) {
+                                    if *wm == mon && !info.sticky {
+                                        if let Some(ws_id) = self.window_workspaces.get(&info.id) {
+                                            if *ws_id == old_ws {
+                                                unsafe { let _ = ShowWindow(info.hwnd, SW_HIDE); }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            self.monitor_workspaces[mon].current = ws;
+                            self.save_session();
+                            // Update bar with workspace names
+                            if let Some(ref bar) = self.bar {
+                                let names = self.workspace_names(mon);
+                                bar.set_workspaces(names, ws);
+                            }
+                            // Show non-sticky windows on new workspace
+                            for (_, info) in &self.windows {
+                                if let Some(wm) = self.window_monitors.get(&info.id) {
+                                    if *wm == mon && !info.sticky {
+                                        if let Some(ws_id) = self.window_workspaces.get(&info.id) {
+                                            if *ws_id == ws {
+                                                unsafe { let _ = ShowWindow(info.hwnd, SW_SHOW); }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            info!("Monitor {}: switched to workspace {}", mon + 1, ws + 1);
+                            self.notify(&format!("Workspace {}", ws + 1));
+                        }
+                        self.ws_pending_ws = None;
+                        self.ws_pending_monitor = None;
+                    }
+                    // Now animate back to visible
+                    self.ws_fade_anim.set_target(1.0);
+                    self.ws_fade_anim.velocity = 2.0;
+                }
+
+                // Check if animation is fully settled
+                if self.ws_fade_anim.is_settled() && self.ws_fade_anim.target == 1.0 {
+                    self.ws_animating = false;
+                    self.ws_fade_anim.current = 1.0;
+                    if let Some(ref overlay) = self.border_overlay {
+                        overlay.set_alpha(255);
+                    }
                 }
             }
 

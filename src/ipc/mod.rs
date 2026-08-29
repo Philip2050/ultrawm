@@ -128,6 +128,46 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
 
     let cmd_str = json.get("command").and_then(|v| v.as_str()).unwrap_or("");
 
+    // Handle switch-workspace command with structured input
+    if cmd_str == "switch-workspace" {
+        if let Some(ws_num) = json.get("workspace").and_then(|v| v.as_u64()) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    let monitor_idx = platform.focused_hwnd
+                        .and_then(|hwnd| platform.window_for_hwnd(hwnd.0))
+                        .and_then(|info| platform.window_monitors.get(&info.id))
+                        .copied()
+                        .unwrap_or(0);
+
+                    let ws_count = platform.monitor_workspaces[monitor_idx].grids.len();
+                    let target_ws = (ws_num as usize - 1).min(ws_count - 1);
+
+                    if target_ws != platform.monitor_workspaces[monitor_idx].current {
+                        platform.switch_workspace(target_ws);
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": format!("Switching to workspace {} with animation", ws_num),
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "command": cmd_str,
+                            "message": format!("Already on workspace {}", ws_num),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Invalid workspace number",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {

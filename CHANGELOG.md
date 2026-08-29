@@ -2,6 +2,32 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [9.9.0] - 2026-08-29 — Animated Workspace Switching
+### Added
+- **Spring-based workspace fade animation** replaces linear fade with smooth physics
+- `ws_fade_anim: SpringValue` on Platform for animated workspace transitions
+- `ws_animating: bool` tracks active workspace animation state
+- `switch_workspace(ws)` triggers spring animation: fades to black, switches workspace, fades back
+- Spring animation uses stiffness/damping/mass for natural motion (overshoot & settle)
+- Animation fades border overlay alpha from 1.0→0.0→1.0 with spring physics
+- **`switch-workspace` IPC command**: trigger animated workspace switch by number
+- IPC command validates workspace number, checks current workspace, and triggers animation
+
+### Config
+```toml
+# Workspace switch animation uses spring physics (hardcoded tuning)
+# stiffness: 180, damping: 20, mass: 1.0 (same as window animations)
+```
+
+### IPC usage
+```
+echo '{"command":"switch-workspace","workspace":2}' | \\.\pipe\ultrawm-ipc
+```
+
+### Changed
+- Workspace switching animation is now physics-based instead of linear step
+- Animation triggers from IPC, bar clicks, and keyboard shortcuts
+
 ## [9.8.0] - 2026-08-29 — Minimize-to-Tray Support
 ### Added
 - **Minimize-to-tray** support: windows can minimize to system tray instead of taskbar
