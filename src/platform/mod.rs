@@ -3831,6 +3831,16 @@ impl Platform {
                     self.refresh_tiling();
                     return;
                 }
+                if command.starts_with("set-theme ") {
+                    if let Some(theme_name) = command.strip_prefix("set-theme ") {
+                        if let Some(theme_mgr) = &mut theme_mgr {
+                            let _ = theme_mgr.apply_theme(theme_name);
+                            self.config.theme.default = theme_name.to_string();
+                            let _ = self.config.save();
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }

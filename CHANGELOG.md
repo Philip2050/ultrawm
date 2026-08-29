@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.42.0] - 2026-08-29 — IPC Set-Theme Command
+### Added
+- **IPC `set-theme` command**: change the active theme by name at runtime
+- Applies theme via `ThemeManager::apply_theme()`
+- Persists the new theme to `config.toml`
+- Updates bar colors, border colors, and wallpaper
+
+### IPC usage
+```
+echo '{"command":"set-theme","theme":"catppuccin-mocha"}' | \\.\pipe\ultrawm-ipc
+echo 'set-theme dracula' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.41.0] - 2026-08-29 — IPC Reset-Layout Command
 ### Added
 - **IPC `reset-layout` command**: re-tiles all windows on the current workspace
