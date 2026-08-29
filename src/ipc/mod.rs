@@ -2082,6 +2082,41 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-active-monitor command
+    if cmd_str == "get-active-monitor" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let monitors = crate::platform::monitor::get_monitors();
+                if let Some(hwnd_wrapper) = platform.focused_hwnd {
+                    let wid = platform.windows.get(&hwnd_wrapper).map(|i| i.id);
+                    if let Some(wid) = wid {
+                        if let Some(mon_idx) = platform.window_monitors.get(&wid) {
+                            let mon_name = monitors.get(*mon_idx).map(|m| m.name.clone()).unwrap_or_else(|| "unknown".into());
+                            return serde_json::json!({
+                                "success": true,
+                                "monitor": mon_idx,
+                                "name": mon_name,
+                                "window_id": wid,
+                            });
+                        }
+                    }
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "monitor": None,
+                    "name": None,
+                    "message": "no focused window",
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-focus command
     if cmd_str == "set-monitor-focus" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

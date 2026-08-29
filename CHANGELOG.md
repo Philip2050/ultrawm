@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.58.0] - 2026-08-29 — IPC Get-Active-Monitor Command
+### Added
+- **IPC `get-active-monitor` command**: query which monitor currently has focus
+- Returns monitor index, name, and focused window ID
+- Useful for external scripts that need to track active display
+
+### IPC usage
+```
+echo '{"command":"get-active-monitor"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.57.0] - 2026-08-29 — Per-Monitor Bar Enabled State
 ### Added
 - **IPC `set-monitor-bar-enabled` command**: show/hide bar for a specific monitor
