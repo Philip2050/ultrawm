@@ -206,6 +206,47 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle set-app-opacity command
+    if cmd_str == "set-app-opacity" {
+        if let Some(exe) = json.get("exe").and_then(|v| v.as_str()) {
+            if let Some(opacity_val) = json.get("opacity").and_then(|v| v.as_f64()) {
+                let opacity = opacity_val.clamp(0.0, 1.0) as f32;
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        platform.remember_app_opacity(exe, opacity);
+                        // Apply to all matching windows
+                        for (hwnd_wrapper, info) in &platform.windows {
+                            if info.exe == exe {
+                                platform.apply_window_opacity(hwnd_wrapper.0, opacity);
+                                if let Some(win_info) = platform.windows.get_mut(&hwnd_wrapper) {
+                                    win_info.opacity = Some(opacity);
+                                }
+                            }
+                        }
+                        platform.save_per_app_opacity();
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": format!("Set opacity {:.0}% for {}", (opacity * 100.0) as i32, exe),
+                        });
+                    }
+                }
+            }
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "message": "missing 'opacity' field (0.0-1.0)",
+            });
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "missing 'exe' field",
+        });
+    }
+
     // Handle screenshot command with structured input
     if cmd_str == "screenshot" {
         let hwnd_opt = json.get("hwnd").and_then(|v| v.as_u64()).map(|h| HWND(h as *mut _));
@@ -488,6 +529,56 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "command": cmd_str,
                 "data": {
                     "monitors": dpi_info,
+                },
+            });
+        }
+        "get-app-opacity" => {
+            if let Some(exe) = json.get("exe").and_then(|v| v.as_str()) {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &*ptr;
+                        let opacity = platform.per_app_opacity.get(exe).copied().unwrap_or(1.0);
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "data": {
+                                "exe": exe,
+                                "opacity": opacity,
+                            },
+                        });
+                    }
+                }
+            }
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "message": "Platform not available or missing 'exe' field",
+            });
+        }
+        "list-app-opacities" => {
+            let opacities = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    let mut items = Vec::new();
+                    for (exe, &opacity) in &platform.per_app_opacity {
+                        items.push(serde_json::json!({
+                            "exe": exe,
+                            "opacity": opacity,
+                        }));
+                    }
+                    items
+                } else {
+                    Vec::new()
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": {
+                    "count": opacities.len(),
+                    "apps": opacities,
                 },
             });
         }

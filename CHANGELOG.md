@@ -2,6 +2,26 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.13.0] - 2026-08-29 — Per-App Opacity Memory
+### Added
+- **Per-app opacity memory**: opacity adjustments are remembered per executable and restored on startup
+- **`per_app_opacity` HashMap**: stores exe -> opacity mappings persisted to `per_app_opacity.json`
+- **`remember_app_opacity()`**: saves opacity for an app when adjusted via Win+O/Shift+O
+- **`apply_per_app_opacity()`**: applies remembered opacity to matching windows on creation
+- **`load_per_app_opacity()`**: loads persisted per-app opacity on startup
+- **`save_per_app_opacity()`**: persists opacity memory (also saved with session)
+
+### IPC commands
+- `get-app-opacity`: `{"command":"get-app-opacity","exe":"notepad.exe"}` → returns opacity
+- `set-app-opacity`: `{"command":"set-app-opacity","exe":"notepad.exe","opacity":0.75}` → sets and applies
+- `list-app-opacities`: returns all remembered app opacities with counts
+
+### Behavior
+- When opacity is adjusted for a window, its exe's opacity is remembered
+- New windows from the same exe automatically get the remembered opacity
+- Opacity < 1.0 is saved; setting to 1.0 removes the memory entry
+- Per-app opacity is applied unless session already set a custom opacity
+
 ## [10.12.0] - 2026-08-29 — Floating Window Edge & Corner Snapping
 ### Added
 - **Screen edge snapping**: floating windows snap to monitor edges when dragged nearby

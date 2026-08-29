@@ -148,6 +148,7 @@ pub struct Platform {
     last_rounded: HashMap<u64, (i32, i32, i32)>, // wid -> (w, h, radius) last applied
     last_frame_time: std::time::Instant,
     shadow_set: HashMap<u64, bool>, // wid -> whether DWM shadow is enabled
+    per_app_opacity: HashMap<String, f32>, // exe -> remembered opacity
     pub config: crate::config::Config,
     pub config_reload_counter: u32,
     pub next_id: u64,
@@ -234,6 +235,7 @@ impl Platform {
             last_frame_time: std::time::Instant::now(),
             last_session_save: std::time::Instant::now(),
             shadow_set: HashMap::new(),
+            per_app_opacity: HashMap::new(),
             config: crate::config::Config::default(),
             config_reload_counter: 0,
             next_id: 1,
@@ -434,6 +436,9 @@ impl Platform {
 
     pub fn initialize(&mut self, _config: &crate::config::Config) -> anyhow::Result<()> {
         info!("UltraWM initializing...");
+
+        // Load per-app opacity memory
+        self.load_per_app_opacity();
 
         // Enumerate existing top-level windows
         self.enumerate_windows()?;
@@ -1383,6 +1388,10 @@ impl Platform {
                 }
                 if cfg.window_opacity < 1.0 {
                     self.apply_window_opacity(hwnd, cfg.window_opacity);
+                }
+                // Apply per-app opacity if remembered
+                if !info.opacity.is_some_and(|o| o < 1.0) {
+                    self.apply_per_app_opacity(hwnd, &info.exe);
                 }
 
                 info!("Managed window: {} (id={})", title, wid);
@@ -2761,9 +2770,8 @@ impl Platform {
                 let current = info.opacity.unwrap_or(1.0);
                 let new_opacity = (current + delta).clamp(0.0, 1.0);
                 info.opacity = Some(new_opacity);
-                unsafe {
-                    let _ = SetLayeredWindowAttributes(info.hwnd, COLORREF(0), (new_opacity * 255.0) as u8, LWA_ALPHA);
-                }
+                self.apply_window_opacity(hwnd_wrapper.0, new_opacity);
+                self.remember_app_opacity(&info.exe, new_opacity);
                 info!("Opacity adjusted: {} -> {} (id={})", current, new_opacity, info.id);
             }
         }
@@ -2810,6 +2818,56 @@ impl Platform {
                 let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA);
             }
         }
+    }
+
+    /// Load per-app opacity memory from file
+    pub fn load_per_app_opacity(&mut self) {
+        let path = self.per_app_opacity_path();
+        if let Ok(contents) = std::fs::read_to_string(&path) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, f32>>(&contents) {
+                self.per_app_opacity = map;
+                debug!("Loaded {} per-app opacity entries", self.per_app_opacity.len());
+            }
+        }
+    }
+
+    /// Save per-app opacity memory to file
+    pub fn save_per_app_opacity(&self) {
+        let path = self.per_app_opacity_path();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(json) = serde_json::to_string_pretty(&self.per_app_opacity) {
+            let _ = std::fs::write(&path, json);
+        }
+    }
+
+    /// Get or set per-app opacity for an exe, applying it to the window
+    pub fn apply_per_app_opacity(&mut self, hwnd: HWND, exe: &str) {
+        if let Some(&opacity) = self.per_app_opacity.get(exe) {
+            if opacity < 1.0 {
+                self.apply_window_opacity(hwnd, opacity);
+                if let Some(info) = self.windows.values_mut().find(|i| i.hwnd == hwnd) {
+                    info.opacity = Some(opacity);
+                }
+            }
+        }
+    }
+
+    /// Remember opacity for an app (exe name)
+    pub fn remember_app_opacity(&mut self, exe: &str, opacity: f32) {
+        if opacity < 1.0 {
+            self.per_app_opacity.insert(exe.to_string(), opacity);
+        } else {
+            self.per_app_opacity.remove(exe);
+        }
+    }
+
+    fn per_app_opacity_path(&self) -> std::path::PathBuf {
+        let base = std::env::var("XDG_CONFIG_HOME").ok()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from(".")));
+        base.join(".config/ultrawm/per_app_opacity.json")
     }
 
     /// Enable idle inhibit — prevent screen lock/sleep
@@ -3724,6 +3782,7 @@ impl Platform {
         if let Err(e) = state.save() {
             warn!("Failed to save session: {}", e);
         }
+        self.save_per_app_opacity();
     }
 
     pub fn toggle_scratchpad(&mut self) {
