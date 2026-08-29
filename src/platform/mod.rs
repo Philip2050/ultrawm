@@ -1,6 +1,7 @@
 use crate::anim::{Spring, SpringValue};
 use crate::layout::{Cell, GridState};
 use crate::theme::ThemeManager;
+use chrono::Local;
 use log::{debug, info, warn};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
@@ -12,7 +13,7 @@ use windows::{
     Win32::{
         Foundation::*,
         Graphics::{Dwm::*, Gdi::*},
-        System::{LibraryLoader::*, Power::*},
+        System::{LibraryLoader::*, Power::*, SystemInformation::*, Threading::*},
         UI::{Accessibility::*, HiDpi::*, Shell::*, WindowsAndMessaging::*},
     },
 };
@@ -510,6 +511,8 @@ impl Platform {
                 bar_cfg.show_clock,
                 bar_cfg.show_volume,
                 bar_cfg.show_battery,
+                bar_cfg.show_cpu,
+                bar_cfg.show_memory,
             ) {
                 Ok(mut bar) => {
                     // Position bar at top or bottom based on config
@@ -725,6 +728,9 @@ impl Platform {
                     }
                 }
             }
+
+            // Update bar system info (clock, CPU, memory)
+            self.update_bar_system_info();
 
             // Hot-reload config every ~1 second
             self.config_reload_counter += 1;
@@ -3585,6 +3591,67 @@ impl Platform {
         println!("Session: {}", if self.session.is_some() { "saved" } else { "none" });
 
         Ok(())
+    }
+
+    /// Read CPU usage percentage using GetSystemTimes
+    pub fn get_cpu_usage(&self) -> u32 {
+        unsafe {
+            let mut idle_time = FILETIME::default();
+            let mut kernel_time = FILETIME::default();
+            let mut user_time = FILETIME::default();
+
+            if GetSystemTimes(&mut idle_time, &mut kernel_time, &mut user_time).is_ok() {
+                let idle = (idle_time.dwHighDateTime as u64) << 32 | idle_time.dwLowDateTime as u64;
+                let kernel = (kernel_time.dwHighDateTime as u64) << 32 | kernel_time.dwLowDateTime as u64;
+                let user = (user_time.dwHighDateTime as u64) << 32 | user_time.dwLowDateTime as u64;
+
+                let total = kernel + user;
+                if total > 0 {
+                    let idle_percent = (idle * 100) / total;
+                    return (100 - idle_percent) as u32;
+                }
+            }
+        }
+        0
+    }
+
+    /// Read memory usage percentage using GlobalMemoryStatusEx
+    pub fn get_memory_usage(&self) -> u32 {
+        unsafe {
+            let mut info = MEMORYSTATUSEX::default();
+            info.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+            if GlobalMemoryStatusEx(&mut info).is_ok() {
+                let total = info.ullTotalPhys;
+                let avail = info.ullAvailPhys;
+                if total > 0 {
+                    let used = total - avail;
+                    return ((used * 100) / total) as u32;
+                }
+            }
+        }
+        0
+    }
+
+    /// Update bar with system info (CPU, memory, clock) at reduced frequency
+    pub fn update_bar_system_info(&mut self) {
+        if let Some(ref bar) = self.bar {
+            // Update clock every frame
+            let now = Local::now();
+            let clock_str = now.format("%H:%M").to_string();
+            bar.set_clock(&clock_str);
+
+            // Update CPU and memory every 60 frames (~1 second)
+            if self.config_reload_counter % 60 == 0 {
+                if self.config.bar.show_cpu {
+                    let cpu = self.get_cpu_usage();
+                    bar.set_cpu(cpu);
+                }
+                if self.config.bar.show_memory {
+                    let mem = self.get_memory_usage();
+                    bar.set_memory(mem);
+                }
+            }
+        }
     }
 }
 

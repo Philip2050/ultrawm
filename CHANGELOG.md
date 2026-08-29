@@ -2,6 +2,38 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.0.0] - 2026-08-29 — System Info Bar (CPU, Memory, Clock)
+### Added
+- **CPU usage display** in bar: shows real-time CPU percentage with 1-second refresh
+- **Memory usage display** in bar: shows RAM usage percentage with 1-second refresh
+- **Live clock** in bar: updates every frame with current time (HH:MM format)
+- `show_cpu` and `show_memory` config options in `BarConfig` (both enabled by default)
+- `BarState::cpu` and `BarState::memory` fields for system metrics
+- `AppBar::set_cpu(usage)` and `AppBar::set_memory(usage)` methods
+- `Platform::get_cpu_usage()` using `GetSystemTimes` API
+- `Platform::get_memory_usage()` using `GlobalMemoryStatusEx` API
+- `Platform::update_bar_system_info()` updates clock, CPU, and memory at configurable intervals
+- CPU/memory updates run every 60 frames (~1 second) to reduce overhead
+- Right-aligned system info indicators in bar (after workspace/title, before battery/volume)
+
+### Config example
+```toml
+[bar]
+show_cpu = true      # show CPU usage percentage
+show_memory = true   # show memory usage percentage
+show_clock = true    # show live clock
+```
+
+### Bar layout (right-aligned)
+```
+[Workspaces] [Title] [CPU: 45%] [MEM: 62%] [14:32] [VOL: 80%] [BAT: 95%]
+```
+
+### Changed
+- Bar now displays system metrics by default
+- Clock updates every frame for smooth time display
+- CPU/memory update frequency controlled by `config_reload_counter`
+
 ## [9.9.0] - 2026-08-29 — Animated Workspace Switching
 ### Added
 - **Spring-based workspace fade animation** replaces linear fade with smooth physics

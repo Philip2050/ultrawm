@@ -21,11 +21,15 @@ struct BarState {
     clock: String,
     battery: u32,
     volume: u32,
+    cpu: u32,
+    memory: u32,
     corner_radius: i32,
     show_workspaces: bool,
     show_clock: bool,
     show_volume: bool,
     show_battery: bool,
+    show_cpu: bool,
+    show_memory: bool,
     workspace_count: usize,
     snap_mode: bool,
     reload_flash: u32, // frames remaining for green reload flash
@@ -51,6 +55,8 @@ impl AppBar {
         show_clock: bool,
         show_volume: bool,
         show_battery: bool,
+        show_cpu: bool,
+        show_memory: bool,
     ) -> anyhow::Result<Self> {
         unsafe {
             let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
@@ -92,11 +98,15 @@ impl AppBar {
                 clock: String::new(),
                 battery: 0,
                 volume: 0,
+                cpu: 0,
+                memory: 0,
                 corner_radius: 6,
                 show_workspaces,
                 show_clock,
                 show_volume,
                 show_battery,
+                show_cpu,
+                show_memory,
                 workspace_count,
                 snap_mode: false,
                 reload_flash: 0,
@@ -177,6 +187,26 @@ impl AppBar {
             let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
             if !ptr.is_null() {
                 (*ptr).volume = level.min(100);
+                self.update();
+            }
+        }
+    }
+
+    pub fn set_cpu(&self, usage: u32) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).cpu = usage.min(100);
+                self.update();
+            }
+        }
+    }
+
+    pub fn set_memory(&self, usage: u32) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).memory = usage.min(100);
                 self.update();
             }
         }
@@ -450,6 +480,52 @@ unsafe extern "system" fn bar_wnd_proc(
                     hdc,
                     &mut bat_w.clone(),
                     &mut bat_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
+                );
+            }
+
+            // Draw CPU indicator
+            if state.show_cpu {
+                let cpu_text = format!(" CPU:{}% ", state.cpu);
+                let cpu_w: Vec<u16> = cpu_text.encode_utf16().chain(Some(0)).collect();
+                let cpu_x = if state.show_battery { 9999 - 160 } else { 9999 - 80 };
+                let mut cpu_rect = RECT {
+                    left: cpu_x - 70,
+                    top: 0,
+                    right: cpu_x + 60,
+                    bottom: 9999,
+                };
+                let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+                let _ = DrawTextW(
+                    hdc,
+                    &mut cpu_w.clone(),
+                    &mut cpu_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
+                );
+            }
+
+            // Draw memory indicator
+            if state.show_memory {
+                let mem_text = format!(" MEM:{}% ", state.memory);
+                let mem_w: Vec<u16> = mem_text.encode_utf16().chain(Some(0)).collect();
+                let mem_x = if state.show_battery && state.show_cpu {
+                    9999 - 250
+                } else if state.show_battery || state.show_cpu {
+                    9999 - 160
+                } else {
+                    9999 - 80
+                };
+                let mut mem_rect = RECT {
+                    left: mem_x - 70,
+                    top: 0,
+                    right: mem_x + 60,
+                    bottom: 9999,
+                };
+                let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+                let _ = DrawTextW(
+                    hdc,
+                    &mut mem_w.clone(),
+                    &mut mem_rect,
                     DT_VCENTER | DT_SINGLELINE | DT_RIGHT,
                 );
             }

@@ -134,6 +134,8 @@ pub struct BarConfig {
     pub show_clock: bool,
     pub show_volume: bool,
     pub show_battery: bool,
+    pub show_cpu: bool,
+    pub show_memory: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -216,6 +218,8 @@ impl Default for Config {
                 show_clock: true,
                 show_volume: true,
                 show_battery: true,
+                show_cpu: true,
+                show_memory: true,
             },
             launcher: LauncherConfig {
                 enabled: true,
