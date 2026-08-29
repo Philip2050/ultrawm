@@ -2337,6 +2337,68 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-monitor-layout command
+    if cmd_str == "get-monitor-layout" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let layouts = &platform.config.layout.monitor_layouts;
+
+                if let Some(m_idx) = monitor_idx {
+                    let layout = layouts.get(m_idx).cloned().unwrap_or(crate::config::MonitorLayout {
+                        gaps: None,
+                        inner_padding: None,
+                        outer_padding: None,
+                        border_width: None,
+                        corner_radius: None,
+                    });
+                    return serde_json::json!({
+                        "success": true,
+                        "monitor": m_idx,
+                        "layout": {
+                            "gaps": layout.gaps,
+                            "inner_padding": layout.inner_padding,
+                            "border_width": layout.border_width,
+                            "corner_radius": layout.corner_radius,
+                        },
+                        "effective": {
+                            "gaps": layout.gaps.unwrap_or(platform.config.layout.gaps),
+                            "inner_padding": layout.inner_padding.unwrap_or(platform.config.layout.inner_padding),
+                            "border_width": layout.border_width.unwrap_or(platform.config.layout.border_width),
+                            "corner_radius": layout.corner_radius.unwrap_or(platform.config.layout.corner_radius),
+                        },
+                    });
+                } else {
+                    let all_layouts: Vec<serde_json::Value> = layouts.iter().enumerate().map(|(idx, layout)| {
+                        serde_json::json!({
+                            "monitor": idx,
+                            "gaps": layout.gaps,
+                            "inner_padding": layout.inner_padding,
+                            "border_width": layout.border_width,
+                            "corner_radius": layout.corner_radius,
+                        })
+                    }).collect();
+                    return serde_json::json!({
+                        "success": true,
+                        "defaults": {
+                            "gaps": platform.config.layout.gaps,
+                            "inner_padding": platform.config.layout.inner_padding,
+                            "border_width": platform.config.layout.border_width,
+                            "corner_radius": platform.config.layout.corner_radius,
+                        },
+                        "overrides": all_layouts,
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-layout command
     if cmd_str == "set-monitor-layout" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

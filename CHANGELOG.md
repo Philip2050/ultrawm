@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.68.0] - 2026-08-29 — IPC Get-Monitor-Layout Command
+### Added
+- **IPC `get-monitor-layout` command**: query per-monitor layout settings
+- Returns gaps, padding, border width, corner radius with effective values
+- Lists all monitors or a specific monitor's layout
+
+### IPC usage
+```
+echo '{"command":"get-monitor-layout","monitor":0}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-layout"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.67.0] - 2026-08-29 — IPC Set-Monitor-Layout Command
 ### Added
 - **IPC `set-monitor-layout` command**: set per-monitor layout properties
