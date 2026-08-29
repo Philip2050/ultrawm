@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.8.0] - 2026-08-29 — GPU-Accelerated Overlay Rendering
+### Added
+- **Per-pixel alpha rendering**: overlays now use UpdateLayeredWindow with 32-bit ARGB bitmaps
+- **Rounded corners**: Help overlay and notifications have smooth rounded corners via per-pixel alpha masking
+- **Hardware-accelerated composition**: DWM compositor GPU-accelerates layered window rendering on Windows 10+
+- **Smooth transparency**: per-pixel alpha enables proper anti-aliased edges and shadows
+
+### Changed
+- Help overlay uses per-pixel alpha bitmap instead of SetLayeredWindowAttributes
+- Notifier renders to 32-bit ARGB bitmap with rounded corners
+- Overlay rendering pipeline: content → GDI bitmap → UpdateLayeredWindow → DWM GPU composition
+
 ## [10.6.0] - 2026-08-29 — Keybind Help Overlay
 ### Added
 - **Help overlay**: displays all available keyboard shortcuts in a semi-transparent window
