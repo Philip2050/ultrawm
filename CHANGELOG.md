@@ -2,6 +2,34 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.26.0] - 2026-08-29 — IPC Get-Config Command
+### Added
+- **IPC `get-config` command**: returns current configuration as JSON
+- Includes layout, keybinds, theme, bar, launcher config, and window rules
+- Useful for scripts, tools, and status bars that need to read config programmatically
+- `last_modified` timestamp excluded from output (internal field)
+
+### IPC usage
+```
+echo '{"command":"get-config"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "get-config",
+  "data": {
+    "layout": { "gaps": 8, "border_width": 2, ... },
+    "keybinds": { "mod_key": "win", ... },
+    "theme": { "default": "catppuccin-mocha", ... },
+    "bar": { "enabled": true, "height": 40, ... },
+    "launcher": { "enabled": true, ... },
+    "rules": [ ... ]
+  }
+}
+```
+
 ## [10.25.0] - 2026-08-29 — IPC List-Workspaces Command
 ### Added
 - **IPC `list-workspaces` command**: returns all workspaces across monitors as JSON

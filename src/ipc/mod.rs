@@ -325,6 +325,74 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle list-workspaces command
+    if cmd_str == "list-workspaces" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let monitor_filter = json.get("monitor")
+                    .and_then(|v| v.as_u64())
+                    .map(|m| m as usize);
+                let mut workspaces = Vec::new();
+                for (mi, mw) in platform.monitor_workspaces.iter().enumerate() {
+                    if let Some(filt) = monitor_filter {
+                        if mi != filt { continue; }
+                    }
+                    for (wi, grid) in mw.grids.iter().enumerate() {
+                        let ws_name = platform.workspace_names.get(mi)
+                            .and_then(|names| names.get(wi))
+                            .map(|s| s.clone())
+                            .unwrap_or_else(|| format!("{}", wi + 1));
+                        let win_count = grid.windows.len();
+                        workspaces.push(serde_json::json!({
+                            "monitor": mi,
+                            "index": wi,
+                            "name": ws_name,
+                            "windows": win_count,
+                            "active": mi == mw.current_monitor && wi == mw.current,
+                        }));
+                    }
+                }
+                let focused_monitor = platform.monitor_workspaces.iter()
+                    .position(|mw| mw.current_monitor == mw.current_monitor).unwrap_or(0);
+                return serde_json::json!({
+                    "success": true,
+                    "command": "list-workspaces",
+                    "focused_monitor": focused_monitor,
+                    "focused_workspace": platform.monitor_workspaces.get(focused_monitor).map(|mw| mw.current).unwrap_or(0),
+                    "workspaces": workspaces,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
+    // Handle get-config command
+    if cmd_str == "get-config" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let config_value = serde_json::to_value(&platform.config).unwrap_or_else(|_| serde_json::json!({}));
+                return serde_json::json!({
+                    "success": true,
+                    "command": "get-config",
+                    "data": config_value,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1183,6 +1251,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "add-scratchpad" => IpcCommand::Single { command: "add-scratchpad".into() },
         "remove-scratchpad" => IpcCommand::Single { command: "remove-scratchpad".into() },
         "list-workspaces" => IpcCommand::Single { command: "list-workspaces".into() },
+        "get-config" => IpcCommand::Single { command: "get-config".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
