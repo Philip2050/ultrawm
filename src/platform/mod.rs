@@ -4230,6 +4230,9 @@ impl Platform {
             println!("  UltraWM as shell: {}", if is_ultrawm { "yes" } else { "no" });
         }
 
+        // Startup
+        println!("Startup: {}", if Platform::is_startup_enabled() { "enabled" } else { "disabled" });
+
         // Config
         println!("Config:");
         let config_path = dirs::home_dir()
@@ -4294,6 +4297,16 @@ impl Platform {
 
         // Session
         println!("Session: {}", if self.session.is_some() { "saved" } else { "none" });
+
+        // Per-app opacity memory
+        println!("Per-app opacity: {} entries", self.per_app_opacity.len());
+        for (exe, opacity) in &self.per_app_opacity {
+            println!("  {}: {:.0}%", exe, opacity * 100.0);
+        }
+
+        // System info
+        println!("CPU: {}%", self.get_cpu_usage());
+        println!("Monocle mode: {}", if self.monocle { "ON" } else { "OFF" });
 
         Ok(())
     }

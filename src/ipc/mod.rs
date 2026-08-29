@@ -823,6 +823,31 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "monitors": monitor_idx,
             });
         }
+        "diagnose" => {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    if let Err(e) = platform.diagnose() {
+                        return serde_json::json!({
+                            "success": false,
+                            "command": cmd_str,
+                            "message": format!("Diagnostics failed: {}", e),
+                        });
+                    }
+                    return serde_json::json!({
+                        "success": true,
+                        "command": cmd_str,
+                        "message": "Diagnostics printed to log",
+                    });
+                }
+            }
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "message": "Platform not available",
+            });
+        }
         "list-layout-presets" => {
             let presets = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;

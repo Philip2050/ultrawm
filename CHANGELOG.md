@@ -2,6 +2,36 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.21.0] - 2026-08-29 — Enhanced Diagnostics & Performance Metrics
+### Added
+- **Startup status in diagnostics**: shows whether UltraWM is set to run on login
+- **Per-app opacity memory in diagnostics**: lists all remembered app opacities
+- **CPU usage reporting**: real-time CPU percentage via GetSystemTimes
+- **Monocle mode status**: shows current monocle state in diagnostics
+- **IPC `diagnose` command**: run full diagnostics from scripts
+- **Comprehensive system info**: DWM, DPI, shell, config, themes, monitors, workspaces, windows, bar, hooks, session
+
+### Diagnostics output includes
+- DWM composition status
+- Primary monitor DPI
+- Shell replacement status (Explorer vs UltraWM)
+- Startup integration status
+- Config path, existence, last modified
+- Available themes
+- Monitor count, sizes, DPI, work areas
+- Per-monitor workspaces, grids, cameras, window positions
+- Managed windows (title, class, exe, id, float state)
+- Bar, border overlay, keyboard hook status
+- Session state
+- Per-app opacity memory entries
+- CPU usage percentage
+- Monocle mode status
+
+### IPC usage
+```
+echo '{"command":"diagnose"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.20.0] - 2026-08-29 — Theme Picker with Per-Pixel Alpha Rendering
 ### Added
 - **Per-pixel alpha theme picker**: modern overlay with rounded corners via UpdateLayeredWindow
