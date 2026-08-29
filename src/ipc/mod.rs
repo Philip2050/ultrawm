@@ -736,6 +736,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "layout-rows" => IpcCommand::Single { command: "layout-rows".into() },
         "layout-master" => IpcCommand::Single { command: "layout-master".into() },
         "layout-fibonacci" => IpcCommand::Single { command: "layout-fibonacci".into() },
+        "toggle-monocle" => IpcCommand::Single { command: "toggle-monocle".into() },
         "layout-preset" => {
             // layout-preset requires a name parameter; handled via channel with name appended
             return serde_json::json!({

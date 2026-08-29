@@ -2,6 +2,31 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.9.0] - 2026-08-29 — Monocle Layout Mode
+### Added
+- **Monocle layout mode**: focused window takes the full viewport, other windows hidden
+- `toggle_monocle()` method on Platform to enable/disable monocle mode
+- **Win+Z keybind**: toggle monocle mode on/off
+- **IPC `toggle-monocle` command**: toggle monocle mode from scripts
+- Auto-show/hide windows on focus change within monocle mode
+- Full-viewport border rendering for the focused window in monocle
+
+### Keybind
+```
+Win+Z — toggle monocle layout mode
+```
+
+### IPC usage
+```
+echo '{"command":"toggle-monocle"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Behavior
+- **Monocle ON**: only the focused window is visible, taking the full monitor work area
+- **Monocle OFF**: normal tiling layout resumes with all windows visible
+- **Focus change in monocle**: old window hides, new window shows and takes full viewport
+- **Exit monocle**: all previously hidden windows are restored and tiled normally
+
 ## [10.8.0] - 2026-08-29 — GPU-Accelerated Overlay Rendering
 ### Added
 - **Per-pixel alpha rendering**: overlays now use UpdateLayeredWindow with 32-bit ARGB bitmaps

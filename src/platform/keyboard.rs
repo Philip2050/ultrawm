@@ -274,6 +274,11 @@ unsafe extern "system" fn keyboard_proc(ncode: i32, wparam: WPARAM, lparam: LPAR
                 return LRESULT(1);
             }
         }
+        x if x == 0x5A => {
+            // Z — toggle monocle mode
+            platform.toggle_monocle();
+            return LRESULT(1);
+        }
         _ => {}
     }
 

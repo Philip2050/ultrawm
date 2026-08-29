@@ -144,6 +144,7 @@ pub struct Platform {
     pub opacity_anim: HashMap<u64, crate::anim::SpringValue>, // wid -> opacity spring animation
     pub snap_mode: bool,       // true when Win+G snap mode is active
     pub snap_flash: u32,       // snap mode flash timer (frames)
+    pub monocle: bool,         // true when monocle layout is active
     last_rounded: HashMap<u64, (i32, i32, i32)>, // wid -> (w, h, radius) last applied
     last_frame_time: std::time::Instant,
     shadow_set: HashMap<u64, bool>, // wid -> whether DWM shadow is enabled
@@ -228,6 +229,7 @@ impl Platform {
             opacity_anim: HashMap::new(),
             snap_mode: false,
             snap_flash: 0,
+            monocle: false,
             last_rounded: HashMap::new(),
             last_frame_time: std::time::Instant::now(),
             last_session_save: std::time::Instant::now(),
@@ -902,6 +904,63 @@ impl Platform {
             return;
         }
 
+        // Monocle mode: focused window takes full viewport
+        if self.monocle {
+            if let Some(hwnd_wrapper) = self.focused_hwnd {
+                if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                    let wid = info.id;
+                    let mon_idx = self.window_monitors.get(&wid).copied().unwrap_or(0);
+                    let mws = &self.monitor_workspaces[mon_idx];
+                    let monitor = &mws.monitor;
+                    let (vw, vh) = (monitor.work_width(), monitor.work_height());
+
+                    // Hide all non-focused windows
+                    for (&hwnd, win_info) in &self.windows {
+                        if win_info.id != wid && !win_info.minimized {
+                            unsafe {
+                                let _ = ShowWindow(hwnd.0, SW_HIDE);
+                            }
+                        }
+                    }
+
+                    // Show and position the focused window
+                    unsafe {
+                        let _ = ShowWindow(hwnd_wrapper.0, SW_SHOW);
+                        let _ = SetWindowPos(
+                            hwnd_wrapper.0,
+                            HWND_TOP,
+                            monitor.work_left,
+                            monitor.work_top,
+                            vw,
+                            vh,
+                            SWP_SHOWWINDOW | SWP_FRAMECHANGED,
+                        );
+                    }
+
+                    // Draw full-viewport border
+                    let is_focused = true;
+                    let color = accent_rgb;
+                    let title = info.title.clone();
+                    border_rects.push((
+                        monitor.work_left,
+                        monitor.work_top,
+                        vw,
+                        vh,
+                        color,
+                        is_focused,
+                        info.floating,
+                        Some(title),
+                    ));
+
+                    if let Some(ref mut overlay) = self.border_overlay {
+                        overlay.update(&border_rects);
+                    }
+                    return;
+                }
+            }
+            return;
+        }
+
         // Pre-compute monitor assignments to avoid borrow conflicts
         // Clone monitor handles for position-based assignment
         let mon_handles: Vec<_> = self.monitors.iter().map(|m| m.handle).collect();
@@ -1441,6 +1500,37 @@ impl Platform {
 
         let wid = self.windows.get(&HWnd(hwnd)).map(|i| i.id).unwrap_or(0);
         if wid > 0 {
+            // Monocle mode: show focused window, hide others
+            if self.monocle {
+                if let Some(old_hwnd) = self.focused_hwnd {
+                    if old_hwnd != HWnd(hwnd) {
+                        // Hide old focused window
+                        unsafe {
+                            let _ = ShowWindow(old_hwnd.0, SW_HIDE);
+                        }
+                    }
+                }
+                // Show and position new focused window
+                if let Some(info) = self.windows.get(&HWnd(hwnd)) {
+                    let mon_idx = self.window_monitors.get(&wid).copied().unwrap_or(0);
+                    let mws = &self.monitor_workspaces[mon_idx];
+                    let monitor = &mws.monitor;
+                    let (vw, vh) = (monitor.work_width(), monitor.work_height());
+                    unsafe {
+                        let _ = ShowWindow(hwnd, SW_SHOW);
+                        let _ = SetWindowPos(
+                            hwnd,
+                            HWND_TOP,
+                            monitor.work_left,
+                            monitor.work_top,
+                            vw,
+                            vh,
+                            SWP_SHOWWINDOW | SWP_FRAMECHANGED,
+                        );
+                    }
+                }
+            }
+
             // Animate opacity: dim old focused, brighten new focused
             let old_focused = self.focused_hwnd;
             if let Some(old_hwnd) = old_focused {
@@ -3129,6 +3219,10 @@ impl Platform {
                     self.layout_preset_fibonacci();
                     return;
                 }
+                if command == "toggle-monocle" {
+                    self.toggle_monocle();
+                    return;
+                }
                 if command.starts_with("layout-preset:") {
                     if let Some(name) = command.strip_prefix("layout-preset:") {
                         self.apply_layout_preset(name);
@@ -3522,6 +3616,15 @@ impl Platform {
             }
             self.overview_positions.clear();
             log::info!("Overview mode OFF");
+        }
+    }
+
+    pub fn toggle_monocle(&mut self) {
+        self.monocle = !self.monocle;
+        if self.monocle {
+            log::info!("Monocle mode ON");
+        } else {
+            log::info!("Monocle mode OFF");
         }
     }
 
