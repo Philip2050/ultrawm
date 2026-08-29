@@ -2,6 +2,26 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.4.0] - 2026-08-29 — Improved Window Tiling Animations
+### Added
+- **Smooth tiling animations**: windows now animate from their current position to new tiled positions
+- **Spring-based position interpolation**: uses existing SpringValue system for natural motion
+- **Animation from current rect**: windows start animation from their actual window position via GetWindowRect
+- **Fallback to target position**: if current rect unavailable, animation starts from target (instant placement)
+- Enhanced `or_insert_with` logic in tiling to preserve animation continuity
+
+### Changed
+- Window tiling now uses actual window position as animation start point
+- New windows animate from center if no previous position exists
+- Workspace switches maintain animation state across tile operations
+- Spring stiffness/damping from config control animation feel (default: 180.0/20.0)
+
+### Animation behavior
+- **New window**: starts from current screen position, animates to tiled cell
+- **Existing window**: slides from old cell to new cell with spring physics
+- **Layout change**: all windows smoothly transition to new layout
+- **Workspace switch**: windows fade out/in while maintaining position animations
+
 ## [10.3.0] - 2026-08-29 — Screenshot IPC Command
 ### Added
 - **Screenshot IPC command**: capture screen or window and save to PNG

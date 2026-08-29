@@ -968,8 +968,14 @@ impl Platform {
                     let target_h = h as f32;
 
                     let anim = self.anim.entry(wid).or_insert_with(|| {
+                        // Try to get current window position for smooth animation
+                        let (start_x, start_y, start_w, start_h) = if let Ok(rect) = get_window_rect(info.hwnd) {
+                            (rect.0 as f32, rect.1 as f32, rect.2 as f32, rect.3 as f32)
+                        } else {
+                            (target_x, target_y, target_w, target_h)
+                        };
                         WindowAnimState::new(
-                            target_x, target_y, target_w, target_h,
+                            start_x, start_y, start_w, start_h,
                             self.config.layout.spring_stiffness,
                             self.config.layout.spring_damping,
                         )
