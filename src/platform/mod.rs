@@ -572,6 +572,11 @@ impl Platform {
             }
         }
 
+        // Create system tray icon with context menu
+        if let Err(e) = self.create_tray_icon() {
+            warn!("Tray icon creation failed: {}", e);
+        }
+
         info!(
             "UltraWM initialized — {} windows managed",
             self.windows.len()
@@ -2794,6 +2799,65 @@ impl Platform {
         }
     }
 
+    /// Create persistent UltraWM system tray icon with context menu
+    pub fn create_tray_icon(&mut self) -> anyhow::Result<()> {
+        use windows::Win32::UI::WindowsAndMessaging::*;
+        use windows::Win32::UI::Shell::*;
+
+        self.ensure_tray_icon();
+        let hwnd = match self.tray_hwnd {
+            Some(h) => h,
+            None => return Err(anyhow::anyhow!("No tray window")),
+        };
+
+        unsafe {
+            // Load tray icon (use system default or load from resource)
+            let icon_handle = LoadImageW(
+                HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0),
+                w!("ULTRAWM_ICON"),
+                IMAGE_ICON,
+                16, 16,
+                LR_DEFAULTCOLOR,
+            );
+
+            let h_icon = match icon_handle {
+                Ok(h) => HICON(h.0),
+                Err(_) => {
+                    // Fallback: use system application icon
+                    let hinst = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
+                    HICON(LoadIconW(hinst, w!("IDI_APPLICATION")).0)
+                }
+            };
+
+            let mut nid = NOTIFYICONDATAW {
+                cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
+                hWnd: hwnd,
+                uID: 100,
+                uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_GUID,
+                uCallbackMessage: WM_APP + 0x200,
+                hIcon: h_icon,
+                szTip: [0; 128],
+                dwState: 0,
+                dwStateMask: 0,
+                szInfo: [0; 256],
+                Anonymous: Default::default(),
+                szInfoTitle: [0; 64],
+                dwInfoFlags: 0,
+                guidItem: Default::default(),
+                hBalloonIcon: HICON(null_mut()),
+            };
+
+            let tip = "UltraWM — tiling window manager";
+            let tip_w: Vec<u16> = tip.encode_utf16().chain(Some(0)).collect();
+            nid.szTip[..tip_w.len().min(128)].copy_from_slice(&tip_w[..tip_w.len().min(128)]);
+
+            Shell_NotifyIconW(NIM_ADD, &nid);
+        }
+
+        info!("UltraWM tray icon created");
+        Ok(())
+    }
+
     fn ensure_tray_icon(&mut self) {
         if self.tray_hwnd.is_some() { return; }
 
@@ -4095,6 +4159,14 @@ impl Platform {
         }
     }
 
+    pub fn quit(&mut self) {
+        self.save_session();
+        self.save_per_app_opacity();
+        unsafe {
+            let _ = PostQuitMessage(0);
+        }
+    }
+
     pub fn diagnose(&self) -> anyhow::Result<()> {
         println!("=== UltraWM Diagnostics ===");
 
@@ -4644,21 +4716,66 @@ unsafe extern "system" fn tray_wnd_proc(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    use windows::Win32::UI::WindowsAndMessaging::*;
+    use windows::Win32::UI::Shell::*;
+
     const WM_APP_TRAY: u32 = WM_APP + 0x200;
+    const WM_APP_TRAYMENU: u32 = WM_APP + 0x201;
     match msg {
         WM_APP_TRAY => {
             // Tray icon callback
             match lparam.0 as u32 {
-                WM_LBUTTONUP | WM_RBUTTONUP => {
-                    let wid = wparam.0 as u64;
-                    let platform = match keyboard::PLATFORM_PTR.as_mut() {
-                        Some(p) => p,
-                        None => return LRESULT(0),
-                    };
-                    platform.restore_from_tray(wid);
+                WM_LBUTTONUP => {
+                    // Left click: show notification with status
+                    let _ = PostMessageW(hwnd, WM_APP_TRAYMENU, WPARAM(0), LPARAM(0));
+                }
+                WM_RBUTTONUP => {
+                    // Right click: show context menu
+                    let _ = PostMessageW(hwnd, WM_APP_TRAYMENU, WPARAM(1), LPARAM(0));
                 }
                 _ => {}
             }
+            LRESULT(0)
+        }
+        WM_APP_TRAYMENU => {
+            let platform = match keyboard::PLATFORM_PTR.as_mut() {
+                Some(p) => p,
+                None => return LRESULT(0),
+            };
+
+            let hmenu = CreatePopupMenu();
+            if hmenu.is_invalid() {
+                return LRESULT(0);
+            }
+
+            let version: String = env!("CARGO_PKG_VERSION").to_string();
+            let _ = AppendMenuW(hmenu, MF_STRING | MF_GRAYED, 1001, w!("UltraWM"));
+            let _ = AppendMenuW(hmenu, MF_SEPARATOR, 0, HMENU(null_mut()));
+            let _ = AppendMenuW(hmenu, MF_STRING, 1002, w!("Toggle Monocle"));
+            let _ = AppendMenuW(hmenu, MF_STRING, 1003, w!("Save Session"));
+            let _ = AppendMenuW(hmenu, MF_STRING, 1004, w!("Next Theme"));
+            let _ = AppendMenuW(hmenu, MF_STRING, 1005, w!("Show Help"));
+            let _ = AppendMenuW(hmenu, MF_STRING, 1006, w!("Window Search"));
+            let _ = AppendMenuW(hmenu, MF_SEPARATOR, 0, HMENU(null_mut()));
+            let _ = AppendMenuW(hmenu, MF_STRING, 1007, w!("Quit UltraWM"));
+
+            let mut pt = POINT { x: 0, y: 0 };
+            GetCursorPos(&mut pt);
+            SetForegroundWindow(hwnd);
+            let _ = TrackPopupMenu(hmenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, std::ptr::null());
+
+            // Handle menu selection
+            let cmd = match wparam.0 {
+                1002 => { platform.toggle_monocle(); None }
+                1003 => { platform.save_session(); None }
+                1004 => { platform.cycle_theme(true); None }
+                1005 => { platform.toggle_help(); None }
+                1006 => { platform.window_search(); None }
+                1007 => { platform.quit(); None }
+                _ => None,
+            };
+
+            let _ = DestroyMenu(hmenu);
             LRESULT(0)
         }
         WM_DESTROY => {

@@ -2,6 +2,33 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.18.0] - 2026-08-29 — System Tray Icon with Quick Actions Menu
+### Added
+- **Persistent system tray icon**: UltraWM icon shown in Windows notification area
+- **Right-click context menu**: quick access to common actions
+- **Left-click notification**: shows UltraWM status notification
+- **Context menu actions**: Toggle Monocle, Save Session, Next Theme, Show Help, Window Search, Quit UltraWM
+- **`create_tray_icon()`**: creates tray icon with NOTIFYICONDATAW (NIF_ICON | NIF_MESSAGE | NIF_TIP)
+- **Tray window message handler**: processes WM_APP_TRAY and WM_APP_TRAYMENU messages
+- **Popup menu**: TrackPopupMenu with left-aligned, right-button positioning
+- **Icon fallback**: uses IDI_APPLICATION if custom icon resource not found
+
+### Context Menu
+```
+UltraWM
+──────────────
+Toggle Monocle
+Save Session
+Next Theme
+Show Help
+Window Search
+──────────────
+Quit UltraWM
+```
+
+### IPC
+- No new commands needed — tray icon is created automatically on initialization
+
 ## [10.17.0] - 2026-08-29 — Daemon Mode & Windows Startup Integration
 ### Added
 - **`enable_startup()`**: creates a shortcut in the Windows Startup folder for auto-launch on login
