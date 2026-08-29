@@ -2,6 +2,48 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.45.0] - 2026-08-29 — IPC Get-Window-Info Command
+### Added
+- **IPC `get-window-info` command**: returns detailed info about the focused window as JSON
+- Window identity: hwnd, id, title, class, exe
+- State: visible, floating, fullscreen, always_on_top, minimized, maximized, sticky
+- Layout: monitor, workspace, z_order
+- Appearance: border_color, border_width, opacity
+- Useful for debugging, scripting, and window management tools
+
+### IPC usage
+```
+echo '{"command":"get-window-info"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "get-window-info",
+  "data": {
+    "hwnd": 123456,
+    "id": 1,
+    "title": "Terminal",
+    "class": "ConsoleWindowClass",
+    "exe": "wt.exe",
+    "visible": true,
+    "floating": false,
+    "fullscreen": false,
+    "always_on_top": false,
+    "minimized": false,
+    "maximized": false,
+    "sticky": false,
+    "monitor": 0,
+    "workspace": 1,
+    "border_color": "0xFFFF4455",
+    "border_width": 2,
+    "opacity": 1.0,
+    "z_order": 0
+  }
+}
+```
+
 ## [10.44.0] - 2026-08-29 — IPC Toggle-Snap Command
 ### Added
 - **IPC `toggle-snap` command**: toggle snap mode on/off

@@ -533,6 +533,59 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle get-window-info command
+    if cmd_str == "get-window-info" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                if let Some(hwnd) = platform.focused_hwnd {
+                    if let Some(info) = platform.windows.get(&hwnd) {
+                        let mon_idx = platform.window_monitors.get(&info.id).copied().unwrap_or(0);
+                        let ws_idx = platform.window_workspaces.get(&info.id).copied().unwrap_or(0);
+                        let bw = platform.window_border_widths.get(&info.id).copied();
+                        let opacity = info.opacity.unwrap_or(1.0);
+                        let border_color = format!("0x{:08X}", info.border_color);
+                        return serde_json::json!({
+                            "success": true,
+                            "command": "get-window-info",
+                            "data": {
+                                "hwnd": hwnd.0,
+                                "id": info.id,
+                                "title": info.title,
+                                "class": info.class,
+                                "exe": info.exe,
+                                "visible": info.visible,
+                                "floating": info.floating,
+                                "fullscreen": info.fullscreen,
+                                "always_on_top": info.always_on_top,
+                                "minimized": info.minimized,
+                                "maximized": info.maximized,
+                                "sticky": info.sticky,
+                                "monitor": mon_idx,
+                                "workspace": ws_idx,
+                                "border_color": border_color,
+                                "border_width": bw.unwrap_or(platform.config.layout.border_width),
+                                "opacity": opacity,
+                                "z_order": info.z_order,
+                            },
+                        });
+                    }
+                }
+                return serde_json::json!({
+                    "success": false,
+                    "command": cmd_str,
+                    "message": "No focused window",
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1405,6 +1458,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "set-theme" => IpcCommand::Single { command: "set-theme".into() },
         "cycle-gap" => IpcCommand::Single { command: "cycle-gap".into() },
         "toggle-snap" => IpcCommand::Single { command: "toggle-snap".into() },
+        "get-window-info" => IpcCommand::Single { command: "get-window-info".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({
