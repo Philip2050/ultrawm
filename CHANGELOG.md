@@ -2,6 +2,27 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.14.0] - 2026-08-29 — Layout Presets with Save & IPC
+### Added
+- **`save_layout_preset()`**: save current tiling layout as a named preset
+- **Dynamic preset creation**: create presets at runtime with kind (grid, columns, rows, master, fibonacci, fullscreen)
+- **Persisted to config**: presets saved to config.toml via `config.save()`
+- **IPC `list-layout-presets`**: query all available layout presets
+- **IPC `create-layout-preset`**: save current layout as a named preset with kind
+- Preset naming: auto-removes existing preset with same name before adding
+
+### IPC usage
+```
+# List all presets
+echo '{"command":"list-layout-presets"}' | \\.\pipe\ultrawm-ipc
+
+# Save current layout as preset
+echo '{"command":"create-layout-preset","name":"my-cols","kind":"columns"}' | \\.\pipe\ultrawm-ipc
+
+# Apply preset
+echo '{"command":"layout-preset","name":"my-cols"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.13.0] - 2026-08-29 — Per-App Opacity Memory
 ### Added
 - **Per-app opacity memory**: opacity adjustments are remembered per executable and restored on startup

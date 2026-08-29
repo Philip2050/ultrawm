@@ -395,6 +395,30 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("missing 'rules' array field".into()), data: None };
     }
 
+    // Handle create-layout-preset: save current layout as named preset
+    if cmd_str == "create-layout-preset" {
+        if let Some(name) = json.get("name").and_then(|v| v.as_str()) {
+            let kind = json.get("kind").and_then(|v| v.as_str()).unwrap_or("grid");
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    platform.save_layout_preset(name, kind);
+                    return serde_json::json!({
+                        "success": true,
+                        "command": cmd_str,
+                        "message": format!("Layout preset '{}' created ({})", name, kind),
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "missing 'name' field. Use: {\"command\":\"create-layout-preset\",\"name\":\"my-preset\",\"kind\":\"columns\"}",
+        });
+    }
+
     // Handle layout-preset with name parameter
     if cmd_str == "layout-preset" {
         if let Some(name) = json.get("name").and_then(|v| v.as_str()) {
@@ -731,6 +755,32 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "command": cmd_str,
                 "data": workspaces,
                 "monitors": monitor_idx,
+            });
+        }
+        "list-layout-presets" => {
+            let presets = unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    platform.config.layout.layout_presets.iter().map(|p| {
+                        serde_json::json!({
+                            "name": p.name,
+                            "kind": p.kind,
+                            "cols": p.cols,
+                            "rows": p.rows,
+                        })
+                    }).collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                }
+            };
+            return serde_json::json!({
+                "success": true,
+                "command": cmd_str,
+                "data": {
+                    "count": presets.len(),
+                    "presets": presets,
+                },
             });
         }
         "get-managed-windows" => {

@@ -2610,6 +2610,33 @@ impl Platform {
         self.save_session();
     }
 
+    /// Save current layout as a named preset
+    pub fn save_layout_preset(&mut self, name: &str, kind: &str) {
+        use crate::config::LayoutPreset;
+
+        let grid = self.current_grid();
+        let wids = self.collect_visible_wids();
+        let n = wids.len().max(1);
+
+        let preset = LayoutPresest {
+            name: name.to_string(),
+            kind: kind.to_string(),
+            cols: if kind == "grid" || kind == "columns" { Some(n as u32) } else { None },
+            rows: if kind == "rows" { Some(n as u32) } else { None },
+        };
+
+        // Remove existing preset with same name
+        self.config.layout.layout_presets.retain(|p| p.name != name);
+        self.config.layout.layout_presets.push(preset);
+
+        // Save config to file
+        if let Err(e) = self.config.save() {
+            warn!("Failed to save config with new layout preset: {}", e);
+        } else {
+            info!("Layout preset '{}' saved ({})", name, kind);
+        }
+    }
+
     pub fn apply_custom_layout(&mut self, name: &str) {
         let (widths, heights) = match self.config.layout.snap_layouts.iter().find(|l| l.name == name) {
             Some(l) => (l.widths.clone(), l.heights.clone()),
