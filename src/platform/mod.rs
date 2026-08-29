@@ -3843,6 +3843,13 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "toggle-snap" {
+                    self.snap_mode = !self.snap_mode;
+                    if let Some(ref bar) = self.bar {
+                        bar.set_snap_mode(self.snap_mode);
+                    }
+                    return;
+                }
                 if command.starts_with("set-theme ") {
                     if let Some(theme_name) = command.strip_prefix("set-theme ") {
                         if let Some(theme_mgr) = &mut theme_mgr {

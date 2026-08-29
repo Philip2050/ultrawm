@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.44.0] - 2026-08-29 — IPC Toggle-Snap Command
+### Added
+- **IPC `toggle-snap` command**: toggle snap mode on/off
+- Updates `snap_mode` state and bar snap indicator
+- Snap mode enables visual window snapping to screen edges
+
+### IPC usage
+```
+echo '{"command":"toggle-snap"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.43.0] - 2026-08-29 — IPC Cycle-Gap Command
 ### Added
 - **IPC `cycle-gap` command**: cycles tiling gap through presets [0, 4, 8, 16, 32]
