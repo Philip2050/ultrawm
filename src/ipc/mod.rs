@@ -575,6 +575,9 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "notify" => IpcCommand::Single { command: "notify".into() },
         "get-managed-windows" => IpcCommand::Single { command: "get-managed-windows".into() },
         "clamp-focused" => IpcCommand::Single { command: "clamp-focused".into() },
+        "minimize-to-tray" => IpcCommand::Single { command: "minimize-to-tray".into() },
+        "restore-from-tray" => IpcCommand::Single { command: "restore-from-tray".into() },
+        "restore-all-tray" => IpcCommand::Single { command: "restore-all-tray".into() },
         "snap-layout" => IpcCommand::Single { command: "snap-layout".into() },
         "snap-custom" => {
             return serde_json::json!({

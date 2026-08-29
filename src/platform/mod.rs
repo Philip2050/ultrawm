@@ -12,7 +12,7 @@ use windows::{
     Win32::{
         Foundation::*,
         Graphics::{Dwm::*, Gdi::*},
-        System::Power::*,
+        System::{LibraryLoader::*, Power::*},
         UI::{Accessibility::*, HiDpi::*, Shell::*, WindowsAndMessaging::*},
     },
 };
@@ -161,6 +161,10 @@ pub struct Platform {
     ws_pending_ws: Option<usize>,
     ws_pending_monitor: Option<usize>,
     last_session_save: std::time::Instant,
+    /// Windows minimized to system tray (wid -> hwnd)
+    tray_windows: HashMap<u64, HWND>,
+    /// Hidden window for tray icon notifications
+    tray_hwnd: Option<HWND>,
 }
 
 pub struct MonitorWorkspaces {
@@ -241,6 +245,8 @@ impl Platform {
             ws_fade_out: false,
             ws_pending_ws: None,
             ws_pending_monitor: None,
+            tray_windows: HashMap::new(),
+            tray_hwnd: None,
         })
     }
 
@@ -2388,6 +2394,99 @@ impl Platform {
         info!("Custom layout '{}': {} cols x {} rows ({} windows)", name, widths.len().max(1), heights.len().max(1), wids.len());
     }
 
+    pub fn minimize_to_tray(&mut self) {
+        let hwnd = match self.focused_hwnd {
+            Some(h) => h.0,
+            None => return,
+        };
+        let wid = match self.windows.get(&HWnd(hwnd)).map(|i| i.id) {
+            Some(id) => id,
+            None => return,
+        };
+        if self.tray_windows.contains_key(&wid) { return; }
+
+        unsafe {
+            // Hide the window
+            let _ = ShowWindow(hwnd, SW_HIDE);
+
+            // Create tray icon if not exists
+            self.ensure_tray_icon();
+
+            // Add to tray
+            let title = self.windows.get(&HWnd(hwnd)).map(|i| i.title.clone()).unwrap_or_default();
+            let tip_str: Vec<u16> = title.encode_utf16().chain(Some(0)).collect();
+
+            let mut nid = NOTIFYICONDATAW::default();
+            nid.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+            nid.hWnd = self.tray_hwnd.unwrap_or(HWND(std::ptr::null_mut()));
+            nid.uID = wid as u32;
+            nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+            nid.uCallbackMessage = WM_APP + 0x200;
+            let copy_len = tip_str.len().min(nid.szTip.len());
+            nid.szTip[..copy_len].copy_from_slice(&tip_str[..copy_len]);
+
+            let _ = Shell_NotifyIconW(NIM_ADD, &nid);
+            self.tray_windows.insert(wid, hwnd);
+            info!("Minimized to tray: {} (wid={})", title, wid);
+        }
+    }
+
+    pub fn restore_from_tray(&mut self, wid: u64) {
+        if let Some(&hwnd) = self.tray_windows.get(&wid) {
+            unsafe {
+                let _ = ShowWindow(hwnd, SW_SHOW);
+                let _ = SetForegroundWindow(hwnd);
+
+                // Remove tray icon
+                let mut nid = NOTIFYICONDATAW::default();
+                nid.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+                nid.hWnd = self.tray_hwnd.unwrap_or(HWND(std::ptr::null_mut()));
+                nid.uID = wid as u32;
+                nid.uFlags = 0;
+                let _ = Shell_NotifyIconW(NIM_DELETE, &nid);
+            }
+            self.tray_windows.remove(&wid);
+            info!("Restored from tray: wid={}", wid);
+        }
+    }
+
+    pub fn restore_all_tray(&mut self) {
+        let wids: Vec<u64> = self.tray_windows.keys().copied().collect();
+        for wid in wids {
+            self.restore_from_tray(wid);
+        }
+    }
+
+    fn ensure_tray_icon(&mut self) {
+        if self.tray_hwnd.is_some() { return; }
+
+        unsafe {
+            // Create a message-only window for tray notifications
+            let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
+            let class = WNDCLASSW {
+                lpfnWndProc: Some(tray_wnd_proc),
+                hInstance: hinstance,
+                lpszClassName: w!("UltraWMTray"),
+                hbrBackground: HBRUSH(GetStockObject(HOLLOW_BRUSH).0),
+                ..Default::default()
+            };
+            RegisterClassW(&class);
+
+            if let Ok(hwnd) = CreateWindowExW(
+                WS_EX_TOOLWINDOW,
+                w!("UltraWMTray"),
+                w!("UltraWM Tray"),
+                WS_POPUP,
+                0, 0, 0, 0,
+                HWND_MESSAGE,
+                None, hinstance, None,
+            ) {
+                self.tray_hwnd = Some(hwnd);
+                SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            }
+        }
+    }
+
     pub fn toggle_shade(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
@@ -2813,6 +2912,23 @@ impl Platform {
                 }
                 if command == "restore" {
                     self.restore_minimized();
+                    return;
+                }
+                if command == "minimize-to-tray" {
+                    self.minimize_to_tray();
+                    return;
+                }
+                if command == "restore-from-tray" {
+                    if let Some(focused) = self.focused_hwnd {
+                        let wid = self.windows.get(&focused).map(|i| i.id);
+                        if let Some(w) = wid {
+                            self.restore_from_tray(w);
+                        }
+                    }
+                    return;
+                }
+                if command == "restore-all-tray" {
+                    self.restore_all_tray();
                     return;
                 }
                 if command == "maximize" {
@@ -3764,5 +3880,40 @@ unsafe extern "system" fn win_event_proc(
             }
         }
         _ => {}
+    }
+}
+
+unsafe extern "system" fn tray_wnd_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    const WM_APP_TRAY: u32 = WM_APP + 0x200;
+    match msg {
+        WM_APP_TRAY => {
+            // Tray icon callback
+            match lparam.0 as u32 {
+                WM_LBUTTONUP | WM_RBUTTONUP => {
+                    let wid = wparam.0 as u64;
+                    let platform = match keyboard::PLATFORM_PTR.as_mut() {
+                        Some(p) => p,
+                        None => return LRESULT(0),
+                    };
+                    platform.restore_from_tray(wid);
+                }
+                _ => {}
+            }
+            LRESULT(0)
+        }
+        WM_DESTROY => {
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Platform;
+            if !ptr.is_null() {
+                drop(Box::from_raw(ptr));
+            }
+            PostQuitMessage(0);
+            LRESULT(0)
+        }
+        _ => DefWindowProcW(hwnd, msg, wparam, lparam),
     }
 }

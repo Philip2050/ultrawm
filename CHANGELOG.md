@@ -2,6 +2,30 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [9.8.0] - 2026-08-29 — Minimize-to-Tray Support
+### Added
+- **Minimize-to-tray** support: windows can minimize to system tray instead of taskbar
+- `tray_windows: HashMap<u64, HWND>` on Platform tracks tray-hidden windows
+- `tray_hwnd: Option<HWND>` for the hidden tray message-only window
+- `minimize_to_tray(wid)` — hides window and creates tray icon with exe name
+- `restore_from_tray(wid)` — restores a specific tray window by clicking its icon
+- `restore_all_tray()` — restores all tray windows (restarts WM recovery)
+- `ensure_tray_icon(hwnd, exe)` — creates/updates tray icon with tooltip
+- **`minimize-to-tray` IPC command**: minimize focused window to tray
+- **`restore-from-tray` IPC command**: restore window by pid
+- **`restore-all-tray` IPC command**: restore all tray windows
+- `tray_wnd_proc` window procedure handles tray icon callbacks (WM_LBUTTONUP/WM_RBUTTONUP)
+- Tray icons use `Shell_NotifyIconW` with `NOTIFYICONDATAW` and round icon
+- Tray icons display first letter of exe name centered in colored icon
+- Windows restore with original style/flags after tray restoration
+
+### IPC usage
+```
+echo '{"command":"minimize-to-tray"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"restore-from-tray","wid":12345}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"restore-all-tray"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [8.2.0] - 2026-08-29 — Window Snap Mode (Win+G)
 ### Added
 - Win+G toggles snap mode — focused window snaps to screen positions with arrow/number keys
