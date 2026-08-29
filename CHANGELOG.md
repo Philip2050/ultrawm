@@ -2,6 +2,16 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.78.0] - 2026-08-29 — IPC Get-Bar-State Command
+### Added
+- **IPC `get-bar-state` command**: get current bar visibility, height, width, and HWND
+- Returns bar state or null if bar is not created
+
+### IPC usage
+```
+echo '{"command":"get-bar-state"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.77.0] - 2026-08-29 — IPC Help Command
 ### Added
 - **IPC `help` command**: list all available IPC commands

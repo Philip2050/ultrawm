@@ -2463,6 +2463,33 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-bar-state command
+    if cmd_str == "get-bar-state" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let bar = platform.bar.as_ref();
+                let state = bar.map(|b| {
+                    serde_json::json!({
+                        "visible": platform.bar_visible,
+                        "height": b.height,
+                        "width": b.width,
+                        "hwnd": b.hwnd.0,
+                    })
+                }).unwrap_or_else(|| serde_json::json!(null));
+                return serde_json::json!({
+                    "success": true,
+                    "bar": state,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle ping command
     if cmd_str == "ping" {
         return serde_json::json!({
