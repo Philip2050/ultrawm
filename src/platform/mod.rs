@@ -3811,6 +3811,22 @@ impl Platform {
                     }
                     return;
                 }
+                if command.starts_with("set-border-width ") {
+                    if let Some(width_str) = command.strip_prefix("set-border-width ") {
+                        if let Ok(width) = width_str.parse::<u32>() {
+                            if let Some(hwnd) = self.focused_hwnd {
+                                if let Some(info) = self.windows.get(&hwnd) {
+                                    if width > 0 {
+                                        self.window_border_widths.insert(info.id, width);
+                                    } else {
+                                        self.window_border_widths.remove(&info.id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }

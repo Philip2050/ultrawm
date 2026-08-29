@@ -1399,6 +1399,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "list-monitors" => IpcCommand::Single { command: "list-monitors".into() },
         "get-bar-config" => IpcCommand::Single { command: "get-bar-config".into() },
         "set-border-color" => IpcCommand::Single { command: "set-border-color".into() },
+        "set-border-width" => IpcCommand::Single { command: "set-border-width".into() },
         "get-theme" => IpcCommand::Single { command: "get-theme".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {

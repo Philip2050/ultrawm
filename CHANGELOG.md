@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.39.0] - 2026-08-29 — IPC Set-Border-Width Command
+### Added
+- **IPC `set-border-width` command**: change focused window's border width at runtime
+- Accepts pixel value: `set-border-width 4` (or 0 to reset to default)
+- Updates `window_border_widths` HashMap, takes effect on next render
+- Pairs with `set-border-color` for dynamic window styling
+
+### IPC usage
+```
+echo '{"command":"set-border-width","width":4}' | \\.\pipe\ultrawm-ipc
+echo 'set-border-width 0' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.38.0] - 2026-08-29 — IPC Get-Theme Command
 ### Added
 - **IPC `get-theme` command**: returns current theme name and colors as JSON
