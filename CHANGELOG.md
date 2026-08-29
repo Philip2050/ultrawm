@@ -2,6 +2,23 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.30.0] - 2026-08-29 — Per-App Corner Radius from Window Rules
+### Added
+- **`corner_radius` field in WindowRule**: rules can set custom corner radius per app
+- **Rule application**: `corner_radius` from matching rule applied via `apply_rounded_corners()`
+- Per-app rounded corners override global `layout.corner_radius`
+
+### Config example
+```toml
+[[rules]]
+match = "chrome"
+corner_radius = 12
+
+[[rules]]
+match = "terminal"
+corner_radius = 0
+```
+
 ## [10.29.0] - 2026-08-29 — Floating Window Z-Order Management
 ### Added
 - **Floating window bring-to-front**: focused floating windows automatically get HWND_TOPMOST via SetWindowPos

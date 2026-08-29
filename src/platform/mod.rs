@@ -3877,6 +3877,10 @@ impl Platform {
             if let Some(bc) = rule.border_color {
                 win_info.border_color = bc;
             }
+            if let Some(cr) = rule.corner_radius {
+                // Apply per-app corner radius via DWM window corner preference
+                self.apply_rounded_corners(win_info.hwnd, cr);
+            }
             if let Some(mw) = rule.max_width {
                 if mw > 0 {
                     win_info.max_width = Some(mw);

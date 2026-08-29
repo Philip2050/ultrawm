@@ -40,6 +40,7 @@ pub struct WindowRule {
     pub always_on_top: Option<bool>,
     pub border_color: Option<u32>,
     pub fullscreen: Option<bool>,
+    pub corner_radius: Option<u32>,
 }
 
 impl WindowRule {
