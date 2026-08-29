@@ -2,6 +2,30 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.17.0] - 2026-08-29 — Daemon Mode & Windows Startup Integration
+### Added
+- **`enable_startup()`**: creates a shortcut in the Windows Startup folder for auto-launch on login
+- **`disable_startup()`**: removes the UltraWM.lnk shortcut from Startup folder
+- **`is_startup_enabled()`**: checks if UltraWM is configured to run on login
+- **IPC `enable-startup`**: add UltraWM to Windows startup
+- **IPC `disable-startup`**: remove UltraWM from Windows startup
+- **IPC `startup-status`**: check if UltraWM is set to run on login
+- **Shell replacement support**: `--install` sets UltraWM as default shell (replaces Explorer)
+- **Shell restore**: `--uninstall` restores previous shell from backup
+- Shortcut uses `--start` argument and hidden window style (7)
+
+### Startup behavior
+- Shortcut placed in: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\UltraWM.lnk`
+- Uses hidden window style to avoid popup on login
+- Working directory set to UltraWM installation folder
+
+### IPC usage
+```
+echo '{"command":"enable-startup"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"disable-startup"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"startup-status"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.16.0] - 2026-08-29 — Configuration Hot-Reload with Change Diff
 ### Added
 - **Comprehensive config diff**: compares 20+ layout fields on reload and reports exact changes

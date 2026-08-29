@@ -195,6 +195,11 @@ fn find_empty_cell(grid: &GridState) -> Option<Cell> {
     None
 }
 
+fn get_startup_dir() -> Option<std::path::PathBuf> {
+    use std::env;
+    dirs::home_dir().map(|h| h.join("AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup"))
+}
+
 impl Platform {
     pub fn new() -> anyhow::Result<Self> {
         // Set per-monitor DPI awareness v2 for correct scaling on mixed-DPI setups
@@ -2967,6 +2972,61 @@ impl Platform {
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from(".")));
         base.join(".config/ultrawm/per_app_opacity.json")
+    }
+
+    /// Check if UltraWM is set to run on startup
+    pub fn is_startup_enabled() -> bool {
+        use std::env::current_exe;
+        if let Ok(startup_dir) = get_startup_dir() {
+            let shortcut_path = startup_dir.join("UltraWM.lnk");
+            return shortcut_path.exists();
+        }
+        false
+    }
+
+    /// Enable startup: create a shortcut in the Windows Startup folder
+    pub fn enable_startup() -> anyhow::Result<()> {
+        use std::env::current_exe;
+        use std::process::Command;
+
+        let startup_dir = get_startup_dir()
+            .ok_or_else(|| anyhow::anyhow!("Could not find Startup folder"))?;
+        std::fs::create_dir_all(&startup_dir)?;
+
+        let shortcut_path = startup_dir.join("UltraWM.lnk");
+        let exe_path = current_exe()?;
+        let exe_str = exe_path.to_string_lossy().to_string();
+
+        // Use PowerShell to create shortcut
+        let ps_script = format!(
+            r#"$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut("{}"); $Shortcut.TargetPath = "{}"; $Shortcut.Arguments = "--start"; $Shortcut.WorkingDirectory = "{}"; $Shortcut.WindowStyle = 7; $Shortcut.Save()"#,
+            shortcut_path.display(),
+            exe_str,
+            exe_path.parent().unwrap_or(std::path::Path::new(".")).display()
+        );
+
+        let output = Command::new("powershell")
+            .args(["-Command", &ps_script])
+            .output()?;
+
+        if !output.status.success() {
+            return Err(anyhow::anyhow!("Failed to create startup shortcut: {:?}", String::from_utf8_lossy(&output.stderr)));
+        }
+
+        info!("UltraWM added to startup: {}", shortcut_path.display());
+        Ok(())
+    }
+
+    /// Disable startup: remove shortcut from the Windows Startup folder
+    pub fn disable_startup() -> anyhow::Result<()> {
+        if let Some(startup_dir) = get_startup_dir() {
+            let shortcut_path = startup_dir.join("UltraWM.lnk");
+            if shortcut_path.exists() {
+                std::fs::remove_file(&shortcut_path)?;
+                info!("UltraWM removed from startup: {}", shortcut_path.display());
+            }
+        }
+        Ok(())
     }
 
     /// Enable idle inhibit — prevent screen lock/sleep

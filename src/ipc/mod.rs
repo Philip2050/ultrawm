@@ -462,6 +462,30 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("Platform not available".into()), data: None };
     }
 
+    // Handle startup integration commands
+    if cmd_str == "enable-startup" {
+        if let Err(e) = crate::platform::Platform::enable_startup() {
+            return IpcResponse { success: false, message: Some(format!("Failed: {}", e)), data: None };
+        }
+        return IpcResponse { success: true, message: Some("UltraWM will run on login".into()), data: None };
+    }
+
+    if cmd_str == "disable-startup" {
+        if let Err(e) = crate::platform::Platform::disable_startup() {
+            return IpcResponse { success: false, message: Some(format!("Failed: {}", e)), data: None };
+        }
+        return IpcResponse { success: true, message: Some("UltraWM removed from login".into()), data: None };
+    }
+
+    if cmd_str == "startup-status" {
+        let enabled = crate::platform::Platform::is_startup_enabled();
+        return IpcResponse {
+            success: true,
+            message: Some(if enabled { "enabled" } else { "disabled" }.into()),
+            data: Some(serde_json::json!({ "enabled": enabled })),
+        };
+    }
+
     let result = process_single_command(cmd_str, tx);
     if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         IpcResponse { success: true, message: Some("ok".into()), data: None }
