@@ -1252,6 +1252,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "remove-scratchpad" => IpcCommand::Single { command: "remove-scratchpad".into() },
         "list-workspaces" => IpcCommand::Single { command: "list-workspaces".into() },
         "get-config" => IpcCommand::Single { command: "get-config".into() },
+        "swap-windows" => IpcCommand::Single { command: "swap-windows".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

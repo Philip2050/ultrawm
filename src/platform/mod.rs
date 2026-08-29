@@ -3743,6 +3743,20 @@ impl Platform {
                     }
                     return;
                 }
+                if command == "swap-windows" {
+                    if let Some(src) = self.focused_hwnd {
+                        let grid = self.current_grid();
+                        let src_id = self.windows.get(&src).map(|i| i.id);
+                        if let Some(src_id) = src_id {
+                            if let Some(&tgt_id) = grid.windows.get(1) {
+                                if let Some(tgt_hwnd) = self.windows.iter().find(|(_, i)| i.id == tgt_id).map(|(hw, _)| *hw) {
+                                    self.swap_windows(src, tgt_hwnd);
+                                }
+                            }
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }

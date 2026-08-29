@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.27.0] - 2026-08-29 — IPC Swap-Windows Command
+### Added
+- **IPC `swap-windows` command**: swaps the focused window with the next tiling window
+- Uses existing `swap_windows()` with grid cell position swap
+- Includes swap flash animation (white border flash on both windows)
+- Useful for keybind-driven window reordering without drag
+
+### IPC usage
+```
+echo '{"command":"swap-windows"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.26.0] - 2026-08-29 — IPC Get-Config Command
 ### Added
 - **IPC `get-config` command**: returns current configuration as JSON
