@@ -2,6 +2,37 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.3.0] - 2026-08-29 — Screenshot IPC Command
+### Added
+- **Screenshot IPC command**: capture screen or window and save to PNG
+- `Platform::take_screenshot()` method using BitBlt and GetDIBits
+- Screenshot supports full screen or specific window capture
+- Automatic BGRA to RGBA conversion for PNG format
+- PNG encoding using existing `png` crate dependency
+- **`screenshot` IPC command**: trigger screenshots from scripts/CLI
+- Optional `hwnd` parameter to capture specific window
+- Optional `output` parameter for custom file path (default: `ultrawm-screenshot.png`)
+
+### IPC usage
+```bash
+# Full screen screenshot
+echo '{"command":"screenshot","output":"fullscreen.png"}' | \\.\pipe\ultrawm-ipc
+
+# Specific window screenshot (by HWND)
+echo '{"command":"screenshot","hwnd":12345,"output":"window.png"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Implementation details
+- Uses `BitBlt` with `SRCCOPY | CAPTUREBLT` for screen capture
+- Creates compatible bitmap and device context for rendering
+- Reads bitmap bits with `GetDIBits` into RGBA buffer
+- Saves PNG with 32-bit color depth using `png` crate
+- Cleans up GDI objects (bitmap, DC) after capture
+
+### Changed
+- Screenshot feature builds on existing `png` crate dependency
+- Output path defaults to current directory if not specified
+
 ## [10.2.0] - 2026-08-29 — Enhanced Session Restore
 ### Added
 - **Monitor assignment per window**: session now saves which monitor each window was on

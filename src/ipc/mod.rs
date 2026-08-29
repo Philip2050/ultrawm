@@ -193,6 +193,39 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle screenshot command with structured input
+    if cmd_str == "screenshot" {
+        let hwnd_opt = json.get("hwnd").and_then(|v| v.as_u64()).map(|h| HWND(h as *mut _));
+        let output = json.get("output").and_then(|v| v.as_str()).unwrap_or("ultrawm-screenshot.png");
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                match platform.take_screenshot(hwnd_opt, output) {
+                    Ok(_) => {
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": format!("Screenshot saved to {}", output),
+                        });
+                    }
+                    Err(e) => {
+                        return serde_json::json!({
+                            "success": false,
+                            "command": cmd_str,
+                            "message": format!("Screenshot failed: {}", e),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -643,6 +676,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "minimize-to-tray" => IpcCommand::Single { command: "minimize-to-tray".into() },
         "restore-from-tray" => IpcCommand::Single { command: "restore-from-tray".into() },
         "restore-all-tray" => IpcCommand::Single { command: "restore-all-tray".into() },
+        "screenshot" => IpcCommand::Single { command: "screenshot".into() },
         "snap-layout" => IpcCommand::Single { command: "snap-layout".into() },
         "snap-custom" => {
             return serde_json::json!({

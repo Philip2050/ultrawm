@@ -3685,6 +3685,75 @@ impl Platform {
             }
         }
     }
+
+    /// Take a screenshot of the specified window or full screen and save to PNG
+    pub fn take_screenshot(&self, hwnd: Option<HWND>, output_path: &str) -> anyhow::Result<()> {
+        unsafe {
+            let (src_hwnd, width, height, x, y) = if let Some(hwnd) = hwnd {
+                // Capture specific window
+                let mut rect = RECT::default();
+                GetWindowRect(hwnd, &mut rect)?;
+                let w = (rect.right - rect.left).max(1);
+                let h = (rect.bottom - rect.top).max(1);
+                (hwnd, w, h, rect.left, rect.top)
+            } else {
+                // Capture full virtual screen
+                let w = GetSystemMetrics(SM_CXSCREEN).max(1);
+                let h = GetSystemMetrics(SM_CYSCREEN).max(1);
+                (HWND(GetDesktopWindow().0), w, h, 0, 0)
+            };
+
+            let hdc_src = GetDC(src_hwnd);
+            let hdc_mem = CreateCompatibleDC(hdc_src);
+            let bitmap = CreateCompatibleBitmap(hdc_src, width, height);
+            let old_bitmap = SelectObject(hdc_mem, bitmap);
+
+            // Copy screen to bitmap
+            BitBlt(hdc_mem, 0, 0, width, height, hdc_src, x, y, SRCCOPY | CAPTUREBLT);
+
+            // Get bitmap bits
+            let mut bmi = BITMAPINFO {
+                bmiHeader: BITMAPINFOHEADER {
+                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                    biWidth: width,
+                    biHeight: -height,
+                    biPlanes: 1,
+                    biBitCount: 32,
+                    biCompression: BI_RGB.0,
+                    ..Default::default()
+                },
+                bmiColors: [Default::default(); 1],
+            };
+
+            let mut buffer = vec![0u8; (width * height * 4) as usize];
+            if GetDIBits(hdc_mem, bitmap, 0, height, Some(buffer.as_mut_ptr() as *mut _), &mut bmi, DIB_RGB_COLORS) == 0 {
+                return Err(anyhow::anyhow!("GetDIBits failed"));
+            }
+
+            // Convert BGRA to RGBA
+            for pixel in buffer.chunks_exact_mut(4) {
+                pixel.swap(0, 2);
+            }
+
+            // Save as PNG
+            let mut png_file = std::fs::File::create(output_path)?;
+            let mut encoder = png::Encoder::new(&mut png_file, width as u32, height as u32);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder.write_header()?;
+            writer.write_image_data(&buffer)?;
+            writer.finish()?;
+
+            // Cleanup
+            SelectObject(hdc_mem, old_bitmap);
+            DeleteObject(bitmap);
+            DeleteDC(hdc_mem);
+            ReleaseDC(src_hwnd, hdc_src);
+
+            info!("Screenshot saved to {}", output_path);
+            Ok(())
+        }
+    }
 }
 
 // ============ Win32 Helpers ============
