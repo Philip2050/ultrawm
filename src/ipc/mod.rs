@@ -997,6 +997,67 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
                 "data": serde_json::Value::Array(rules),
             });
         }
+        "focus-monitor" => {
+            if let Some(mon) = json.get("monitor").and_then(|v| v.as_u64()) {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        platform.focus_monitor(mon as usize);
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": format!("Focusing monitor {}", mon + 1),
+                        });
+                    }
+                }
+            }
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "message": "missing 'monitor' field (0-indexed)",
+            });
+        }
+        "move-to-monitor" => {
+            if let Some(mon) = json.get("monitor").and_then(|v| v.as_u64()) {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        platform.move_focused_to_monitor(mon as usize);
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": format!("Moving window to monitor {}", mon + 1),
+                        });
+                    }
+                }
+            }
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "message": "missing 'monitor' field (0-indexed)",
+            });
+        }
+        "focus-next-monitor" => {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    platform.focus_next_monitor();
+                    return serde_json::json!({
+                        "success": true,
+                        "command": cmd_str,
+                        "message": "Focusing next monitor",
+                    });
+                }
+            }
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "message": "Platform not available",
+            });
+        }
         "export-rules" => {
             let rules = unsafe {
                 let ptr = crate::platform::keyboard::PLATFORM_PTR;

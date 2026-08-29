@@ -2,6 +2,24 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.22.0] - 2026-08-29 — Multi-Monitor Focus & Window Transfer
+### Added
+- **`move_focused_to_monitor()`**: move focused window to target monitor
+- **`focus_next_monitor()`**: cycle focus to the next monitor
+- **`focus_monitor()`**: focus a specific monitor and switch to its workspace
+- **IPC `move-to-monitor`**: `{"command":"move-to-monitor","monitor":1}` — move focused window to monitor 2
+- **IPC `focus-monitor`**: `{"command":"focus-monitor","monitor":0}` — focus primary monitor
+- **IPC `focus-next-monitor`**: cycle focus across all monitors
+- Window position updates when moved between monitors
+- Auto re-tiling after monitor transfer
+
+### IPC usage
+```
+echo '{"command":"move-to-monitor","monitor":1}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"focus-next-monitor"}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"focus-monitor","monitor":0}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.21.0] - 2026-08-29 — Enhanced Diagnostics & Performance Metrics
 ### Added
 - **Startup status in diagnostics**: shows whether UltraWM is set to run on login

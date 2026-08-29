@@ -2315,6 +2315,64 @@ impl Platform {
         Some(0)
     }
 
+    /// Move focused window to a different monitor
+    pub fn move_focused_to_monitor(&mut self, target_mon: usize) {
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                if target_mon >= self.monitors.len() { return; }
+                let mon = &self.monitors[target_mon];
+                let wid = info.id;
+
+                // Update monitor assignment
+                self.window_monitors.insert(wid, target_mon);
+
+                // Move window to target monitor
+                unsafe {
+                    let _ = SetWindowPos(
+                        hwnd_wrapper.0,
+                        HWND_TOP,
+                        mon.work_left + 50,
+                        mon.work_top + 50,
+                        info.saved_w.max(400),
+                        info.saved_h.max(300),
+                        SWP_SHOWWINDOW | SWP_FRAMECHANGED,
+                    );
+                }
+
+                // Re-tile
+                self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+                info!("Moved window to monitor {}", target_mon + 1);
+            }
+        }
+    }
+
+    /// Focus the next monitor (cycle focus across monitors)
+    pub fn focus_next_monitor(&mut self) {
+        if self.monitors.len() <= 1 { return; }
+        if let Some(hwnd_wrapper) = self.focused_hwnd {
+            if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                let current_mon = self.window_monitors.get(&info.id).copied().unwrap_or(0);
+                let next_mon = (current_mon + 1) % self.monitors.len();
+                self.focus_monitor(next_mon);
+            }
+        }
+    }
+
+    /// Focus a specific monitor by switching to its current workspace
+    pub fn focus_monitor(&mut self, mon_idx: usize) {
+        if mon_idx >= self.monitor_workspaces.len() { return; }
+        let target_ws = self.monitor_workspaces[mon_idx].current;
+        // Find a window on that monitor to focus
+        for (hwnd_wrapper, info) in &self.windows {
+            if let Some(wmon) = self.window_monitors.get(&info.id) {
+                if *wmon == mon_idx && !info.minimized && info.visible {
+                    self.on_focus_changed(hwnd_wrapper.0);
+                    return;
+                }
+            }
+        }
+    }
+
     pub fn clamp_focused_window(&mut self) {
         if let Some(hwnd_wrapper) = self.focused_hwnd {
             if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
