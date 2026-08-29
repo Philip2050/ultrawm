@@ -612,6 +612,35 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle get-layout-presets command
+    if cmd_str == "get-layout-presets" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let presets: Vec<serde_json::Value> = platform.config.layout.layout_presets.iter().map(|p| {
+                    serde_json::json!({
+                        "name": p.name,
+                        "kind": p.kind,
+                        "cols": p.cols,
+                        "rows": p.rows,
+                    })
+                }).collect();
+                return serde_json::json!({
+                    "success": true,
+                    "command": "get-layout-presets",
+                    "presets": presets,
+                    "count": presets.len(),
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1487,6 +1516,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "get-window-info" => IpcCommand::Single { command: "get-window-info".into() },
         "cycle-theme" => IpcCommand::Single { command: "cycle-theme".into() },
         "list-themes" => IpcCommand::Single { command: "list-themes".into() },
+        "get-layout-presets" => IpcCommand::Single { command: "get-layout-presets".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

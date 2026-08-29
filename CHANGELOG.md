@@ -2,6 +2,29 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.48.0] - 2026-08-29 — IPC Get-Layout-Presets Command
+### Added
+- **IPC `get-layout-presets` command**: returns all layout presets as JSON
+- Each preset: name, kind (columns/rows/master/fibonacci/custom), cols, rows
+- Useful for layout picker tools and status bars
+
+### IPC usage
+```
+echo '{"command":"get-layout-presets"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "get-layout-presets",
+  "presets": [
+    {"name": "default", "kind": "columns", "cols": null, "rows": null}
+  ],
+  "count": 1
+}
+```
+
 ## [10.47.0] - 2026-08-29 — IPC List-Themes Command
 ### Added
 - **IPC `list-themes` command**: returns all available theme names as JSON
