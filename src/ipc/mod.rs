@@ -2463,6 +2463,16 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle ping command
+    if cmd_str == "ping" {
+        return serde_json::json!({
+            "success": true,
+            "command": "ping",
+            "message": "pong",
+            "version": env!("CARGO_PKG_VERSION"),
+        });
+    }
+
     // Handle list-all-windows command
     if cmd_str == "list-all-windows" {
         unsafe {

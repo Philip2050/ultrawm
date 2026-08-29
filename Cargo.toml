@@ -1,6 +1,6 @@
 [package]
 name = "ultrawm"
-version = "10.73.0"
+version = "10.74.0"
 edition = "2021"
 authors = ["Blake"]
 license = "MIT"

@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.74.0] - 2026-08-29 — IPC Ping Command
+### Added
+- **IPC `ping` command**: health check endpoint
+- Returns version, success status, and "pong" message
+- Useful for scripts to verify UltraWM IPC is running
+
+### IPC usage
+```
+echo '{"command":"ping"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.73.0] - 2026-08-29 — IPC Apply-Layout-Preset Command
 ### Added
 - **IPC `apply-layout-preset` command**: apply a named layout preset at runtime
