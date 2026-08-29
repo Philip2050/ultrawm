@@ -113,6 +113,20 @@ All notable changes to UltraWM will be documented in this file.
 - Config save creates parent directory if it doesn't exist
 - Failed saves are logged as warnings but don't crash the WM
 
+## [9.5.0] - 2026-08-29 — Session Auto-Save Interval Config
+### Added
+- **`session_auto_save_interval`** config field: auto-save session every N seconds (0 = disabled)
+- `last_session_save: Instant` field on Platform tracks last auto-save time
+- Event loop checks interval each frame and saves when elapsed
+- Replaces hardcoded ~5 second periodic save with configurable interval
+- Setting to 0 disables auto-save (manual saves still work on workspace switch, window close, etc.)
+
+### Example config
+```toml
+[layout]
+session_auto_save_interval = 30  # save every 30 seconds
+```
+
 ## [9.4.0] - 2026-08-29 — Layout Presets: Named Window Arrangements
 ### Added
 - **Layout presets** in config: named window arrangement definitions

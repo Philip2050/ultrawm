@@ -160,6 +160,7 @@ pub struct Platform {
     ws_fade_out: bool,      // true=fading out, false=fading in
     ws_pending_ws: Option<usize>,
     ws_pending_monitor: Option<usize>,
+    last_session_save: std::time::Instant,
 }
 
 pub struct MonitorWorkspaces {
@@ -220,6 +221,7 @@ impl Platform {
             snap_flash: 0,
             last_rounded: HashMap::new(),
             last_frame_time: std::time::Instant::now(),
+            last_session_save: std::time::Instant::now(),
             shadow_set: HashMap::new(),
             config: crate::config::Config::default(),
             config_reload_counter: 0,
@@ -757,8 +759,12 @@ impl Platform {
                 }
             }
 
-            // Save session every ~5 seconds
-            self.save_session();
+            // Auto-save session at configured interval
+            let auto_save_secs = self.config.layout.session_auto_save_interval;
+            if auto_save_secs > 0 && self.last_session_save.elapsed().as_secs() >= auto_save_secs as u64 {
+                self.save_session();
+                self.last_session_save = std::time::Instant::now();
+            }
 
             // Update bar with focused window title, color, and clock
             if let Some(ref bar) = self.bar {
