@@ -2,6 +2,12 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.52.0] - 2026-08-29 — Per-Monitor Wallpaper on Monitor Switch
+### Added
+- **Automatic wallpaper on monitor switch**: applies per-monitor wallpaper when focus changes monitors
+- Supports both image wallpapers (bmp/jpg/png) and color wallpapers via `apply_theme_wallpaper`
+- Completes the per-monitor wallpaper feature with dynamic application on display change
+
 ## [10.51.0] - 2026-08-29 — IPC Set-Bar-Position Command
 ### Added
 - **IPC `set-bar-position` command**: move the status bar to top or bottom at runtime

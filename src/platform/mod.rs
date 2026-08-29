@@ -1694,6 +1694,21 @@ impl Platform {
                 let counts = self.window_count_per_workspace(mon_idx);
                 bar.set_workspaces(names, current, counts);
             }
+
+            // Apply per-monitor wallpaper when switching monitors
+            let monitors = crate::platform::monitor::get_monitors();
+            if let Some(mon_idx) = new_mon {
+                if mon_idx < monitors.len() && mon_idx < self.config.wallpapers.len() {
+                    if let Some(ref wp) = self.config.wallpapers[mon_idx] {
+                        let wp_path = std::path::Path::new(wp);
+                        if wp_path.extension().map(|e| e == "bmp" || e == "jpg" || e == "png" || e == "jpeg").unwrap_or(false) {
+                            let _ = crate::platform::wallpaper::apply_wallpaper_image_monitor(wp);
+                        } else {
+                            let _ = crate::platform::wallpaper::apply_theme_wallpaper(wp, "#000000", 1920, 1080);
+                        }
+                    }
+                }
+            }
         }
     }
 
