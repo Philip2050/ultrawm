@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.37.0] - 2026-08-29 — IPC Set-Border-Color Command
+### Added
+- **IPC `set-border-color` command**: change focused window's border color at runtime
+- Accepts hex color string: `set-border-color FF0000` or `set-border-color 0xFF0000`
+- Updates `win_info.border_color` directly, takes effect on next render
+- Useful for color-coding windows dynamically
+
+### IPC usage
+```
+echo '{"command":"set-border-color","color":"FF4488FF"}' | \\.\pipe\ultrawm-ipc
+echo 'set-border-color 0x00FF00' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.36.0] - 2026-08-29 — IPC Get-Bar-Config Command
 ### Added
 - **IPC `get-bar-config` command**: returns bar configuration and runtime state as JSON

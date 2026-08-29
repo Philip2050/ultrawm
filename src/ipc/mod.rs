@@ -1373,6 +1373,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "get-stats" => IpcCommand::Single { command: "get-stats".into() },
         "list-monitors" => IpcCommand::Single { command: "list-monitors".into() },
         "get-bar-config" => IpcCommand::Single { command: "get-bar-config".into() },
+        "set-border-color" => IpcCommand::Single { command: "set-border-color".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

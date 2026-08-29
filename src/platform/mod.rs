@@ -3799,6 +3799,18 @@ impl Platform {
                     }
                     return;
                 }
+                if command.starts_with("set-border-color ") {
+                    if let Some(color_str) = command.strip_prefix("set-border-color ") {
+                        if let Ok(color) = u32::from_str_radix(color_str.trim_start_matches("0x"), 16) {
+                            if let Some(hwnd) = self.focused_hwnd {
+                                if let Some(info) = self.windows.get_mut(&hwnd) {
+                                    info.border_color = color;
+                                }
+                            }
+                        }
+                    }
+                    return;
+                }
                 match command.as_str() {
                     "next-theme" => { let _ = theme_mgr.next_theme(); }
                     "prev-theme" => { let _ = theme_mgr.prev_theme(); }
