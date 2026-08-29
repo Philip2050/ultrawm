@@ -1403,6 +1403,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "get-theme" => IpcCommand::Single { command: "get-theme".into() },
         "reset-layout" => IpcCommand::Single { command: "reset-layout".into() },
         "set-theme" => IpcCommand::Single { command: "set-theme".into() },
+        "cycle-gap" => IpcCommand::Single { command: "cycle-gap".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

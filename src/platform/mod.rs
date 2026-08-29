@@ -3831,6 +3831,18 @@ impl Platform {
                     self.refresh_tiling();
                     return;
                 }
+                if command == "cycle-gap" {
+                    let presets = [0, 4, 8, 16, 32];
+                    let current = self.config.layout.gaps;
+                    let idx = presets.iter().position(|&g| g == current).map(|i| (i + 1) % presets.len()).unwrap_or(1);
+                    let new_gap = presets[idx];
+                    self.config.layout.gaps = new_gap;
+                    self.refresh_tiling();
+                    if let Some(ref bar) = self.bar {
+                        bar.trigger_reload_flash();
+                    }
+                    return;
+                }
                 if command.starts_with("set-theme ") {
                     if let Some(theme_name) = command.strip_prefix("set-theme ") {
                         if let Some(theme_mgr) = &mut theme_mgr {

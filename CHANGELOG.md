@@ -2,6 +2,21 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.43.0] - 2026-08-29 — IPC Cycle-Gap Command
+### Added
+- **IPC `cycle-gap` command**: cycles tiling gap through presets [0, 4, 8, 16, 32]
+- Automatically re-tiles all windows after gap change
+- Triggers bar reload flash for visual feedback
+- Useful for quickly adjusting tiling density
+
+### IPC usage
+```
+echo '{"command":"cycle-gap"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Gap presets
+0 → 4 → 8 → 16 → 32 → 0 (cycles)
+
 ## [10.42.0] - 2026-08-29 — IPC Set-Theme Command
 ### Added
 - **IPC `set-theme` command**: change the active theme by name at runtime
