@@ -2082,6 +2082,53 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle list-all-windows command
+    if cmd_str == "list-all-windows" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let mut windows: Vec<serde_json::Value> = Vec::new();
+                for (hwnd_wrapper, info) in platform.windows.iter() {
+                    let mon_idx = platform.window_monitors.get(&info.id).copied().unwrap_or(0);
+                    let ws_idx = platform.window_workspaces.get(&info.id).copied().unwrap_or(0);
+                    let bw = platform.window_border_widths.get(&info.id).copied();
+                    let opacity = info.opacity.unwrap_or(1.0);
+                    let is_focused = platform.focused_hwnd == Some(*hwnd_wrapper);
+                    windows.push(serde_json::json!({
+                        "hwnd": hwnd_wrapper.0,
+                        "id": info.id,
+                        "title": info.title,
+                        "class": info.class,
+                        "exe": info.exe,
+                        "visible": info.visible,
+                        "floating": info.floating,
+                        "fullscreen": info.fullscreen,
+                        "always_on_top": info.always_on_top,
+                        "minimized": info.minimized,
+                        "sticky": info.sticky,
+                        "monitor": mon_idx,
+                        "workspace": ws_idx,
+                        "border_color": format!("0x{:08X}", info.border_color),
+                        "border_width": bw.unwrap_or(platform.config.layout.border_width),
+                        "opacity": opacity,
+                        "focused": is_focused,
+                    }));
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "command": "list-all-windows",
+                    "count": windows.len(),
+                    "windows": windows,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle get-active-monitor command
     if cmd_str == "get-active-monitor" {
         unsafe {

@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.60.0] - 2026-08-29 — IPC List-All-Windows Command
+### Added
+- **IPC `list-all-windows` command**: list all managed windows with their properties
+- Returns window ID, title, class, exe, monitor, workspace, opacity, border, and focus state
+- Useful for external scripts that need full window inventory
+
+### IPC usage
+```
+echo '{"command":"list-all-windows"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.59.0] - 2026-08-29 — IPC List-Monitor-Bars Command
 ### Added
 - **IPC `list-monitor-bars` command**: list all monitors with their bar settings
