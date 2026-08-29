@@ -750,9 +750,7 @@ impl Platform {
             if self.config_reload_counter >= 60 {
                 self.config_reload_counter = 0;
                 if let Ok(Some(new_config)) = self.config.reload_if_changed() {
-                    let old_gaps = self.config.layout.gaps;
-                    let old_peek_x = self.config.layout.peek_x;
-                    let old_peek_y = self.config.layout.peek_y;
+                    let old = self.config.clone();
                     self.config = new_config;
 
                     // Re-parse keybinds from updated config
@@ -763,31 +761,105 @@ impl Platform {
                         bar.trigger_reload_flash();
                     }
 
-                    // Apply layout changes to grid if they changed
-                    if self.config.layout.gaps != old_gaps
-                        || self.config.layout.peek_x != old_peek_x
-                        || self.config.layout.peek_y != old_peek_y
-                    {
-                        let gaps = self.config.layout.gaps;
-                        let inner_padding = self.config.layout.inner_padding;
-                        let peek_x = self.config.layout.peek_x;
-                        let peek_y = self.config.layout.peek_y;
-                        let grid = self.current_grid();
-                        {
-                            grid.apply_layout_config(gaps, inner_padding, peek_x, peek_y);
-                        }
-                        info!(
-                            "Config reloaded: gaps={}, inner_padding={}, peek_x={}, peek_y={}",
-                            self.config.layout.gaps,
-                            self.config.layout.inner_padding,
-                            self.config.layout.peek_x,
-                            self.config.layout.peek_y
-                        );
+                    // Compute and apply config diff
+                    let mut changes = Vec::new();
+                    let layout = &old.layout;
+                    let new_layout = &self.config.layout;
+
+                    if layout.gaps != new_layout.gaps {
+                        changes.push(format!("gaps: {} → {}", layout.gaps, new_layout.gaps));
                     }
-                    // Update border width and radius from config
+                    if layout.inner_padding != new_layout.inner_padding {
+                        changes.push(format!("inner_padding: {} → {}", layout.inner_padding, new_layout.inner_padding));
+                    }
+                    if layout.peek_x != new_layout.peek_x {
+                        changes.push(format!("peek_x: {} → {}", layout.peek_x, new_layout.peek_x));
+                    }
+                    if layout.peek_y != new_layout.peek_y {
+                        changes.push(format!("peek_y: {} → {}", layout.peek_y, new_layout.peek_y));
+                    }
+                    if layout.border_width != new_layout.border_width {
+                        changes.push(format!("border_width: {} → {}", layout.border_width, new_layout.border_width));
+                    }
+                    if layout.corner_radius != new_layout.corner_radius {
+                        changes.push(format!("corner_radius: {} → {}", layout.corner_radius, new_layout.corner_radius));
+                    }
+                    if layout.window_opacity != new_layout.window_opacity {
+                        changes.push(format!("window_opacity: {:.2} → {:.2}", layout.window_opacity, new_layout.window_opacity));
+                    }
+                    if layout.workspace_count != new_layout.workspace_count {
+                        changes.push(format!("workspace_count: {} → {}", layout.workspace_count, new_layout.workspace_count));
+                    }
+                    if layout.default_float_width != new_layout.default_float_width {
+                        changes.push(format!("default_float_width: {} → {}", layout.default_float_width, new_layout.default_float_width));
+                    }
+                    if layout.default_float_height != new_layout.default_float_height {
+                        changes.push(format!("default_float_height: {} → {}", layout.default_float_height, new_layout.default_float_height));
+                    }
+                    if layout.snap_grid_size != new_layout.snap_grid_size {
+                        changes.push(format!("snap_grid_size: {} → {}", layout.snap_grid_size, new_layout.snap_grid_size));
+                    }
+                    if layout.snap_edge_distance != new_layout.snap_edge_distance {
+                        changes.push(format!("snap_edge_distance: {} → {}", layout.snap_edge_distance, new_layout.snap_edge_distance));
+                    }
+                    if layout.rounded_corners != new_layout.rounded_corners {
+                        changes.push(format!("rounded_corners: {} → {}", layout.rounded_corners, new_layout.rounded_corners));
+                    }
+                    if layout.dwm_shadows != new_layout.dwm_shadows {
+                        changes.push(format!("dwm_shadows: {} → {}", layout.dwm_shadows, new_layout.dwm_shadows));
+                    }
+                    if layout.center_focused != new_layout.center_focused {
+                        changes.push(format!("center_focused: {} → {}", layout.center_focused, new_layout.center_focused));
+                    }
+                    if layout.focus_follows_mouse != new_layout.focus_follows_mouse {
+                        changes.push(format!("focus_follows_mouse: {} → {}", layout.focus_follows_mouse, new_layout.focus_follows_mouse));
+                    }
+                    if layout.auto_split != new_layout.auto_split {
+                        changes.push(format!("auto_split: {} → {}", layout.auto_split, new_layout.auto_split));
+                    }
+                    if layout.default_split_dir != new_layout.default_split_dir {
+                        changes.push(format!("default_split_dir: {} → {}", layout.default_split_dir, new_layout.default_split_dir));
+                    }
+                    if layout.resize_step_px != new_layout.resize_step_px {
+                        changes.push(format!("resize_step_px: {} → {}", layout.resize_step_px, new_layout.resize_step_px));
+                    }
+                    if layout.session_auto_save_interval != new_layout.session_auto_save_interval {
+                        changes.push(format!("session_auto_save_interval: {} → {}", layout.session_auto_save_interval, new_layout.session_auto_save_interval));
+                    }
+                    if layout.spring_stiffness != new_layout.spring_stiffness {
+                        changes.push(format!("spring_stiffness: {:.1} → {:.1}", layout.spring_stiffness, new_layout.spring_stiffness));
+                    }
+                    if layout.spring_damping != new_layout.spring_damping {
+                        changes.push(format!("spring_damping: {:.1} → {:.1}", layout.spring_damping, new_layout.spring_damping));
+                    }
+
+                    // Apply layout changes to grid
+                    if layout.gaps != new_layout.gaps
+                        || layout.inner_padding != new_layout.inner_padding
+                        || layout.peek_x != new_layout.peek_x
+                        || layout.peek_y != new_layout.peek_y
+                    {
+                        let grid = self.current_grid();
+                        grid.apply_layout_config(new_layout.gaps, new_layout.inner_padding, new_layout.peek_x, new_layout.peek_y);
+                    }
+
+                    // Update border overlay
                     if let Some(ref mut overlay) = self.border_overlay {
-                        overlay.border_width = self.config.layout.border_width as i32;
-                        overlay.border_radius = self.config.layout.corner_radius as i32;
+                        overlay.border_width = new_layout.border_width as i32;
+                        overlay.border_radius = new_layout.corner_radius as i32;
+                    }
+
+                    // Re-tile to apply all layout changes
+                    self.tile_all_windows(0xFF7F7F7F, 0xFF454545);
+
+                    if !changes.is_empty() {
+                        let change_str = changes.join("; ");
+                        info!("Config reloaded ({} changes): {}", changes.len(), change_str);
+                        if let Some(ref notifier) = self.notifier {
+                            let _ = notifier.show(&format!("Config reloaded: {}", changes.len()));
+                        }
+                    } else {
+                        debug!("Config reloaded: no changes detected");
                     }
                 }
             }

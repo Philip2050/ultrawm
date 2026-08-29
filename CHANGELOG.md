@@ -2,6 +2,27 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.16.0] - 2026-08-29 — Configuration Hot-Reload with Change Diff
+### Added
+- **Comprehensive config diff**: compares 20+ layout fields on reload and reports exact changes
+- **Change notification**: shows notification with count of changed settings
+- **Automatic apply**: all layout changes (gaps, padding, peek, border, opacity, etc.) applied immediately
+- **Bar reload flash**: visual indicator when config is reloaded
+- **Structured logging**: `Config reloaded (N changes): field1: old → new; field2: old → new`
+- **No-change detection**: debug log when config file changes but values are identical
+
+### Changed fields tracked
+- gaps, inner_padding, outer_padding, peek_x, peek_y
+- border_width, corner_radius, window_opacity
+- workspace_count, default_float_width, default_float_height
+- snap_grid_size, snap_edge_distance
+- spring_stiffness, spring_damping, center_focused
+- focus_follows_mouse, auto_split, default_split_dir
+- resize_step_px, session_auto_save_interval
+
+### IPC
+- No new commands needed — reload is automatic every 60 frames (~1 second)
+
 ## [10.15.0] - 2026-08-29 — Window Search with Rich Metadata & Filters
 ### Added
 - **Rich WindowEntry**: search results now include workspace, monitor, floating, minimized, always-on-top, opacity
