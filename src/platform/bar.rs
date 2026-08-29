@@ -29,6 +29,8 @@ struct BarState {
     workspace_count: usize,
     snap_mode: bool,
     reload_flash: u32, // frames remaining for green reload flash
+    resize_flash: u32, // frames remaining for resize size indicator
+    resize_size: String, // current window size shown during resize
 }
 
 pub struct AppBar {
@@ -98,6 +100,8 @@ impl AppBar {
                 workspace_count,
                 snap_mode: false,
                 reload_flash: 0,
+                resize_flash: 0,
+                resize_size: String::new(),
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -208,6 +212,17 @@ impl AppBar {
             }
         }
     }
+
+    pub fn show_resize_size(&self, size_text: String) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).resize_flash = 60; // ~1 second display at 60fps
+                (*ptr).resize_size = size_text;
+                self.update();
+            }
+        }
+    }
 }
 
 impl Drop for AppBar {
@@ -266,6 +281,11 @@ unsafe extern "system" fn bar_wnd_proc(
             // Decay reload flash
             if state.reload_flash > 0 {
                 state.reload_flash -= 1;
+            }
+
+            // Decay resize size flash
+            if state.resize_flash > 0 {
+                state.resize_flash -= 1;
             }
 
             let mut ps = PAINTSTRUCT::default();
@@ -443,6 +463,45 @@ unsafe extern "system" fn bar_wnd_proc(
                 let flash_brush = CreateSolidBrush(COLORREF(flash_color));
                 let _ = FillRect(hdc, &RECT { left: 0, top: 0, right: 9999, bottom: 9999 }, flash_brush);
                 let _ = DeleteObject(flash_brush);
+            }
+
+            // Draw resize size indicator
+            if state.resize_flash > 0 {
+                let alpha = state.resize_flash.min(60) as f32 / 60.0;
+                let box_w = 140;
+                let box_h = 28;
+                let cx = 9999 / 2;
+                let cy = state.height / 2;
+                let bx = cx - box_w / 2;
+                let by = cy - box_h / 2;
+
+                // Background box
+                let bg_brush = CreateSolidBrush(COLORREF(state.bg_color));
+                let _ = FillRect(hdc, &RECT { left: bx, top: by, right: bx + box_w, bottom: by + box_h }, bg_brush);
+                let _ = DeleteObject(bg_brush);
+
+                // Border
+                let border_pen = CreatePen(PS_SOLID, 1, COLORREF(state.fg_color));
+                let old_pen = SelectObject(hdc, border_pen);
+                let _ = Rectangle(hdc, bx, by, bx + box_w, by + box_h);
+                let _ = SelectObject(hdc, old_pen);
+                let _ = DeleteObject(border_pen);
+
+                // Text
+                let _ = SetTextColor(hdc, COLORREF(state.fg_color));
+                let size_w: Vec<u16> = state.resize_size.encode_utf16().chain(Some(0)).collect();
+                let mut size_rect = RECT {
+                    left: bx,
+                    top: by,
+                    right: bx + box_w,
+                    bottom: by + box_h,
+                };
+                let _ = DrawTextW(
+                    hdc,
+                    &mut size_w.clone(),
+                    &mut size_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_CENTER,
+                );
             }
 
             let _ = EndPaint(hwnd, &ps);

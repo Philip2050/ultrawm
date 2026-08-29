@@ -113,6 +113,23 @@ All notable changes to UltraWM will be documented in this file.
 - Config save creates parent directory if it doesn't exist
 - Failed saves are logged as warnings but don't crash the WM
 
+## [9.6.0] - 2026-08-29 — Multi-Step Resize with Visual Size Guide
+### Added
+- **`resize_step_px`** config: pixel-based resize when > 0 (0 = preset steps)
+- Pixel resize uses `SetWindowPos` with configurable step size (e.g. 20px per keypress)
+- **Visual size guide** in bar: centered box showing WxH dimensions during resize
+- `resize_flash` counter on BarState shows size for ~1 second (60 frames)
+- `AppBar::show_resize_size(text)` displays dimensions in a bordered box
+- `Platform::adjust_window_size()` helper for pixel-based resize via SetWindowPos
+- `Platform::show_resize_size()` gets current rect and displays in bar
+- Size indicator uses fg color text on bg color box with border
+
+### Config example
+```toml
+[layout]
+resize_step_px = 20  # 20px per resize step (0 = preset steps)
+```
+
 ## [9.5.0] - 2026-08-29 — Session Auto-Save Interval Config
 ### Added
 - **`session_auto_save_interval`** config field: auto-save session every N seconds (0 = disabled)

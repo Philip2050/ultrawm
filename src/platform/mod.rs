@@ -1568,11 +1568,19 @@ impl Platform {
     pub fn resize_width(&mut self, grow: bool) {
         let grid = self.current_grid();
         if let Some(wid) = grid.focused_window {
-            if grow {
-                grid.grow_width(wid);
+            let step = self.config.layout.resize_step_px;
+            if step > 0 {
+                // Pixel-based resize
+                let delta = if grow { step as i32 } else { -(step as i32) };
+                self.adjust_window_size(wid, delta, 0);
             } else {
-                grid.shrink_width(wid);
+                if grow {
+                    grid.grow_width(wid);
+                } else {
+                    grid.shrink_width(wid);
+                }
             }
+            self.show_resize_size(wid);
             debug!("Width adjusted for window {}", wid);
         }
     }
@@ -1580,12 +1588,57 @@ impl Platform {
     pub fn resize_height(&mut self, grow: bool) {
         let grid = self.current_grid();
         if let Some(wid) = grid.focused_window {
-            if grow {
-                grid.grow_height(wid);
+            let step = self.config.layout.resize_step_px;
+            if step > 0 {
+                // Pixel-based resize
+                let delta = if grow { step as i32 } else { -(step as i32) };
+                self.adjust_window_size(wid, 0, delta);
             } else {
-                grid.shrink_height(wid);
+                if grow {
+                    grid.grow_height(wid);
+                } else {
+                    grid.shrink_height(wid);
+                }
             }
+            self.show_resize_size(wid);
             debug!("Height adjusted for window {}", wid);
+        }
+    }
+
+    fn adjust_window_size(&mut self, wid: u64, dw: i32, dh: i32) {
+        if let Some(info) = self.windows.values().find(|i| i.id == wid) {
+            unsafe {
+                let mut rect = RECT::default();
+                if GetWindowRect(info.hwnd, &mut rect).is_ok() {
+                    let new_w = (rect.right - rect.left + dw).max(100);
+                    let new_h = (rect.bottom - rect.top + dh).max(100);
+                    let _ = SetWindowPos(
+                        info.hwnd,
+                        HWND(null_mut()),
+                        rect.left,
+                        rect.top,
+                        new_w,
+                        new_h,
+                        SWP_NOZORDER | SWP_NOACTIVATE,
+                    );
+                }
+            }
+        }
+    }
+
+    fn show_resize_size(&mut self, wid: u64) {
+        if let Some(info) = self.windows.values().find(|i| i.id == wid) {
+            unsafe {
+                let mut rect = RECT::default();
+                if GetWindowRect(info.hwnd, &mut rect).is_ok() {
+                    let w = rect.right - rect.left;
+                    let h = rect.bottom - rect.top;
+                    let size_text = format!("{} x {}", w, h);
+                    if let Some(ref bar) = self.bar {
+                        bar.show_resize_size(size_text);
+                    }
+                }
+            }
         }
     }
 

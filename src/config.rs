@@ -61,6 +61,7 @@ pub struct LayoutConfig {
     pub snap_edge_distance: u32,
     pub layout_presets: Vec<LayoutPreset>,
     pub session_auto_save_interval: u32,
+    pub resize_step_px: u32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -164,6 +165,7 @@ impl Default for Config {
                 snap_edge_distance: 8,
                 layout_presets: vec![],
                 session_auto_save_interval: 0,
+                resize_step_px: 0,
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),
