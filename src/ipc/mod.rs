@@ -2661,6 +2661,44 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-workspace-names command
+    if cmd_str == "get-workspace-names" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                if let Some(m_idx) = monitor_idx {
+                    let names = platform.workspace_names(m_idx);
+                    let current = platform.monitor_workspaces[m_idx].current;
+                    return serde_json::json!({
+                        "success": true,
+                        "monitor": m_idx,
+                        "names": names,
+                        "current": current,
+                    });
+                } else {
+                    let mut all: Vec<serde_json::Value> = Vec::new();
+                    for (idx, mws) in platform.monitor_workspaces.iter().enumerate() {
+                        all.push(serde_json::json!({
+                            "monitor": idx,
+                            "names": platform.workspace_names(idx),
+                            "current": mws.current,
+                        }));
+                    }
+                    return serde_json::json!({
+                        "success": true,
+                        "workspaces": all,
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle get-active-monitor command
     if cmd_str == "get-active-monitor" {
         unsafe {

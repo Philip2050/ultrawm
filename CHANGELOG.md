@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.71.0] - 2026-08-29 — IPC Get-Workspace-Names Command
+### Added
+- **IPC `get-workspace-names` command**: query workspace names for a monitor or all monitors
+- Returns current active workspace index alongside names
+- Useful for external workspace switchers and status bars
+
+### IPC usage
+```
+echo '{"command":"get-workspace-names","monitor":0}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-workspace-names"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.70.0] - 2026-08-29 — IPC Get-Session Command
 ### Added
 - **IPC `get-session` command**: query current session state
