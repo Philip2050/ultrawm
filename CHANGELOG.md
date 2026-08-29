@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.56.0] - 2026-08-29 — Per-Monitor Bar Transparency
+### Added
+- **IPC `set-monitor-bar-transparency` command**: set bar transparency for a specific monitor (0.0-1.0)
+- **IPC `get-monitor-bar-transparency` command**: query bar transparency for a monitor or list all overrides
+- **Per-monitor bar transparencies**: `bar_transparencies: HashMap<usize, f32>` in Platform
+- Falls back to global `config.bar.transparency` when no override is set
+
+### IPC usage
+```
+echo '{"command":"set-monitor-bar-transparency","monitor":0,"transparency":0.5}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-bar-transparency","monitor":1}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-bar-transparency"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.55.0] - 2026-08-29 — Per-Window Opacity IPC Commands
 ### Added
 - **IPC `set-window-opacity` command**: set transparency for any window by ID or focused window

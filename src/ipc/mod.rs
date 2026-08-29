@@ -1954,6 +1954,71 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-monitor-bar-transparency command
+    if cmd_str == "set-monitor-bar-transparency" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let transparency = params.get("transparency").and_then(|v| v.as_f64()).map(|v| v as f32);
+        if let (Some(mon_idx), Some(t)) = (monitor_idx, transparency) {
+            if t >= 0.0 && t <= 1.0 {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &*ptr;
+                        let monitors = crate::platform::monitor::get_monitors();
+                        if mon_idx < monitors.len() {
+                            platform.bar_transparencies.insert(mon_idx, t);
+                            return serde_json::json!({
+                                "success": true,
+                                "monitor": mon_idx,
+                                "transparency": t,
+                            });
+                        } else {
+                            return serde_json::json!({
+                                "success": false,
+                                "error": format!("monitor {} out of range (0-{})", mon_idx, monitors.len() - 1),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid parameters (monitor, transparency 0.0-1.0)",
+        });
+    }
+
+    // Handle get-monitor-bar-transparency command
+    if cmd_str == "get-monitor-bar-transparency" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let default_transparency = platform.config.bar.transparency;
+                if let Some(m_idx) = monitor_idx {
+                    let t = platform.bar_transparencies.get(&m_idx).copied().unwrap_or(default_transparency);
+                    return serde_json::json!({
+                        "success": true,
+                        "monitor": m_idx,
+                        "transparency": t,
+                    });
+                } else {
+                    let all_transparencies: Vec<(usize, f32)> = platform.bar_transparencies.iter().map(|(k, v)| (*k, *v)).collect();
+                    return serde_json::json!({
+                        "success": true,
+                        "default_transparency": default_transparency,
+                        "overrides": all_transparencies,
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-focus command
     if cmd_str == "set-monitor-focus" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

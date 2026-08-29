@@ -137,6 +137,7 @@ pub struct Platform {
     pub bar: Option<AppBar>,
     pub bar_visible: bool,
     pub bar_heights: HashMap<usize, u32>, // monitor_idx -> bar height override
+    pub bar_transparencies: HashMap<usize, f32>, // monitor_idx -> bar transparency override
     pub notifier: Option<Notifier>,
     // Each monitor has its own set of workspaces (independent)
     pub monitor_workspaces: Vec<MonitorWorkspaces>,
@@ -235,6 +236,7 @@ impl Platform {
             bar_visible: true,
             bar: None,
             bar_heights: HashMap::new(),
+            bar_transparencies: HashMap::new(),
             notifier: None,
             monitor_workspaces,
             window_workspaces: HashMap::new(),
