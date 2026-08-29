@@ -508,6 +508,31 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle get-theme command
+    if cmd_str == "get-theme" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let theme_name = platform.config.theme.default.clone();
+                let current_colors = platform.theme_mgr.as_ref().map(|tm| tm.current_colors()).unwrap_or_else(|| serde_json::json!({}));
+                return serde_json::json!({
+                    "success": true,
+                    "command": "get-theme",
+                    "data": {
+                        "name": theme_name,
+                        "colors": current_colors,
+                    },
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Platform not available",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1374,6 +1399,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "list-monitors" => IpcCommand::Single { command: "list-monitors".into() },
         "get-bar-config" => IpcCommand::Single { command: "get-bar-config".into() },
         "set-border-color" => IpcCommand::Single { command: "set-border-color".into() },
+        "get-theme" => IpcCommand::Single { command: "get-theme".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

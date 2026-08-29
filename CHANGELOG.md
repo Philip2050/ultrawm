@@ -2,6 +2,34 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.38.0] - 2026-08-29 — IPC Get-Theme Command
+### Added
+- **IPC `get-theme` command**: returns current theme name and colors as JSON
+- Theme name from `config.theme.default`
+- Colors from `ThemeManager::current_colors()`
+- Useful for theming tools, scripts, and status bars
+
+### IPC usage
+```
+echo '{"command":"get-theme"}' | \\.\pipe\ultrawm-ipc
+```
+
+### Response format
+```json
+{
+  "success": true,
+  "command": "get-theme",
+  "data": {
+    "name": "catppuccin-mocha",
+    "colors": {
+      "background": "#1E1E2E",
+      "foreground": "#CDD6F4",
+      "accent": "#CBA6F7"
+    }
+  }
+}
+```
+
 ## [10.37.0] - 2026-08-29 — IPC Set-Border-Color Command
 ### Added
 - **IPC `set-border-color` command**: change focused window's border color at runtime
