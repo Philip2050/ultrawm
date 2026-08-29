@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.75.0] - 2026-08-29 — IPC Set-Monitor-Layout-Preset Command
+### Added
+- **IPC `set-monitor-layout-preset` command**: apply a named layout preset to a specific monitor
+- Copies preset values (gaps, padding, border, corner) to the monitor's layout override
+- Persists to config.toml
+
+### IPC usage
+```
+echo '{"command":"set-monitor-layout-preset","preset":"compact","monitor":1}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.74.0] - 2026-08-29 — IPC Ping Command
 ### Added
 - **IPC `ping` command**: health check endpoint

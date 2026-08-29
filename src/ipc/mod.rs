@@ -2623,6 +2623,60 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-monitor-layout-preset command
+    if cmd_str == "set-monitor-layout-preset" {
+        let preset_name = params.get("preset").and_then(|v| v.as_str());
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+
+        if let (Some(name), Some(mon_idx)) = (preset_name, monitor_idx) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    let presets = &platform.config.layout.layout_presets;
+                    if let Some(preset) = presets.iter().find(|p| p.name == name) {
+                        let layouts = &mut platform.config.layout.monitor_layouts;
+                        if mon_idx >= layouts.len() {
+                            layouts.resize(mon_idx + 1, crate::config::MonitorLayout {
+                                gaps: None,
+                                inner_padding: None,
+                                outer_padding: None,
+                                border_width: None,
+                                corner_radius: None,
+                            });
+                        }
+                        let layout = &mut layouts[mon_idx];
+                        layout.gaps = preset.gaps;
+                        layout.inner_padding = preset.inner_padding;
+                        layout.border_width = preset.border_width;
+                        layout.corner_radius = preset.corner_radius;
+                        let _ = platform.config.save();
+                        return serde_json::json!({
+                            "success": true,
+                            "monitor": mon_idx,
+                            "preset": name,
+                            "layout": {
+                                "gaps": layout.gaps,
+                                "inner_padding": layout.inner_padding,
+                                "border_width": layout.border_width,
+                                "corner_radius": layout.corner_radius,
+                            },
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("preset '{}' not found", name),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'preset' or 'monitor' parameter",
+        });
+    }
+
     // Handle set-monitor-layout command
     if cmd_str == "set-monitor-layout" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
