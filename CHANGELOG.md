@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.59.0] - 2026-08-29 — IPC List-Monitor-Bars Command
+### Added
+- **IPC `list-monitor-bars` command**: list all monitors with their bar settings
+- Returns per-monitor bar config: enabled, height, transparency, and monitor name
+- Useful for syncing bar state across external tools
+
+### IPC usage
+```
+echo '{"command":"list-monitor-bars"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.58.0] - 2026-08-29 — IPC Get-Active-Monitor Command
 ### Added
 - **IPC `get-active-monitor` command**: query which monitor currently has focus

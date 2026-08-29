@@ -2117,6 +2117,39 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle list-monitor-bars command
+    if cmd_str == "list-monitor-bars" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let monitors = crate::platform::monitor::get_monitors();
+                let mut bars: Vec<serde_json::Value> = Vec::new();
+                for (idx, mon) in monitors.iter().enumerate() {
+                    let height = platform.bar_heights.get(&idx).copied().unwrap_or(platform.config.bar.height);
+                    let transparency = platform.bar_transparencies.get(&idx).copied().unwrap_or(platform.config.bar.transparency);
+                    let enabled = platform.bar_enabled_monitors.get(&idx).copied().unwrap_or(platform.config.bar.enabled);
+                    bars.push(serde_json::json!({
+                        "monitor": idx,
+                        "name": mon.name,
+                        "enabled": enabled,
+                        "height": height,
+                        "transparency": transparency,
+                    }));
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "monitor_count": monitors.len(),
+                    "bars": bars,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-focus command
     if cmd_str == "set-monitor-focus" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
