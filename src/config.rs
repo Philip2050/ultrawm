@@ -18,8 +18,13 @@ pub struct Config {
 pub struct WindowRule {
     #[serde(alias = "match")]
     pub match_: String,
+    /// Match type: "exe", "class", "title", or "any" (default: exe)
+    pub match_type: Option<String>,
+    /// Rule priority (higher = applied later, overrides lower)
+    pub priority: Option<i32>,
     pub float: Option<bool>,
     pub workspace: Option<usize>,
+    pub monitor: Option<usize>,
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub max_width: Option<u32>,
@@ -32,19 +37,38 @@ pub struct WindowRule {
     pub float_h: Option<u32>,
     pub opacity: Option<f32>,
     pub sticky: Option<bool>,
+    pub always_on_top: Option<bool>,
+    pub border_color: Option<u32>,
+    pub fullscreen: Option<bool>,
 }
 
 impl WindowRule {
     pub fn match_exe(&self, exe: &str) -> bool {
-        !self.match_.is_empty() && exe.contains(&self.match_)
+        self.matches_any(exe, "", "")
     }
 
     pub fn match_class(&self, class: &str) -> bool {
-        !self.match_.is_empty() && class.contains(&self.match_)
+        self.matches_any("", class, "")
     }
 
     pub fn match_title(&self, title: &str) -> bool {
-        !self.match_.is_empty() && title.contains(&self.match_)
+        self.matches_any("", "", title)
+    }
+
+    pub fn matches_any(&self, exe: &str, class: &str, title: &str) -> bool {
+        if self.match_.is_empty() { return false; }
+        let mtype = self.match_type.as_deref().unwrap_or("exe");
+        match mtype {
+            "exe" => exe.contains(&self.match_),
+            "class" => class.contains(&self.match_),
+            "title" => title.contains(&self.match_),
+            "any" => exe.contains(&self.match_) || class.contains(&self.match_) || title.contains(&self.match_),
+            _ => exe.contains(&self.match_),
+        }
+    }
+
+    pub fn priority(&self) -> i32 {
+        self.priority.unwrap_or(0)
     }
 }
 

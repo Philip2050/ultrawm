@@ -3783,11 +3783,12 @@ impl Platform {
     }
 
     pub fn apply_rules(&mut self, win_info: &mut WindowInfo, raw_info: &WindowInfo) {
-        for rule in &self.config.rules {
-            let matches = raw_info.title.contains(&rule.match_)
-                || raw_info.class.contains(&rule.match_)
-                || raw_info.exe.contains(&rule.match_);
-            if !matches {
+        // Sort rules by priority (lower first, higher overrides)
+        let mut sorted_rules: Vec<_> = self.config.rules.iter().collect();
+        sorted_rules.sort_by_key(|r| r.priority());
+
+        for rule in sorted_rules {
+            if !rule.matches_any(&raw_info.exe, &raw_info.class, &raw_info.title) {
                 continue;
             }
 
@@ -3799,6 +3800,11 @@ impl Platform {
                     self.window_workspaces.insert(win_info.id, ws);
                 }
             }
+            if let Some(mon) = rule.monitor {
+                if mon < self.monitors.len() {
+                    self.window_monitors.insert(win_info.id, mon);
+                }
+            }
             if let Some(op) = rule.opacity {
                 if op >= 0.0 && op <= 1.0 {
                     win_info.opacity = Some(op);
@@ -3806,6 +3812,15 @@ impl Platform {
             }
             if let Some(sticky) = rule.sticky {
                 win_info.sticky = sticky;
+            }
+            if let Some(aot) = rule.always_on_top {
+                win_info.always_on_top = aot;
+            }
+            if let Some(fs) = rule.fullscreen {
+                win_info.fullscreen = fs;
+            }
+            if let Some(bc) = rule.border_color {
+                win_info.border_color = bc;
             }
             if let Some(mw) = rule.max_width {
                 if mw > 0 {

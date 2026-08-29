@@ -2,6 +2,43 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.23.0] - 2026-08-29 — Window Rules with Priority & Match Types
+### Added
+- **Rule priority**: higher-priority rules override lower-priority ones (default: 0)
+- **Match type field**: choose matching by "exe", "class", "title", or "any"
+- **Monitor assignment**: rules can assign windows to specific monitors
+- **Always-on-top**: rules can set always-on-top state
+- **Fullscreen**: rules can set initial fullscreen state
+- **Border color**: rules can set custom border color per window
+- **Priority sorting**: rules sorted by priority before applying (lower first)
+- **Enhanced apply_rules()**: uses `matches_any()` with match_type support
+
+### Rule fields
+- `match_type`: "exe" (default), "class", "title", or "any" (match any field)
+- `priority`: i32, higher = applied later and overrides (default: 0)
+- `monitor`: target monitor index for window placement
+- `always_on_top`: bool, set window always on top
+- `fullscreen`: bool, set initial fullscreen state
+- `border_color`: u32 ARGB, custom border color
+
+### Config example
+```toml
+[[rules]]
+match = "chrome"
+match_type = "exe"
+float = false
+workspace = 0
+monitor = 0
+priority = 10
+
+[[rules]]
+match = "notepad"
+match_type = "exe"
+float = true
+opacity = 0.9
+priority = 5
+```
+
 ## [10.22.0] - 2026-08-29 — Multi-Monitor Focus & Window Transfer
 ### Added
 - **`move_focused_to_monitor()`**: move focused window to target monitor
