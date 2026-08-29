@@ -683,6 +683,39 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle set-wallpaper-monitor command
+    if cmd_str == "set-wallpaper-monitor" {
+        let monitor_idx = json.get("monitor").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+        if let Some(color) = json.get("color").and_then(|v| v.as_str()) {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &*ptr;
+                    if monitor_idx < platform.monitors.len() {
+                        let mon = &platform.monitors[monitor_idx];
+                        if let Err(e) = crate::platform::wallpaper::apply_wallpaper_monitor(color, monitor_idx, mon.width(), mon.height()) {
+                            return serde_json::json!({
+                                "success": false,
+                                "command": cmd_str,
+                                "message": format!("Wallpaper failed: {}", e),
+                            });
+                        }
+                        return serde_json::json!({
+                            "success": true,
+                            "command": cmd_str,
+                            "message": format!("Wallpaper set for monitor {}", monitor_idx + 1),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Usage: {\"command\":\"set-wallpaper-monitor\",\"color\":\"#1E1E2E\",\"monitor\":0}",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1560,6 +1593,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "list-themes" => IpcCommand::Single { command: "list-themes".into() },
         "get-layout-presets" => IpcCommand::Single { command: "get-layout-presets".into() },
         "set-workspace-name" => IpcCommand::Single { command: "set-workspace-name".into() },
+        "set-wallpaper-monitor" => IpcCommand::Single { command: "set-wallpaper-monitor".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

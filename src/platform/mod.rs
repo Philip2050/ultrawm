@@ -130,6 +130,7 @@ pub struct Platform {
     pub windows: HashMap<HWnd, WindowInfo>,
     pub focused_hwnd: Option<HWnd>,
     pub monitors: Vec<MonitorInfo>,
+    pub wallpapers: Vec<Option<String>>, // per-monitor wallpaper paths
     pub keyboard_hook: Option<keyboard::KeyboardHook>,
     pub keybinds: keybinds::ParsedKeybinds,
     pub border_overlay: Option<BorderOverlay>,
@@ -220,10 +221,13 @@ impl Platform {
             })
             .collect();
 
+        let wallpapers = vec![None; monitors.len()];
+
         Ok(Self {
             windows: HashMap::new(),
             focused_hwnd: None,
             monitors,
+            wallpapers,
             keyboard_hook: None,
             keybinds: keybinds::parse_keybinds(&crate::config::Config::default().keybinds),
             border_overlay: None,

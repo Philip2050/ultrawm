@@ -8,6 +8,42 @@ use windows::{
     },
 };
 
+pub fn apply_wallpaper_monitor(hex_color: &str, monitor_idx: usize, width: i32, height: i32) -> anyhow::Result<()> {
+    let rgb = parse_hex(hex_color);
+    let r = (rgb & 0xFF) as u8;
+    let g = ((rgb >> 8) & 0xFF) as u8;
+    let b = ((rgb >> 16) & 0xFF) as u8;
+
+    let bmp = generate_gradient_bmp(r, g, b, width, height)?;
+    let bmp_path = save_bmp(&bmp)?;
+
+    unsafe {
+        let wp_w: Vec<u16> = bmp_path.encode_utf16().chain(Some(0)).collect();
+        let _ = SystemParametersInfoW(
+            SPI_SETDESKWALLPAPER,
+            0,
+            Some(wp_w.as_ptr() as *mut _),
+            SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
+        );
+    }
+
+    Ok(())
+}
+
+pub fn apply_wallpaper_image_monitor(path: &str) -> anyhow::Result<()> {
+    unsafe {
+        let wp_w: Vec<u16> = path.encode_utf16().chain(Some(0)).collect();
+        let _ = SystemParametersInfoW(
+            SPI_SETDESKWALLPAPER,
+            0,
+            Some(wp_w.as_ptr() as *mut _),
+            SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
+        );
+    }
+
+    Ok(())
+}
+
 pub fn apply_wallpaper(hex_color: &str, width: i32, height: i32) -> anyhow::Result<()> {
     let rgb = parse_hex(hex_color);
     let r = (rgb & 0xFF) as u8;

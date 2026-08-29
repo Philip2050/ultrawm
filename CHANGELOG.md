@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.50.0] - 2026-08-29 — Per-Monitor Wallpaper Support
+### Added
+- **Per-monitor wallpaper paths**: `wallpapers: Vec<Option<String>>` in Platform
+- **IPC `set-wallpaper-monitor` command**: set wallpaper for a specific monitor
+- **Color wallpaper**: generates gradient BMP and applies via SystemParametersInfoW
+- Per-monitor wallpapers stored in Platform state for each monitor
+
+### IPC usage
+```
+echo '{"command":"set-wallpaper-monitor","color":"#1E1E2E","monitor":0}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.49.0] - 2026-08-29 — IPC Set-Workspace-Name Command
 ### Added
 - **IPC `set-workspace-name` command**: rename a workspace at runtime
