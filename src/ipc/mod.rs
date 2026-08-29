@@ -372,6 +372,31 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("missing 'name' field. Use: {\"command\":\"snap-custom\",\"name\":\"my-layout\"}".into()), data: None };
     }
 
+    // Handle session save/restore commands
+    if cmd_str == "save-session" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &mut *ptr;
+                platform.save_session();
+                return IpcResponse { success: true, message: Some("Session saved".into()), data: None };
+            }
+        }
+        return IpcResponse { success: false, message: Some("Platform not available".into()), data: None };
+    }
+
+    if cmd_str == "restore-session" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &mut *ptr;
+                platform.restore_session();
+                return IpcResponse { success: true, message: Some("Session restored".into()), data: None };
+            }
+        }
+        return IpcResponse { success: false, message: Some("Platform not available".into()), data: None };
+    }
+
     let result = process_single_command(cmd_str, tx);
     if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         IpcResponse { success: true, message: Some("ok".into()), data: None }
@@ -771,6 +796,8 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "minimize-to-tray" => IpcCommand::Single { command: "minimize-to-tray".into() },
         "restore-from-tray" => IpcCommand::Single { command: "restore-from-tray".into() },
         "restore-all-tray" => IpcCommand::Single { command: "restore-all-tray".into() },
+        "save-session" => IpcCommand::Single { command: "save-session".into() },
+        "restore-session" => IpcCommand::Single { command: "restore-session".into() },
         "screenshot" => IpcCommand::Single { command: "screenshot".into() },
         "window-search" => IpcCommand::Single { command: "window-search".into() },
         "help" => IpcCommand::Single { command: "help".into() },

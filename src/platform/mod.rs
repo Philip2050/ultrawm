@@ -438,8 +438,9 @@ impl Platform {
         // Enumerate existing top-level windows
         self.enumerate_windows()?;
 
-        // Restore Z-order from session
+        // Restore session: match windows by exe and restore workspace/monitor/position
         if self.session.is_some() {
+            self.restore_session();
             self.apply_z_order();
         }
 
@@ -3402,6 +3403,107 @@ impl Platform {
                 let _ = SetWindowPos(hwnd_wrapper.0, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             }
         }
+    }
+
+    pub fn restore_session(&mut self) {
+        let session = match &self.session {
+            Some(s) => s,
+            None => return,
+        };
+
+        if session.monitors.is_empty() {
+            return;
+        }
+
+        // Build exe -> list of (hwnd, info) for matching
+        let mut exe_map: HashMap<String, Vec<(HWnd, &WindowInfo)>> = HashMap::new();
+        for (&hwnd_wrapper, info) in &self.windows {
+            exe_map.entry(info.exe.clone()).or_default().push((hwnd_wrapper, info));
+        }
+
+        // Track which running windows have been matched to avoid double-assignment
+        let mut matched: std::collections::HashSet<usize> = std::collections::HashSet::new();
+
+        let mut restore_plan: Vec<(HWnd, usize, usize, bool, Option<i32>, Option<i32>, Option<i32>, Option<i32>)> = Vec::new();
+
+        for (mon_idx, mon_state) in session.monitors.iter().enumerate() {
+            for grid in &mon_state.grids {
+                for sw in &grid.windows {
+                    if let Some(candidates) = exe_map.get(&sw.exe) {
+                        // Find first unmatched candidate
+                        for &(hwnd_wrapper, info) in candidates {
+                            if matched.insert(hwnd_wrapper.0 .0 as usize) {
+                                let fx = sw.float_x.or(sw.x).or(info.float_x).or(Some(info.saved_x));
+                                let fy = sw.float_y.or(sw.y).or(info.float_y).or(Some(info.saved_y));
+                                let fw = sw.float_w.or(sw.w).or(info.float_w.map(|w| w as i32)).or(Some(info.saved_w as i32));
+                                let fh = sw.float_h.or(sw.h).or(info.float_h.map(|h| h as i32)).or(Some(info.saved_h as i32));
+                                restore_plan.push((
+                                    hwnd_wrapper,
+                                    sw.monitor.min(mon_idx.max(sw.monitor).min(self.monitors.len().saturating_sub(1))),
+                                    sw.workspace,
+                                    sw.floating,
+                                    fx,
+                                    fy,
+                                    fw,
+                                    fh,
+                                ));
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply restore plan
+        for (hwnd_wrapper, mon_idx, ws, floating, fx, fy, fw, fh) in restore_plan {
+            let wid = if let Some(info) = self.windows.get(&hwnd_wrapper) {
+                info.id
+            } else {
+                continue;
+            };
+
+            // Assign to correct monitor workspace
+            if mon_idx < self.monitor_workspaces.len() {
+                self.window_monitors.insert(wid, mon_idx);
+            }
+
+            // Assign to correct workspace
+            let target_ws = ws.min(self.monitor_workspaces.get(mon_idx).map(|m| m.grids.len().saturating_sub(1)).unwrap_or(0));
+            self.window_workspaces.insert(wid, target_ws);
+
+            // Restore floating state
+            if let Some(info) = self.windows.get_mut(&hwnd_wrapper) {
+                info.floating = floating;
+                if let Some(x) = fx { info.float_x = Some(x); info.saved_x = x; }
+                if let Some(y) = fy { info.float_y = Some(y); info.saved_y = y; }
+                if let Some(w) = fw { info.float_w = Some(w as u32); info.saved_w = w; }
+                if let Some(h) = fh { info.float_h = Some(h as u32); info.saved_h = h; }
+                info.maximized = false;
+            }
+
+            // Switch to correct workspace and position the window
+            if mon_idx < self.monitor_workspaces.len() {
+                let mws = &mut self.monitor_workspaces[mon_idx];
+                let prev_ws = mws.current;
+                mws.current = target_ws;
+
+                unsafe {
+                    let _ = ShowWindow(hwnd_wrapper.0, SW_SHOW);
+                    if floating {
+                        let px = fx.unwrap_or(100);
+                        let py = fy.unwrap_or(100);
+                        let pw = fw.unwrap_or(800).max(100) as i32;
+                        let ph = fh.unwrap_or(600).max(100) as i32;
+                        let _ = SetWindowPos(hwnd_wrapper.0, HWND_TOP, px, py, pw, ph, SWP_SHOWWINDOW);
+                    }
+                }
+
+                mws.current = prev_ws;
+            }
+        }
+
+        info!("Session restored: {} windows repositioned", restore_plan.len());
     }
 
     pub fn save_session(&mut self) {

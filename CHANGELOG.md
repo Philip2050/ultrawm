@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.11.0] - 2026-08-29 — Session Restore & Layout Persistence
+### Added
+- **Session restore**: windows are automatically repositioned to their saved workspace, monitor, and position on startup
+- **`restore_session()` method**: matches windows by exe name and restores workspace/monitor/floating state
+- **IPC `save-session` command**: manually trigger session save
+- **IPC `restore-session` command**: manually trigger session restore
+- **Position fallback chain**: session position → float position → current position for robust restore
+- **Per-window restore**: floating size, position, opacity, sticky, maximized, always-on-top all restored
+
+### Changed
+- Session restore runs automatically after window enumeration on startup
+- Z-order is applied after session restore for correct window stacking
+- Session matching uses first-unmatched strategy (same exe = same app)
+
 ## [10.10.0] - 2026-08-29 — Per-Monitor Workspace Switching & Window Counts
 ### Added
 - **Per-monitor workspace switching**: IPC `switch-workspace` supports optional `monitor` parameter for independent monitor workspace switching
