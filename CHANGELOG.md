@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.54.0] - 2026-08-29 — Per-Monitor Bar Height
+### Added
+- **IPC `set-monitor-bar-height` command**: set custom bar height for a specific monitor (20-200px)
+- **IPC `get-monitor-bar-height` command**: query bar height for a monitor or list all overrides
+- **Per-monitor bar heights**: `bar_heights: HashMap<usize, u32>` in Platform for per-monitor overrides
+- Falls back to global `config.bar.height` when no override is set for a monitor
+
+### IPC usage
+```
+echo '{"command":"set-monitor-bar-height","monitor":0,"height":50}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-bar-height","monitor":1}' | \\.\pipe\ultrawm-ipc
+echo '{"command":"get-monitor-bar-height"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.53.0] - 2026-08-29 — Focus-Follows-Mouse IPC Commands
 ### Added
 - **IPC `set-focus-follows-mouse` command**: enable/disable focus-follows-mouse at runtime

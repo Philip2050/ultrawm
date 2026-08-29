@@ -1791,6 +1791,71 @@ fn capture_screenshot() -> serde_json::Value {
         })
     }
 
+    // Handle set-monitor-bar-height command
+    if cmd_str == "set-monitor-bar-height" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let height = params.get("height").and_then(|v| v.as_u64()).map(|v| v as u32);
+        if let (Some(mon_idx), Some(h)) = (monitor_idx, height) {
+            if h >= 20 && h <= 200 {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &*ptr;
+                        let monitors = crate::platform::monitor::get_monitors();
+                        if mon_idx < monitors.len() {
+                            platform.bar_heights.insert(mon_idx, h);
+                            return serde_json::json!({
+                                "success": true,
+                                "monitor": mon_idx,
+                                "height": h,
+                            });
+                        } else {
+                            return serde_json::json!({
+                                "success": false,
+                                "error": format!("monitor {} out of range (0-{})", mon_idx, monitors.len() - 1),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing or invalid parameters (monitor, height 20-200)",
+        });
+    }
+
+    // Handle get-monitor-bar-height command
+    if cmd_str == "get-monitor-bar-height" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let default_height = platform.config.bar.height;
+                if let Some(m_idx) = monitor_idx {
+                    let h = platform.bar_heights.get(&m_idx).copied().unwrap_or(default_height);
+                    return serde_json::json!({
+                        "success": true,
+                        "monitor": m_idx,
+                        "height": h,
+                    });
+                } else {
+                    let all_heights: Vec<(usize, u32)> = platform.bar_heights.iter().map(|(k, v)| (*k, *v)).collect();
+                    return serde_json::json!({
+                        "success": true,
+                        "default_height": default_height,
+                        "overrides": all_heights,
+                    });
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle set-monitor-focus command
     if cmd_str == "set-monitor-focus" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
