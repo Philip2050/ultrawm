@@ -2856,6 +2856,37 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle set-monitor-workspace-names command
+    if cmd_str == "set-monitor-workspace-names" {
+        let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let names = params.get("names").and_then(|v| v.as_array());
+
+        if let (Some(mon_idx), Some(name_arr)) = (monitor_idx, names) {
+            let name_vec: Vec<String> = name_arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+            if !name_vec.is_empty() {
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        if mon_idx < platform.workspace_names.len() {
+                            platform.workspace_names[mon_idx] = name_vec;
+                            platform.refresh_bar_workspaces(mon_idx);
+                            return serde_json::json!({
+                                "success": true,
+                                "monitor": mon_idx,
+                                "names": platform.workspace_names[mon_idx].clone(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'monitor' or 'names' parameter (names must be an array of strings)",
+        });
+    }
+
     // Handle get-workspace-names command
     if cmd_str == "get-workspace-names" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

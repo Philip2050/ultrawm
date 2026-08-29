@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.76.0] - 2026-08-29 — IPC Set-Monitor-Workspace-Names Command
+### Added
+- **IPC `set-monitor-workspace-names` command**: set all workspace names for a monitor at once
+- Accepts an array of strings for workspace names
+- Updates bar workspace indicator automatically
+
+### IPC usage
+```
+echo '{"command":"set-monitor-workspace-names","monitor":0,"names":["Main","Web","Code","Music"]}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.75.0] - 2026-08-29 — IPC Set-Monitor-Layout-Preset Command
 ### Added
 - **IPC `set-monitor-layout-preset` command**: apply a named layout preset to a specific monitor
