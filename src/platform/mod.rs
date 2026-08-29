@@ -1986,6 +1986,10 @@ impl Platform {
 
         let mon_idx = self.find_monitor_for_window(hwnd).unwrap_or(0);
         let mon = &self.monitors[mon_idx];
+        let mw = mon.work_width();
+        let mh = mon.work_height();
+        let mleft = mon.work_left;
+        let mtop = mon.work_top;
 
         unsafe {
             let mut rect = RECT::default();
@@ -2001,11 +2005,95 @@ impl Platform {
             // Snap to grid
             let (gx, gy, gw, gh) = self.snap_to_grid(x, y, w, h);
 
-            // Edge snapping: check proximity to other windows' edges
             let edge_dist = self.config.layout.snap_edge_distance as i32;
             let mut snapped_x = gx;
             let mut snapped_y = gy;
 
+            // --- Screen edge snapping ---
+            // Left edge
+            if (gx - mleft).abs() <= edge_dist {
+                snapped_x = mleft;
+            }
+            // Right edge
+            if ((mleft + mw) - (gx + gw)).abs() <= edge_dist {
+                snapped_x = mleft + mw - gw;
+            }
+            // Top edge
+            if (gy - mtop).abs() <= edge_dist {
+                snapped_y = mtop;
+            }
+            // Bottom edge
+            if ((mtop + mh) - (gy + gh)).abs() <= edge_dist {
+                snapped_y = mtop + mh - gh;
+            }
+
+            // --- Corner snapping (half/maximize) ---
+            // Left half: snap left edge + half width
+            if (gx - mleft).abs() <= edge_dist && (gw - mw / 2).abs() <= edge_dist {
+                snapped_x = mleft;
+                snapped_y = mtop;
+                let snapped_w = mw / 2;
+                let snapped_h = mh;
+                let _ = SetWindowPos(
+                    hwnd,
+                    HWND_TOP,
+                    snapped_x, snapped_y, snapped_w, snapped_h,
+                    SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+                if let Some(info) = self.windows.get_mut(&wrapper) {
+                    info.float_x = Some(snapped_x);
+                    info.float_y = Some(snapped_y);
+                    info.float_w = Some(snapped_w as u32);
+                    info.float_h = Some(snapped_h as u32);
+                }
+                return;
+            }
+            // Right half
+            if ((mleft + mw) - (gx + gw)).abs() <= edge_dist && (gw - mw / 2).abs() <= edge_dist {
+                snapped_x = mleft + mw / 2;
+                snapped_y = mtop;
+                let snapped_w = mw / 2;
+                let snapped_h = mh;
+                let _ = SetWindowPos(
+                    hwnd,
+                    HWND_TOP,
+                    snapped_x, snapped_y, snapped_w, snapped_h,
+                    SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+                if let Some(info) = self.windows.get_mut(&wrapper) {
+                    info.float_x = Some(snapped_x);
+                    info.float_y = Some(snapped_y);
+                    info.float_w = Some(snapped_w as u32);
+                    info.float_h = Some(snapped_h as u32);
+                }
+                return;
+            }
+            // Maximize (snap to all 4 edges)
+            if (gx - mleft).abs() <= edge_dist
+                && (gy - mtop).abs() <= edge_dist
+                && ((mleft + mw) - (gx + gw)).abs() <= edge_dist
+                && ((mtop + mh) - (gy + gh)).abs() <= edge_dist
+            {
+                snapped_x = mleft;
+                snapped_y = mtop;
+                let snapped_w = mw;
+                let snapped_h = mh;
+                let _ = SetWindowPos(
+                    hwnd,
+                    HWND_TOP,
+                    snapped_x, snapped_y, snapped_w, snapped_h,
+                    SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+                if let Some(info) = self.windows.get_mut(&wrapper) {
+                    info.float_x = Some(snapped_x);
+                    info.float_y = Some(snapped_y);
+                    info.float_w = Some(snapped_w as u32);
+                    info.float_h = Some(snapped_h as u32);
+                }
+                return;
+            }
+
+            // --- Edge snapping to other windows ---
             for (other_hwnd, other_info) in &self.windows {
                 if other_info.floating && *other_hwnd != wrapper {
                     let mut orect = RECT::default();
@@ -2015,15 +2103,12 @@ impl Platform {
                         let oy1 = orect.top;
                         let oy2 = orect.bottom;
 
-                        // Check horizontal edges
                         if (gx + gw - ox1).abs() <= edge_dist && gx + gw >= ox1 && gx <= ox2 {
                             snapped_x = ox1 - gw;
                         }
                         if (ox2 - gx).abs() <= edge_dist && ox2 >= gx && ox2 <= gx + gw {
                             snapped_x = ox2;
                         }
-
-                        // Check vertical edges
                         if (gy + gh - oy1).abs() <= edge_dist && gy + gh >= oy1 && gy <= oy2 {
                             snapped_y = oy1 - gh;
                         }
@@ -2035,8 +2120,8 @@ impl Platform {
             }
 
             // Clamp to monitor bounds
-            snapped_x = snapped_x.clamp(mon.left, mon.right - gw);
-            snapped_y = snapped_y.clamp(mon.top, mon.bottom - gh);
+            snapped_x = snapped_x.clamp(mleft, mleft + mw - gw);
+            snapped_y = snapped_y.clamp(mtop, mtop + mh - gh);
 
             // Apply if position changed
             if snapped_x != x || snapped_y != y {

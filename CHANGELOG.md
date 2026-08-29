@@ -2,6 +2,28 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.12.0] - 2026-08-29 — Floating Window Edge & Corner Snapping
+### Added
+- **Screen edge snapping**: floating windows snap to monitor edges when dragged nearby
+- **Corner snapping**: snap to left/right half, top/bottom half, or full maximize
+- **Maximize on corner drag**: dragging to all 4 edges simultaneously maximizes the window
+- **Proximity threshold**: configurable `snap_edge_distance` (default 8px) for snap detection
+- **Grid snapping**: positions snap to `snap_grid_size` grid for consistent alignment
+- **Edge-to-edge snapping**: floating windows snap to other floating windows' edges
+- **Auto-snap on move**: triggers automatically when a floating window is repositioned via EVENT_OBJECT_LOCATIONCHANGE
+
+### Snap behaviors
+- **Left edge snap**: window aligns to left edge of monitor
+- **Right edge snap**: window aligns to right edge
+- **Top/bottom edge snap**: window aligns to top/bottom of monitor
+- **Left half snap**: drag to left edge with ~50% width → half-left layout
+- **Right half snap**: drag to right edge with ~50% width → half-right layout
+- **Maximize snap**: drag to all 4 edges simultaneously → full-screen maximize
+- **Window-to-window snap**: edges align with other floating windows within threshold
+
+### IPC
+- No new commands needed — snapping is automatic via WinEvent LOCATIONCHANGE
+
 ## [10.11.0] - 2026-08-29 — Session Restore & Layout Persistence
 ### Added
 - **Session restore**: windows are automatically repositioned to their saved workspace, monitor, and position on startup
