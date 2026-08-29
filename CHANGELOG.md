@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.40.0] - 2026-08-29 — Animated Opacity from Window Rules
+### Added
+- **Opacity animation on rule match**: when a window rule sets opacity, it animates smoothly using spring physics
+- **Spring-based transition**: uses existing `opacity_anim` HashMap with stiffness=200, damping=25
+- Smooth fade from current opacity to target opacity over ~0.5 seconds
+- Falls back to instant set if animation system not available
+
+### Window rule example
+```toml
+[[rules]]
+match = "discord"
+opacity = 0.85
+```
+
 ## [10.39.0] - 2026-08-29 — IPC Set-Border-Width Command
 ### Added
 - **IPC `set-border-width` command**: change focused window's border width at runtime

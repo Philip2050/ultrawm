@@ -3896,6 +3896,14 @@ impl Platform {
             if let Some(op) = rule.opacity {
                 if op >= 0.0 && op <= 1.0 {
                     win_info.opacity = Some(op);
+                    // Animate to the target opacity using spring physics
+                    self.opacity_anim.entry(win_info.id).or_insert_with(|| {
+                        crate::anim::SpringValue::new(op).with_spring(crate::anim::Spring {
+                            stiffness: 200.0,
+                            damping: 25.0,
+                            mass: 1.0,
+                        })
+                    }).set_target(op);
                 }
             }
             if let Some(sticky) = rule.sticky {
