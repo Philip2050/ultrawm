@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.49.0] - 2026-08-29 — IPC Set-Workspace-Name Command
+### Added
+- **IPC `set-workspace-name` command**: rename a workspace at runtime
+- Supports optional `monitor` parameter for per-monitor workspace naming
+- Updates bar workspace indicators immediately
+- Persists to `config.toml` via `save()`
+
+### IPC usage
+```
+echo '{"command":"set-workspace-name","workspace":1,"name":"Web","monitor":0}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.48.0] - 2026-08-29 — IPC Get-Layout-Presets Command
 ### Added
 - **IPC `get-layout-presets` command**: returns all layout presets as JSON

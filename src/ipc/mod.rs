@@ -641,6 +641,48 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         });
     }
 
+    // Handle set-workspace-name command
+    if cmd_str == "set-workspace-name" {
+        if let Some(name_val) = json.get("name").and_then(|v| v.as_str()) {
+            if let Some(ws_val) = json.get("workspace").and_then(|v| v.as_u64()) {
+                let ws_idx = ws_val as usize;
+                unsafe {
+                    let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                    if !ptr.is_null() {
+                        let platform = &mut *ptr;
+                        let mon_idx = json.get("monitor")
+                            .and_then(|v| v.as_u64())
+                            .map(|m| m as usize)
+                            .unwrap_or_else(|| {
+                                platform.focused_hwnd
+                                    .and_then(|hwnd| platform.window_for_hwnd(hwnd.0))
+                                    .and_then(|info| platform.window_monitors.get(&info.id))
+                                    .copied()
+                                    .unwrap_or(0)
+                            });
+                        if mon_idx < platform.workspace_names.len() {
+                            let names = &mut platform.workspace_names[mon_idx];
+                            if ws_idx < names.len() {
+                                names[ws_idx] = name_val.to_string();
+                                platform.refresh_bar_workspaces(mon_idx);
+                                return serde_json::json!({
+                                    "success": true,
+                                    "command": "set-workspace-name",
+                                    "message": format!("Renamed monitor {} workspace {} to '{}'", mon_idx + 1, ws_idx + 1, name_val),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "command": cmd_str,
+            "message": "Usage: {\"command\":\"set-workspace-name\",\"workspace\":1,\"name\":\"Web\",\"monitor\":0}",
+        });
+    }
+
     // Handle add-rule command with structured input
     if cmd_str == "add-rule" {
         if let Some(match_str) = json.get("match").and_then(|v| v.as_str()) {
@@ -1517,6 +1559,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "cycle-theme" => IpcCommand::Single { command: "cycle-theme".into() },
         "list-themes" => IpcCommand::Single { command: "list-themes".into() },
         "get-layout-presets" => IpcCommand::Single { command: "get-layout-presets".into() },
+        "set-workspace-name" => IpcCommand::Single { command: "set-workspace-name".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

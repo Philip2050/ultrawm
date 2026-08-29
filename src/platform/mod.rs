@@ -2457,6 +2457,15 @@ impl Platform {
         }
     }
 
+    pub fn refresh_bar_workspaces(&self, mon_idx: usize) {
+        if let Some(ref bar) = self.bar {
+            let names = self.workspace_names(mon_idx);
+            let current = self.monitor_workspaces[mon_idx].current;
+            let counts = self.window_count_per_workspace(mon_idx);
+            bar.set_workspaces(names, current, counts);
+        }
+    }
+
     pub fn monitor_layout(&self, mon_idx: usize) -> crate::config::MonitorLayout {
         let layouts = &self.config.layout.monitor_layouts;
         layouts.get(mon_idx).cloned().unwrap_or(crate::config::MonitorLayout {
