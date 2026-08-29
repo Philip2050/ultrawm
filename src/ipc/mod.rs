@@ -2307,6 +2307,54 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle apply-layout-preset command
+    if cmd_str == "apply-layout-preset" {
+        let preset_name = params.get("preset").and_then(|v| v.as_str());
+        if let Some(name) = preset_name {
+            unsafe {
+                let ptr = crate::platform::keyboard::PLATFORM_PTR;
+                if !ptr.is_null() {
+                    let platform = &mut *ptr;
+                    let presets = &platform.config.layout.layout_presets;
+                    if let Some(preset) = presets.iter().find(|p| p.name == name) {
+                        let mut changes = Vec::new();
+                        if let Some(g) = preset.gaps {
+                            platform.config.layout.gaps = g;
+                            changes.push(format!("gaps: {}", g));
+                        }
+                        if let Some(ip) = preset.inner_padding {
+                            platform.config.layout.inner_padding = ip;
+                            changes.push(format!("inner_padding: {}", ip));
+                        }
+                        if let Some(bw) = preset.border_width {
+                            platform.config.layout.border_width = bw;
+                            changes.push(format!("border_width: {}", bw));
+                        }
+                        if let Some(cr) = preset.corner_radius {
+                            platform.config.layout.corner_radius = cr;
+                            changes.push(format!("corner_radius: {}", cr));
+                        }
+                        let _ = platform.config.save();
+                        return serde_json::json!({
+                            "success": true,
+                            "preset": name,
+                            "changes": changes,
+                        });
+                    } else {
+                        return serde_json::json!({
+                            "success": false,
+                            "error": format!("preset '{}' not found", name),
+                        });
+                    }
+                }
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "missing 'preset' parameter",
+        });
+    }
+
     // Handle get-session command
     if cmd_str == "get-session" {
         unsafe {

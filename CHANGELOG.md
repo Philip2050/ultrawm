@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.73.0] - 2026-08-29 — IPC Apply-Layout-Preset Command
+### Added
+- **IPC `apply-layout-preset` command**: apply a named layout preset at runtime
+- Supports gaps, inner_padding, border_width, corner_radius
+- Persists changes to config.toml
+
+### IPC usage
+```
+echo '{"command":"apply-layout-preset","preset":"spacious"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.72.0] - 2026-08-29 — IPC Move-Window-To-Workspace Command
 ### Added
 - **IPC `move-window-to-workspace` command**: move any window to a specific workspace/monitor
