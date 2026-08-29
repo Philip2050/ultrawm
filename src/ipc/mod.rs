@@ -2175,6 +2175,55 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle list-workspaces command
+    if cmd_str == "list-workspaces" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let monitors = crate::platform::monitor::get_monitors();
+                let mut ws_list: Vec<serde_json::Value> = Vec::new();
+
+                for (mon_idx, mws) in platform.monitor_workspaces.iter().enumerate() {
+                    let mon_name = monitors.get(mon_idx).map(|m| m.name.clone()).unwrap_or_else(|| "unknown".into());
+                    for (ws_idx, grid) in mws.grids.iter().enumerate() {
+                        let mut win_list: Vec<serde_json::Value> = Vec::new();
+                        for &wid in grid.windows.iter() {
+                            let win_info = platform.windows.iter().find(|(_, i)| i.id == wid);
+                            if let Some((hwnd_wrapper, info)) = win_info {
+                                win_list.push(serde_json::json!({
+                                    "id": wid,
+                                    "hwnd": hwnd_wrapper.0,
+                                    "title": info.title,
+                                    "exe": info.exe,
+                                    "floating": info.floating,
+                                    "fullscreen": info.fullscreen,
+                                    "opacity": info.opacity.unwrap_or(1.0),
+                                }));
+                            }
+                        }
+                        ws_list.push(serde_json::json!({
+                            "monitor": mon_idx,
+                            "monitor_name": mon_name,
+                            "workspace": ws_idx,
+                            "active": mws.current == ws_idx,
+                            "window_count": grid.windows.len(),
+                            "windows": win_list,
+                        }));
+                    }
+                }
+                return serde_json::json!({
+                    "success": true,
+                    "workspaces": ws_list,
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle list-monitor-workspaces command
     if cmd_str == "list-monitor-workspaces" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);

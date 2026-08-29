@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.69.0] - 2026-08-29 — IPC List-Workspaces Command Enhancement
+### Added
+- **Enhanced `list-workspaces` command**: now lists all workspaces across all monitors
+- Returns monitor name, active state, window count, and full window details per workspace
+- Useful for external status bars and workspace switchers
+
+### IPC usage
+```
+echo '{"command":"list-workspaces"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.68.0] - 2026-08-29 — IPC Get-Monitor-Layout Command
 ### Added
 - **IPC `get-monitor-layout` command**: query per-monitor layout settings
