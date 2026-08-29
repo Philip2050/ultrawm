@@ -38,6 +38,8 @@ struct BarState {
     resize_flash: u32, // frames remaining for resize size indicator
     resize_size: String, // current window size shown during resize
     network: bool,
+    title_scroll_offset: i32, // current scroll offset for long titles
+    title_scroll_timer: u32,  // frames before scrolling starts
 }
 
 pub struct AppBar {
@@ -118,6 +120,8 @@ impl AppBar {
                 resize_flash: 0,
                 resize_size: String::new(),
                 network: true,
+                title_scroll_offset: 0,
+                title_scroll_timer: 0,
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -154,6 +158,8 @@ impl AppBar {
             let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
             if !ptr.is_null() {
                 (*ptr).title = title.to_string();
+                (*ptr).title_scroll_offset = 0;
+                (*ptr).title_scroll_timer = 0;
                 self.update();
             }
         }
@@ -498,23 +504,34 @@ unsafe extern "system" fn bar_wnd_proc(
                 right_x -= 80;
             }
 
-            // Draw title (with ellipsis truncation and accent color)
+            // Draw title (with scrolling for long titles)
             if !state.title.is_empty() {
                 let _ = SetTextColor(hdc, COLORREF(state.title_color));
                 let title_text = format!(" {} ", state.title);
                 let title_w: Vec<u16> = title_text.encode_utf16().chain(Some(0)).collect();
-                let mut title_rect = RECT {
-                    left: x + 10,
-                    top: 0,
-                    right: right_x - 10,
-                    bottom: 9999,
-                };
-                let _ = DrawTextW(
-                    hdc,
-                    &mut title_w.clone(),
-                    &mut title_rect,
-                    DT_VCENTER | DT_SINGLELINE | DT_LEFT | DT_END_ELLIPSIS,
-                );
+                let avail_width = (right_x - 10) - (x + 10);
+                if avail_width > 20 {
+                    let mut text_size = SIZE::default();
+                    let _ = GetTextExtentPoint32W(hdc, &title_w, &mut text_size);
+                    let text_w = text_size.cx;
+                    let draw_x = if text_w > avail_width {
+                        // Scrolling title
+                        state.title_scroll_timer = state.title_scroll_timer.saturating_sub(1);
+                        if state.title_scroll_timer == 0 {
+                            state.title_scroll_offset -= 1;
+                            if state.title_scroll_offset < -(text_w + 20) {
+                                state.title_scroll_offset = avail_width + 10;
+                                state.title_scroll_timer = 60;
+                            }
+                        }
+                        x + 10 + state.title_scroll_offset
+                    } else {
+                        state.title_scroll_offset = 0;
+                        state.title_scroll_timer = 0;
+                        x + 10
+                    };
+                    let _ = TextOutW(hdc, draw_x, 8, &title_w);
+                }
             }
             if state.show_clock && !state.clock.is_empty() {
                 let clock_w: Vec<u16> = state.clock.encode_utf16().chain(Some(0)).collect();

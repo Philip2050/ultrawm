@@ -2,6 +2,20 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.35.0] - 2026-08-29 — Scrolling Window Titles in Bar
+### Added
+- **Scrolling titles**: long window titles scroll horizontally when they exceed available space
+- **Scroll pause**: titles pause for 60 frames (1 second) before scrolling starts
+- **Scroll loop**: title scrolls left, then wraps back to right after a gap
+- **Reset on change**: scroll position resets when the title changes
+- Uses `GetTextExtentPoint32W` for text width measurement
+- Uses `TextOutW` for positioned text drawing
+
+### Bar behavior
+- Short titles (< available width): displayed statically, no scrolling
+- Long titles: scroll left at 1px per frame after 1s pause
+- Scroll offset resets when title changes
+
 ## [10.34.0] - 2026-08-29 — IPC List-Monitors Command
 ### Added
 - **IPC `list-monitors` command**: returns all monitor info as JSON
