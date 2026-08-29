@@ -1253,6 +1253,7 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "list-workspaces" => IpcCommand::Single { command: "list-workspaces".into() },
         "get-config" => IpcCommand::Single { command: "get-config".into() },
         "swap-windows" => IpcCommand::Single { command: "swap-windows".into() },
+        "toggle-bar" => IpcCommand::Single { command: "toggle-bar".into() },
         "quit" => IpcCommand::Single { command: "quit".into() },
         _ => {
             return serde_json::json!({

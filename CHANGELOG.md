@@ -2,6 +2,18 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.28.0] - 2026-08-29 — IPC Toggle-Bar Command
+### Added
+- **IPC `toggle-bar` command**: show/hide the status bar at runtime
+- **`toggle_bar_visibility()`**: toggles bar ShowWindow(SW_SHOW/SW_HIDE)
+- **`bar_visible` state**: runtime visibility independent of config `bar.enabled`
+- IPC response confirms bar shown or hidden
+
+### IPC usage
+```
+echo '{"command":"toggle-bar"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.27.0] - 2026-08-29 — IPC Swap-Windows Command
 ### Added
 - **IPC `swap-windows` command**: swaps the focused window with the next tiling window

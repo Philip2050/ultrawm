@@ -134,6 +134,7 @@ pub struct Platform {
     pub keybinds: keybinds::ParsedKeybinds,
     pub border_overlay: Option<BorderOverlay>,
     pub bar: Option<AppBar>,
+    pub bar_visible: bool,
     pub notifier: Option<Notifier>,
     // Each monitor has its own set of workspaces (independent)
     pub monitor_workspaces: Vec<MonitorWorkspaces>,
@@ -225,6 +226,7 @@ impl Platform {
             keyboard_hook: None,
             keybinds: keybinds::parse_keybinds(&crate::config::Config::default().keybinds),
             border_overlay: None,
+            bar_visible: true,
             bar: None,
             notifier: None,
             monitor_workspaces,
@@ -2246,6 +2248,16 @@ impl Platform {
         }
     }
 
+    pub fn toggle_bar_visibility(&mut self) {
+        self.bar_visible = !self.bar_visible;
+        if let Some(ref bar) = self.bar {
+            unsafe {
+                let _ = ShowWindow(bar.hwnd, if self.bar_visible { SW_SHOW } else { SW_HIDE });
+            }
+        }
+        info!("Bar visibility: {}", if self.bar_visible { "shown" } else { "hidden" });
+    }
+
     pub fn toggle_fullscreen(&mut self) {
         let mut became_fullscreen = false;
         if let Some(hwnd_wrapper) = self.focused_hwnd {
@@ -3755,6 +3767,10 @@ impl Platform {
                             }
                         }
                     }
+                    return;
+                }
+                if command == "toggle-bar" {
+                    self.toggle_bar_visibility();
                     return;
                 }
                 match command.as_str() {
