@@ -2,6 +2,17 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.80.0] - 2026-08-29 — IPC Get-Monitor-Layout-Presets Command
+### Added
+- **IPC `get-monitor-layout-presets` command**: list all available layout presets
+- Returns preset name and properties (gaps, padding, border, corner radius)
+- Useful for UI tools that need to present layout options
+
+### IPC usage
+```
+echo '{"command":"get-monitor-layout-presets"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [10.79.0] - 2026-08-29 — IPC Reset-Monitor-Layout Command
 ### Added
 - **IPC `reset-monitor-layout` command**: reset per-monitor layout overrides to global defaults

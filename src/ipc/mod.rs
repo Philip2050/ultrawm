@@ -2654,6 +2654,35 @@ fn capture_screenshot() -> serde_json::Value {
         });
     }
 
+    // Handle get-monitor-layout-presets command
+    if cmd_str == "get-monitor-layout-presets" {
+        unsafe {
+            let ptr = crate::platform::keyboard::PLATFORM_PTR;
+            if !ptr.is_null() {
+                let platform = &*ptr;
+                let presets = &platform.config.layout.layout_presets;
+                let preset_list: Vec<serde_json::Value> = presets.iter().map(|p| {
+                    serde_json::json!({
+                        "name": p.name,
+                        "gaps": p.gaps,
+                        "inner_padding": p.inner_padding,
+                        "border_width": p.border_width,
+                        "corner_radius": p.corner_radius,
+                    })
+                }).collect();
+                return serde_json::json!({
+                    "success": true,
+                    "presets": preset_list,
+                    "count": preset_list.len(),
+                });
+            }
+        }
+        return serde_json::json!({
+            "success": false,
+            "error": "platform not available",
+        });
+    }
+
     // Handle get-monitor-layout command
     if cmd_str == "get-monitor-layout" {
         let monitor_idx = params.get("monitor").and_then(|v| v.as_u64()).map(|v| v as usize);
