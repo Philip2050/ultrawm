@@ -33,9 +33,11 @@ struct BarState {
     workspace_count: usize,
     window_counts: Vec<usize>, // window count per workspace
     snap_mode: bool,
+    monocle_mode: bool,
     reload_flash: u32, // frames remaining for green reload flash
     resize_flash: u32, // frames remaining for resize size indicator
     resize_size: String, // current window size shown during resize
+    network: bool,
 }
 
 pub struct AppBar {
@@ -111,9 +113,11 @@ impl AppBar {
                 workspace_count,
                 window_counts: vec![0; workspace_count],
                 snap_mode: false,
+                monocle_mode: false,
                 reload_flash: 0,
                 resize_flash: 0,
                 resize_size: String::new(),
+                network: true,
             };
             let boxed = Box::new(state);
             let ptr = Box::into_raw(boxed);
@@ -236,6 +240,26 @@ impl AppBar {
         }
     }
 
+    pub fn set_monocle_mode(&self, enabled: bool) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).monocle_mode = enabled;
+                self.update();
+            }
+        }
+    }
+
+    pub fn set_network(&self, online: bool) {
+        unsafe {
+            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
+            if !ptr.is_null() {
+                (*ptr).network = online;
+                self.update();
+            }
+        }
+    }
+
     pub fn trigger_reload_flash(&self) {
         unsafe {
             let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut BarState;
@@ -294,6 +318,23 @@ pub fn get_volume_level() -> u32 {
         } else {
             0
         }
+    }
+}
+
+pub fn is_network_online() -> bool {
+    unsafe {
+        let h = kernel32::LoadLibraryW(HSTRING::from("wininet.dll"));
+        if h.is_null() { return false; }
+        let func: unsafe extern "system" fn(*mut u32) -> u32 =
+            std::mem::transmute(kernel32::GetProcAddress(h, s!("InternetGetConnectedState")));
+        if func.is_null() {
+            let _ = kernel32::FreeLibrary(h);
+            return false;
+        }
+        let mut flags: u32 = 0;
+        let result = (func.unwrap())(&mut flags);
+        let _ = kernel32::FreeLibrary(h);
+        result != 0
     }
 }
 
@@ -407,6 +448,46 @@ unsafe extern "system" fn bar_wnd_proc(
                 );
                 x += 60;
             }
+
+            // Draw monocle mode indicator
+            if state.monocle_mode {
+                let mono_text = " MONOCLE ";
+                let mono_w: Vec<u16> = mono_text.encode_utf16().chain(Some(0)).collect();
+                let mono_color = 0xFFFF8800; // Orange
+                let _ = SetTextColor(hdc, COLORREF(mono_color));
+                let mut mono_rect = RECT {
+                    left: x + 5,
+                    top: 4,
+                    right: x + 80,
+                    bottom: 26,
+                };
+                let _ = DrawTextW(
+                    hdc,
+                    &mut mono_w.clone(),
+                    &mut mono_rect,
+                    DT_VCENTER | DT_SINGLELINE | DT_LEFT,
+                );
+                x += 76;
+            }
+
+            // Draw network indicator
+            let net_color = if state.network { 0xFFA6E3A1 } else { 0xFFF38BA8 }; // green/red
+            let net_text = if state.network { " W " } else { " W! " };
+            let net_w: Vec<u16> = net_text.encode_utf16().chain(Some(0)).collect();
+            let _ = SetTextColor(hdc, COLORREF(net_color));
+            let mut net_rect = RECT {
+                left: x + 5,
+                top: 4,
+                right: x + 45,
+                bottom: 26,
+            };
+            let _ = DrawTextW(
+                hdc,
+                &mut net_w.clone(),
+                &mut net_rect,
+                DT_VCENTER | DT_SINGLELINE | DT_LEFT,
+            );
+            x += 40;
 
             // Draw clock (right-aligned)
             let mut right_x = 9999i32;

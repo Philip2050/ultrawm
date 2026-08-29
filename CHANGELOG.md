@@ -2,6 +2,19 @@
 
 All notable changes to UltraWM will be documented in this file.
 
+## [10.24.0] - 2026-08-29 — Status Bar Widget Enhancements
+### Added
+- **Monocle mode indicator**: orange "MONOCLE" label shown in bar when monocle layout is active
+- **Network status indicator**: green "W" (online) or red "W!" (offline) shown in bar
+- **`is_network_online()`**: checks internet connectivity via `InternetGetConnectedState` from wininet.dll
+- Bar updates network status dynamically on each render tick
+- Monocle indicator automatically shown/hidden when monocle layout toggles
+
+### Bar layout
+- Monocle indicator appears after workspace buttons (orange text)
+- Network indicator follows monocle indicator (colored text)
+- Both indicators integrate with existing bar spacing and rendering
+
 ## [10.23.0] - 2026-08-29 — Window Rules with Priority & Match Types
 ### Added
 - **Rule priority**: higher-priority rules override lower-priority ones (default: 0)

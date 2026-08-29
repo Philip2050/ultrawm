@@ -899,6 +899,10 @@ impl Platform {
 
                 // Update snap mode indicator
                 bar.set_snap_mode(self.snap_mode);
+                bar.set_monocle_mode(self.monocle);
+
+                // Update network status
+                bar.set_network(crate::platform::bar::is_network_online());
 
                 // Update clock every second
                 let now = chrono::Local::now();
