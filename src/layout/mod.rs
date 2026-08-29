@@ -166,6 +166,10 @@ pub struct GridState {
     /// Bidirectional split tree per cell
     pub cell_nodes: BTreeMap<Cell, CellNode>,
     pub layout_mode: LayoutMode,
+    /// Custom column widths (pixels). When set, overrides equal-width calculation.
+    pub custom_widths: Vec<u32>,
+    /// Custom row heights (pixels). When set, overrides equal-height calculation.
+    pub custom_heights: Vec<u32>,
 }
 
 impl GridState {
@@ -183,6 +187,8 @@ impl GridState {
             focused_window: None,
             cell_nodes: BTreeMap::new(),
             layout_mode: LayoutMode::Grid,
+            custom_widths: Vec::new(),
+            custom_heights: Vec::new(),
         }
     }
 
@@ -223,6 +229,38 @@ impl GridState {
         }
 
         let total_cells = cols * rows;
+        for (idx, &wid) in windows.iter().take(total_cells).enumerate() {
+            let r = (idx / cols) as i32;
+            let c = (idx % cols) as i32;
+            let cell = Cell::new(r, c);
+            self.cells.insert(cell, wid);
+            self.window_positions.insert(wid, cell);
+            self.cell_nodes.insert(cell, CellNode::Leaf(wid));
+        }
+
+        if !windows.is_empty() {
+            self.focused_window = Some(windows[0]);
+        }
+    }
+
+    /// Rearrange windows with custom column widths and/or row heights
+    /// widths/heights are pixel values; empty = equal distribution
+    pub fn snap_layout_custom(&mut self, windows: &[WindowId], widths: &[u32], heights: &[u32]) {
+        self.cells.clear();
+        self.window_positions.clear();
+        self.cell_nodes.clear();
+        self.focused_window = None;
+        self.custom_widths = widths.to_vec();
+        self.custom_heights = heights.to_vec();
+
+        if windows.is_empty() {
+            return;
+        }
+
+        let cols = if widths.is_empty() { 1 } else { widths.len() };
+        let rows = if heights.is_empty() { 1 } else { heights.len() };
+        let total_cells = cols * rows;
+
         for (idx, &wid) in windows.iter().take(total_cells).enumerate() {
             let r = (idx / cols) as i32;
             let c = (idx % cols) as i32;
@@ -442,6 +480,31 @@ impl GridState {
     fn default_cell_w(&self) -> u32 { self.presets.default_width() }
     fn default_cell_h(&self) -> u32 { self.presets.default_height() }
 
+    /// Get custom cell size for a cell, falling back to default
+    fn custom_cell_size(&self, cell: Cell) -> (u32, u32) {
+        let cw = if !self.custom_widths.is_empty() {
+            let idx = cell.col.max(0) as usize;
+            if idx < self.custom_widths.len() {
+                self.custom_widths[idx]
+            } else {
+                self.default_cell_w()
+            }
+        } else {
+            self.default_cell_w()
+        };
+        let ch = if !self.custom_heights.is_empty() {
+            let idx = cell.row.max(0) as usize;
+            if idx < self.custom_heights.len() {
+                self.custom_heights[idx]
+            } else {
+                self.default_cell_h()
+            }
+        } else {
+            self.default_cell_h()
+        };
+        (cw, ch)
+    }
+
     pub fn focus_window(&mut self, wid: WindowId) -> Option<Cell> {
         if let Some(&cell) = self.window_positions.get(&wid) {
             self.focused_window = Some(wid);
@@ -561,8 +624,9 @@ impl GridState {
     }
 
     fn rects_for_node(&self, cell: Cell, node: &CellNode, vw: i32, vh: i32, out: &mut Vec<(WindowId, i32, i32, u32, u32)>) {
-        let cw = self.default_cell_w() as i32;
-        let ch = self.default_cell_h() as i32;
+        let (cw, ch) = self.custom_cell_size(cell);
+        let cw = cw as i32;
+        let ch = ch as i32;
         let base_x = (cell.col - self.camera.col) * (cw + self.gap_x)
             - (self.peek_x - self.gap_x / 2).max(0) + vw / 2;
         let base_y = (cell.row - self.camera.row) * (ch + self.gap_y)
@@ -655,8 +719,7 @@ impl GridState {
             return (x.max(0), y.max(0), sw as u32, sh as u32);
         }
 
-        let cw = self.cell_width(cell);
-        let ch = self.cell_height(cell);
+        let (cw, ch) = self.custom_cell_size(cell);
         let dx = (cell.col - self.camera.col) * (cw as i32 + self.gap_x)
             - (self.peek_x - self.gap_x / 2).max(0);
         let dy = (cell.row - self.camera.row) * (ch as i32 + self.gap_y)

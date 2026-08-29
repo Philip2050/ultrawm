@@ -1566,9 +1566,9 @@ impl Platform {
     }
 
     pub fn resize_width(&mut self, grow: bool) {
+        let step = self.config.layout.resize_step_px;
         let grid = self.current_grid();
         if let Some(wid) = grid.focused_window {
-            let step = self.config.layout.resize_step_px;
             if step > 0 {
                 // Pixel-based resize
                 let delta = if grow { step as i32 } else { -(step as i32) };
@@ -1586,9 +1586,9 @@ impl Platform {
     }
 
     pub fn resize_height(&mut self, grow: bool) {
+        let step = self.config.layout.resize_step_px;
         let grid = self.current_grid();
         if let Some(wid) = grid.focused_window {
-            let step = self.config.layout.resize_step_px;
             if step > 0 {
                 // Pixel-based resize
                 let delta = if grow { step as i32 } else { -(step as i32) };
@@ -2287,8 +2287,8 @@ impl Platform {
     }
 
     pub fn apply_layout_preset(&mut self, name: &str) {
-        let preset = match self.config.layout.layout_presets.iter().find(|p| p.name == name) {
-            Some(p) => p,
+        let (kind, cols, rows) = match self.config.layout.layout_presets.iter().find(|p| p.name == name) {
+            Some(p) => (p.kind.clone(), p.cols, p.rows),
             None => {
                 warn!("Layout preset not found: {}", name);
                 return;
@@ -2298,21 +2298,21 @@ impl Platform {
         if wids.is_empty() { return; }
         let grid = self.current_grid();
 
-        match preset.kind.as_str() {
+        match kind.as_str() {
             "grid" => {
-                let cols = preset.cols.unwrap_or(2).max(1) as usize;
+                let cols = cols.unwrap_or(2).max(1) as usize;
                 grid.layout_mode = crate::layout::LayoutMode::Grid;
                 grid.snap_layout(&wids, cols, 1);
                 info!("Layout preset '{}': grid {}x1", name, cols);
             }
             "columns" => {
-                let n = preset.cols.unwrap_or(2).max(1) as usize;
+                let n = cols.unwrap_or(2).max(1) as usize;
                 grid.layout_mode = crate::layout::LayoutMode::Grid;
                 grid.snap_layout(&wids, n, 1);
                 info!("Layout preset '{}': columns ({})", name, n);
             }
             "rows" => {
-                let n = preset.rows.unwrap_or(2).max(1) as usize;
+                let n = rows.unwrap_or(2).max(1) as usize;
                 grid.layout_mode = crate::layout::LayoutMode::Grid;
                 grid.snap_layout(&wids, 1, n);
                 info!("Layout preset '{}': rows ({})", name, n);
@@ -2353,7 +2353,7 @@ impl Platform {
                     state.1 = next;
                     Some(next as usize)
                 }).collect();
-                let cols = fib.iter().take_while(|&f| f < n).last().copied().unwrap_or(1).max(1).min(n);
+                let cols = fib.iter().take_while(|&f| *f < n).last().copied().unwrap_or(1).max(1).min(n);
                 grid.snap_layout(&wids, cols, 1);
                 info!("Layout preset '{}': fibonacci ({} cols)", name, cols);
             }
@@ -2365,10 +2365,27 @@ impl Platform {
                 info!("Layout preset '{}': fullscreen", name);
             }
             _ => {
-                warn!("Unknown layout preset kind: {}", preset.kind);
+                warn!("Unknown layout preset kind: {}", kind);
             }
         }
         self.save_session();
+    }
+
+    pub fn apply_custom_layout(&mut self, name: &str) {
+        let (widths, heights) = match self.config.layout.snap_layouts.iter().find(|l| l.name == name) {
+            Some(l) => (l.widths.clone(), l.heights.clone()),
+            None => {
+                warn!("Custom layout not found: {}", name);
+                return;
+            }
+        };
+        let wids = self.collect_visible_wids();
+        if wids.is_empty() { return; }
+        let grid = self.current_grid();
+        grid.layout_mode = crate::layout::LayoutMode::Grid;
+        grid.snap_layout_custom(&wids, &widths, &heights);
+        self.save_session();
+        info!("Custom layout '{}': {} cols x {} rows ({} windows)", name, widths.len().max(1), heights.len().max(1), wids.len());
     }
 
     pub fn toggle_shade(&mut self) {
@@ -2939,6 +2956,12 @@ impl Platform {
                                 self.snap_layout(cols, rows);
                             }
                         }
+                    }
+                    return;
+                }
+                if command.starts_with("snap-custom:") {
+                    if let Some(name) = command.strip_prefix("snap-custom:") {
+                        self.apply_custom_layout(name);
                     }
                     return;
                 }

@@ -62,6 +62,7 @@ pub struct LayoutConfig {
     pub layout_presets: Vec<LayoutPreset>,
     pub session_auto_save_interval: u32,
     pub resize_step_px: u32,
+    pub snap_layouts: Vec<SnapLayout>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -70,6 +71,13 @@ pub struct LayoutPreset {
     pub kind: String,
     pub cols: Option<u32>,
     pub rows: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SnapLayout {
+    pub name: String,
+    pub widths: Vec<u32>,
+    pub heights: Vec<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -166,6 +174,7 @@ impl Default for Config {
                 layout_presets: vec![],
                 session_auto_save_interval: 0,
                 resize_step_px: 0,
+                snap_layouts: vec![],
             },
             keybinds: KeybindsConfig {
                 mod_key: "win".into(),

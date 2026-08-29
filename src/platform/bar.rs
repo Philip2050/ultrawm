@@ -471,7 +471,7 @@ unsafe extern "system" fn bar_wnd_proc(
                 let box_w = 140;
                 let box_h = 28;
                 let cx = 9999 / 2;
-                let cy = state.height / 2;
+                let cy = 20; // top area of bar
                 let bx = cx - box_w / 2;
                 let by = cy - box_h / 2;
 

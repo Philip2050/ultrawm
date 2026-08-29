@@ -207,6 +207,15 @@ fn handle_json_command(json: serde_json::Value, tx: &mpsc::Sender<IpcCommand>) -
         return IpcResponse { success: false, message: Some("missing 'name' field. Use: {\"command\":\"layout-preset\",\"name\":\"my-preset\"}".into()), data: None };
     }
 
+    // Handle snap-custom with name parameter
+    if cmd_str == "snap-custom" {
+        if let Some(name) = json.get("name").and_then(|v| v.as_str()) {
+            let _ = tx.send(crate::ipc::IpcCommand::Single { command: format!("snap-custom:{}", name) });
+            return IpcResponse { success: true, message: Some(format!("applying custom layout '{}'", name)), data: None };
+        }
+        return IpcResponse { success: false, message: Some("missing 'name' field. Use: {\"command\":\"snap-custom\",\"name\":\"my-layout\"}".into()), data: None };
+    }
+
     let result = process_single_command(cmd_str, tx);
     if result.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         IpcResponse { success: true, message: Some("ok".into()), data: None }
@@ -567,6 +576,13 @@ fn process_single_command(cmd_str: &str, tx: &mpsc::Sender<IpcCommand>) -> serde
         "get-managed-windows" => IpcCommand::Single { command: "get-managed-windows".into() },
         "clamp-focused" => IpcCommand::Single { command: "clamp-focused".into() },
         "snap-layout" => IpcCommand::Single { command: "snap-layout".into() },
+        "snap-custom" => {
+            return serde_json::json!({
+                "success": false,
+                "command": cmd_str,
+                "error": "snap-custom requires a name. Use: {\"command\":\"snap-custom\",\"name\":\"my-layout\"}",
+            });
+        }
         "layout-columns" => IpcCommand::Single { command: "layout-columns".into() },
         "layout-rows" => IpcCommand::Single { command: "layout-rows".into() },
         "layout-master" => IpcCommand::Single { command: "layout-master".into() },

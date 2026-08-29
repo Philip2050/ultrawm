@@ -113,6 +113,37 @@ All notable changes to UltraWM will be documented in this file.
 - Config save creates parent directory if it doesn't exist
 - Failed saves are logged as warnings but don't crash the WM
 
+## [9.7.0] - 2026-08-29 — Configurable Snap Positions (Custom Grid Layouts)
+### Added
+- **Custom snap layouts** in config: define named layouts with custom column widths and row heights
+- `SnapLayout` struct with `name`, `widths`, `heights` fields
+- `snap_layouts: Vec<SnapLayout>` field on `LayoutConfig`
+- `GridState::custom_widths` and `custom_heights` override equal-cell rendering
+- `GridState::custom_cell_size()` returns per-cell size from custom layout or default
+- `GridState::snap_layout_custom()` places windows with custom dimensions
+- `Platform::apply_custom_layout(name)` applies named custom layout
+- **`snap-custom` IPC command**: apply custom layout by name
+
+### Config example
+```toml
+[[layout.snap_layouts]]
+name = "sidebar"
+widths = [400, 800]  # narrow left pane + wide right pane
+
+[[layout.snap_layouts]]
+name = "golden"
+widths = [600, 900]  # golden ratio split
+
+[[layout.snap_layouts]]
+name = "triple"
+widths = [400, 400, 400]  # three equal columns
+```
+
+### IPC usage
+```
+echo '{"command":"snap-custom","name":"sidebar"}' | \\.\pipe\ultrawm-ipc
+```
+
 ## [9.6.0] - 2026-08-29 — Multi-Step Resize with Visual Size Guide
 ### Added
 - **`resize_step_px`** config: pixel-based resize when > 0 (0 = preset steps)
